@@ -1,1 +1,0 @@
-# Knowledge_graph_portal
