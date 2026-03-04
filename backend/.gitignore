@@ -1,0 +1,47 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pkl
+*.log
+*.sqlite3
+*.db
+*.egg-info/
+*.egg
+*.so
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ---- Virtual environments ----
+venv/
+.venv/
+env/
+.env/
+ENV/
+.ipynb_checkpoints/
+.idea/
+.vscode/
+
+# ---- Build and packaging ----
+build/
+dist/
+develop-eggs/
+.eggs/
+.installed.cfg
+MANIFEST
+
+# ---- Jupyter ----
+*.ipynb_checkpoints
+.ipynb_checkpoints/
+
+# ---- Mac/Linux/Windows junk ----
+.DS_Store
+Thumbs.db
+
+# ---- dotenv / secrets ----
+.env
+.env.*
+*.env

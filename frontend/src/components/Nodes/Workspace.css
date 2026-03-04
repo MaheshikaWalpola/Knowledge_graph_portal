@@ -1,0 +1,620 @@
+/* ========================================
+   🗂️ WORKSPACE - Personal Ontology Editor
+   Clean, Tabbed Interface Design
+   ======================================== */
+
+/* Container */
+.workspace-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-xl) var(--space-lg);
+  min-height: calc(100vh - 160px);
+}
+
+/* Main Card */
+.workspace-card {
+  max-width: calc(1400px - 48px);
+  width: 100%;
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-2xl);
+  box-shadow: var(--shadow-card);
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* ========================================
+   📌 Header
+   ======================================== */
+.workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.workspace-header-left {
+  flex: 1;
+}
+
+.workspace-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.workspace-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: var(--space-xs) 0 0 0;
+}
+
+.workspace-header-actions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ========================================
+   🎛️ Tabs Navigation
+   ======================================== */
+.workspace-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--bg-glass);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  margin-bottom: var(--space-xl);
+}
+
+.workspace-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.workspace-tab:hover {
+  color: var(--text-primary);
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.workspace-tab.active {
+  color: white;
+  background: var(--gradient-primary);
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+}
+
+.workspace-tab svg {
+  opacity: 0.7;
+  transition: opacity var(--transition-normal);
+}
+
+.workspace-tab.active svg,
+.workspace-tab:hover svg {
+  opacity: 1;
+}
+
+/* ========================================
+   📝 Panel Content
+   ======================================== */
+.workspace-panel {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* ========================================
+   🔍 Search Form
+   ======================================== */
+.workspace-search-form {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.workspace-input {
+  flex: 1;
+  min-width: 200px;
+  height: 48px;
+  padding: 0 var(--space-lg);
+  font-size: 15px;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-glass);
+  backdrop-filter: blur(var(--blur-md));
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  outline: none;
+  transition: all var(--transition-normal);
+}
+
+.workspace-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+}
+
+.workspace-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.workspace-select {
+  height: 48px;
+  padding: 0 var(--space-lg);
+  padding-right: 40px;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  transition: all var(--transition-normal);
+}
+
+.workspace-select:focus {
+  border-color: var(--accent-primary);
+}
+
+/* ========================================
+   🔘 Buttons
+   ======================================== */
+.workspace-btn-primary {
+  height: 48px;
+  padding: 0 var(--space-xl);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: white;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  transition: all var(--transition-normal);
+  white-space: nowrap;
+}
+
+.workspace-btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+}
+
+.workspace-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.workspace-btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 40px;
+  padding: 0 var(--space-lg);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.workspace-btn-secondary:hover {
+  background: var(--bg-glass-strong);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ========================================
+   🔄 View Toggle
+   ======================================== */
+.workspace-view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-glass);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  margin-bottom: var(--space-lg);
+}
+
+.view-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.view-btn:hover {
+  color: var(--text-primary);
+}
+
+.view-btn.active {
+  color: white;
+  background: var(--gradient-primary);
+}
+
+/* ========================================
+   📊 Results Area
+   ======================================== */
+.workspace-results {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.results-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.results-badge {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-full);
+}
+
+.results-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.workspace-graph {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--bg-glass);
+}
+
+/* ========================================
+   📋 List View
+   ======================================== */
+.workspace-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 450px;
+  overflow-y: auto;
+  padding-right: var(--space-sm);
+}
+
+.edge-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-normal);
+}
+
+.edge-item:hover {
+  background: var(--bg-glass-strong);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+.edge-source,
+.edge-target {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.edge-relation {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* ========================================
+   📝 Details Panel
+   ======================================== */
+.workspace-details {
+  margin-top: var(--space-xl);
+  padding: var(--space-lg);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+}
+
+.workspace-details h4 {
+  margin: 0 0 var(--space-md) 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.details-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: rgba(124, 58, 237, 0.05);
+  border-radius: var(--radius-md);
+}
+
+.details-stats > div {
+  text-align: center;
+  font-size: 13px;
+}
+
+.details-stats strong {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+/* ========================================
+   ✏️ Edit Mode Toggle
+   ======================================== */
+.edit-mode-toggle {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xl);
+}
+
+.edit-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.edit-mode-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.edit-mode-btn.active {
+  color: white;
+  background: var(--gradient-primary);
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
+}
+
+/* ========================================
+   📝 Edit Form
+   ======================================== */
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.edit-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.edit-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.edit-triple-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-md);
+}
+
+/* ========================================
+   📤 Upload Section
+   ======================================== */
+.upload-section {
+  text-align: center;
+  padding: var(--space-xl);
+}
+
+.upload-description {
+  margin: 0 0 var(--space-xl) 0;
+  color: var(--text-secondary);
+}
+
+.upload-area {
+  margin-bottom: var(--space-xl);
+}
+
+.upload-input {
+  display: none;
+}
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+  border: 2px dashed var(--border-medium);
+  border-radius: var(--radius-xl);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.upload-label:hover {
+  border-color: var(--accent-primary);
+  background: rgba(124, 58, 237, 0.05);
+  color: var(--accent-primary);
+}
+
+/* ========================================
+   ✅ Status Banners
+   ======================================== */
+.error-banner {
+  padding: var(--space-md) var(--space-lg);
+  font-size: 14px;
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-md);
+}
+
+.success-banner {
+  padding: var(--space-md) var(--space-lg);
+  font-size: 14px;
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-md);
+}
+
+/* ========================================
+   ⏳ Loading States
+   ======================================== */
+.workspace-loading,
+.workspace-error {
+  text-align: center;
+  padding: var(--space-3xl);
+}
+
+.workspace-loading p {
+  margin-top: var(--space-md);
+  color: var(--text-secondary);
+}
+
+.workspace-loading-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-spinner.small {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--text-tertiary);
+}
+
+/* ========================================
+   📱 Responsive
+   ======================================== */
+@media (max-width: 768px) {
+  .workspace-container {
+    padding: var(--space-lg) var(--space-md);
+  }
+
+  .workspace-card {
+    padding: var(--space-xl);
+  }
+
+  .workspace-header {
+    flex-direction: column;
+  }
+
+  .workspace-tabs {
+    flex-direction: column;
+  }
+
+  .workspace-search-form {
+    flex-direction: column;
+  }
+
+  .edit-triple-row {
+    grid-template-columns: 1fr;
+  }
+
+  .details-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ========================================
+   ✨ Animations
+   ======================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

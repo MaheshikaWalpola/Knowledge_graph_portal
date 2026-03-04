@@ -1,0 +1,341 @@
+/* ========================================
+   🎨 MUI COMPONENT OVERRIDES
+   Global Material-UI Styling
+   ======================================== */
+
+/* ========================================
+   📋 Dialog / Modal Overrides
+   ======================================== */
+.MuiDialog-paper {
+  background: var(--bg-glass-strong) !important;
+  backdrop-filter: blur(var(--blur-xl)) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(180%) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: var(--radius-2xl) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+.MuiDialogTitle-root {
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important;
+  font-size: 1.25rem !important;
+  color: var(--text-primary) !important;
+  padding: var(--space-xl) var(--space-xl) var(--space-md) !important;
+}
+
+.MuiDialogContent-root {
+  padding: var(--space-md) var(--space-xl) !important;
+}
+
+.MuiDialogActions-root {
+  padding: var(--space-md) var(--space-xl) var(--space-xl) !important;
+  gap: var(--space-sm) !important;
+}
+
+/* ========================================
+   📝 Tab Overrides
+   ======================================== */
+.MuiTabs-root {
+  min-height: 48px !important;
+}
+
+.MuiTab-root {
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  text-transform: none !important;
+  min-height: 48px !important;
+  color: var(--text-secondary) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.MuiTab-root:hover {
+  color: var(--text-primary) !important;
+  background: rgba(124, 58, 237, 0.05) !important;
+}
+
+.MuiTab-root.Mui-selected {
+  color: var(--accent-primary) !important;
+}
+
+.MuiTabs-indicator {
+  background: var(--gradient-primary) !important;
+  height: 3px !important;
+  border-radius: var(--radius-full) var(--radius-full) 0 0 !important;
+}
+
+/* ========================================
+   🔘 Button Overrides
+   ======================================== */
+.MuiButton-root {
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  border-radius: var(--radius-lg) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.MuiButton-contained {
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.25) !important;
+}
+
+.MuiButton-contained:hover {
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.35) !important;
+}
+
+.MuiButton-outlined {
+  border-color: var(--border-medium) !important;
+}
+
+.MuiButton-outlined:hover {
+  border-color: var(--accent-primary) !important;
+  background: rgba(124, 58, 237, 0.05) !important;
+}
+
+/* ========================================
+   📝 TextField Overrides
+   ======================================== */
+.MuiTextField-root .MuiOutlinedInput-root {
+  font-family: var(--font-sans) !important;
+  border-radius: var(--radius-lg) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.MuiTextField-root .MuiOutlinedInput-notchedOutline {
+  border-color: var(--border-light) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.MuiTextField-root
+  .MuiOutlinedInput-root:hover
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--border-medium) !important;
+}
+
+.MuiTextField-root
+  .MuiOutlinedInput-root.Mui-focused
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--accent-primary) !important;
+  border-width: 2px !important;
+}
+
+.MuiInputLabel-root {
+  font-family: var(--font-sans) !important;
+  color: var(--text-secondary) !important;
+}
+
+.MuiInputLabel-root.Mui-focused {
+  color: var(--accent-primary) !important;
+}
+
+/* ========================================
+   📋 Select Overrides
+   ======================================== */
+.MuiSelect-root {
+  font-family: var(--font-sans) !important;
+}
+
+.MuiMenu-paper {
+  background: var(--bg-glass-strong) !important;
+  backdrop-filter: blur(var(--blur-lg)) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.MuiMenuItem-root {
+  font-family: var(--font-sans) !important;
+  font-size: 14px !important;
+  padding: var(--space-sm) var(--space-md) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.MuiMenuItem-root:hover {
+  background: rgba(124, 58, 237, 0.08) !important;
+}
+
+.MuiMenuItem-root.Mui-selected {
+  background: rgba(124, 58, 237, 0.12) !important;
+}
+
+/* ========================================
+   📢 Alert / Snackbar Overrides
+   ======================================== */
+.MuiAlert-root {
+  font-family: var(--font-sans) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.MuiAlert-filledSuccess {
+  background: var(--gradient-success) !important;
+}
+
+.MuiAlert-filledError {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+}
+
+.MuiSnackbar-root .MuiPaper-root {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+/* ========================================
+   📊 Table Overrides
+   ======================================== */
+.MuiTable-root {
+  font-family: var(--font-sans) !important;
+}
+
+.MuiTableHead-root {
+  background: var(--bg-tertiary) !important;
+}
+
+.MuiTableCell-head {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--text-secondary) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+}
+
+.MuiTableCell-body {
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+}
+
+.MuiTableRow-root:hover {
+  background: rgba(124, 58, 237, 0.04) !important;
+}
+
+/* ========================================
+   💫 Chip Overrides
+   ======================================== */
+.MuiChip-root {
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
+  border-radius: var(--radius-full) !important;
+}
+
+.MuiChip-colorPrimary {
+  background: var(--gradient-primary) !important;
+  color: white !important;
+}
+
+/* ========================================
+   🔄 Circular Progress
+   ======================================== */
+.MuiCircularProgress-colorPrimary {
+  color: var(--accent-primary) !important;
+}
+
+/* ========================================
+   📋 Card Overrides
+   ======================================== */
+.MuiCard-root {
+  background: var(--bg-glass-strong) !important;
+  backdrop-filter: blur(var(--blur-lg)) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-card) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.MuiCard-root:hover {
+  box-shadow: var(--shadow-xl) !important;
+  border-color: var(--border-medium) !important;
+}
+
+.MuiCardHeader-title {
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important;
+}
+
+.MuiCardContent-root {
+  font-family: var(--font-sans) !important;
+}
+
+/* ========================================
+   📋 Paper Overrides
+   ======================================== */
+.MuiPaper-root {
+  background: var(--bg-secondary) !important;
+}
+
+.MuiPaper-elevation1 {
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.MuiPaper-elevation2 {
+  box-shadow: var(--shadow-md) !important;
+}
+
+.MuiPaper-elevation3 {
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* ========================================
+   🔀 Divider
+   ======================================== */
+.MuiDivider-root {
+  border-color: var(--border-light) !important;
+}
+
+/* ========================================
+   📝 Tooltip
+   ======================================== */
+.MuiTooltip-tooltip {
+  font-family: var(--font-sans) !important;
+  font-size: 12px !important;
+  background: var(--bg-glass-strong) !important;
+  backdrop-filter: blur(var(--blur-md)) !important;
+  border: 1px solid var(--border-light) !important;
+  color: var(--text-primary) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ========================================
+   📋 List Overrides
+   ======================================== */
+.MuiList-root {
+  font-family: var(--font-sans) !important;
+}
+
+.MuiListItem-root {
+  transition: all var(--transition-fast) !important;
+}
+
+.MuiListItem-root:hover {
+  background: rgba(124, 58, 237, 0.05) !important;
+}
+
+.MuiListItemText-primary {
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
+  color: var(--text-primary) !important;
+}
+
+.MuiListItemText-secondary {
+  font-family: var(--font-sans) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* ========================================
+   🌙 Dark Mode for MUI components
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  .MuiDialog-paper,
+  .MuiMenu-paper,
+  .MuiCard-root {
+    background: rgba(18, 18, 26, 0.95) !important;
+  }
+
+  .MuiPaper-root {
+    background: rgba(18, 18, 26, 0.9) !important;
+  }
+
+  .MuiTableHead-root {
+    background: rgba(255, 255, 255, 0.03) !important;
+  }
+}

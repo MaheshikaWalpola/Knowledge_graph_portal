@@ -1,0 +1,336 @@
+/* ========================================
+   🔐 AUTH FORMS - Login & Registration
+   MacBook-Inspired Premium Design
+   ======================================== */
+
+/* Form Container */
+.login__form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2xl);
+  max-width: 440px;
+  margin: var(--space-2xl) auto;
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* Form Header (if needed) */
+.form-header {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+}
+
+.form-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--space-sm);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.form-subtitle {
+  color: var(--text-secondary);
+  font-size: 15px;
+  margin: 0;
+}
+
+/* Form Control Wrapper */
+.formControl {
+  width: 100% !important;
+  margin-bottom: var(--space-md) !important;
+}
+
+/* ========================================
+   📝 MUI TextField Overrides
+   ======================================== */
+.formControl .MuiOutlinedInput-root {
+  border-radius: var(--radius-lg) !important;
+  background: var(--bg-glass) !important;
+  backdrop-filter: blur(var(--blur-sm));
+  transition: all var(--transition-normal) !important;
+}
+
+.formControl .MuiOutlinedInput-root:hover {
+  background: var(--bg-glass-strong) !important;
+}
+
+.formControl .MuiOutlinedInput-root.Mui-focused {
+  background: var(--bg-glass-strong) !important;
+}
+
+.formControl .MuiOutlinedInput-notchedOutline {
+  border-color: var(--border-light) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.formControl .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: var(--border-medium) !important;
+}
+
+.formControl
+  .MuiOutlinedInput-root.Mui-focused
+  .MuiOutlinedInput-notchedOutline {
+  border-color: var(--accent-primary) !important;
+  border-width: 2px !important;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1) !important;
+}
+
+.formControl .MuiInputLabel-root {
+  color: var(--text-secondary) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.formControl .MuiInputLabel-root.Mui-focused {
+  color: var(--accent-primary) !important;
+}
+
+.formControl .MuiOutlinedInput-input {
+  color: var(--text-primary) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 15px !important;
+  padding: 16px !important;
+}
+
+/* Password visibility toggle */
+.formControl .MuiIconButton-root {
+  color: var(--text-tertiary) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.formControl .MuiIconButton-root:hover {
+  color: var(--accent-primary) !important;
+  background: rgba(124, 58, 237, 0.08) !important;
+}
+
+/* ========================================
+   🔘 Submit Button
+   ======================================== */
+.login__form .MuiButton-contained {
+  width: 100% !important;
+  height: 52px !important;
+  margin-top: var(--space-lg) !important;
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  border-radius: var(--radius-lg) !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  font-family: var(--font-sans) !important;
+  text-transform: none !important;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35) !important;
+  transition: all var(--transition-normal) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.login__form .MuiButton-contained::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.25),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.login__form .MuiButton-contained:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 25px rgba(124, 58, 237, 0.45) !important;
+}
+
+.login__form .MuiButton-contained:hover::before {
+  left: 100%;
+}
+
+.login__form .MuiButton-contained:active {
+  transform: translateY(0) !important;
+}
+
+/* ========================================
+   🔗 Links
+   ======================================== */
+.login__form a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all var(--transition-normal);
+  margin-top: var(--space-lg);
+}
+
+.login__form a:hover {
+  color: var(--accent-secondary);
+  text-decoration: underline;
+}
+
+/* ========================================
+   ❌ Error Message
+   ======================================== */
+.error__message {
+  font-size: 14px !important;
+  text-align: center;
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.1) 0%,
+    rgba(239, 68, 68, 0.05) 100%
+  );
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  color: #dc2626 !important;
+}
+
+/* Form Helper Text (inline errors) */
+.formControl .MuiFormHelperText-root {
+  color: #dc2626 !important;
+  font-size: 13px !important;
+  font-family: var(--font-sans) !important;
+  margin-top: var(--space-sm) !important;
+}
+
+/* ========================================
+   ✅ Success State
+   ======================================== */
+.success__message {
+  font-size: 14px;
+  text-align: center;
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.1) 0%,
+    rgba(16, 185, 129, 0.05) 100%
+  );
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-md);
+  color: #059669;
+}
+
+/* ========================================
+   📱 Responsive Adjustments
+   ======================================== */
+@media (max-width: 600px) {
+  .login__form {
+    margin: var(--space-lg);
+    padding: var(--space-xl);
+    max-width: none;
+    border-radius: var(--radius-xl);
+  }
+
+  .form-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* ========================================
+   🌙 Dark Mode Adjustments
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  .formControl .MuiOutlinedInput-root {
+    background: rgba(255, 255, 255, 0.03) !important;
+  }
+
+  .formControl .MuiOutlinedInput-root:hover,
+  .formControl .MuiOutlinedInput-root.Mui-focused {
+    background: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .error__message {
+    background: linear-gradient(
+      135deg,
+      rgba(239, 68, 68, 0.15) 0%,
+      rgba(239, 68, 68, 0.08) 100%
+    );
+    color: #f87171 !important;
+  }
+
+  .success__message {
+    background: linear-gradient(
+      135deg,
+      rgba(16, 185, 129, 0.15) 0%,
+      rgba(16, 185, 129, 0.08) 100%
+    );
+    color: #34d399;
+  }
+}
+
+/* ========================================
+   ✨ Animation
+   ======================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
+   📋 Registration Form Specific
+   ======================================== */
+.registration-form {
+  max-width: 500px;
+}
+
+.registration-form .formControl {
+  margin-bottom: var(--space-md) !important;
+}
+
+/* Name fields side by side */
+.name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  width: 100%;
+}
+
+@media (max-width: 500px) {
+  .name-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Terms checkbox styling */
+.terms-checkbox {
+  margin-top: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.terms-checkbox .MuiCheckbox-root {
+  color: var(--text-tertiary) !important;
+}
+
+.terms-checkbox .MuiCheckbox-root.Mui-checked {
+  color: var(--accent-primary) !important;
+}
+
+.terms-checkbox label {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.terms-checkbox a {
+  margin: 0;
+  margin-left: 4px;
+}

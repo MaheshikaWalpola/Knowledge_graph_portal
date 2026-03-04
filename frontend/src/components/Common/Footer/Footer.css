@@ -1,0 +1,96 @@
+/* ========================================
+   🦶 FOOTER
+   MacBook-Inspired Premium Design
+   ======================================== */
+
+/* Footer Container */
+.footer {
+  padding: var(--space-2xl) var(--space-lg);
+  margin-top: auto;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative gradient line at top */
+.footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 2px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-full);
+  opacity: 0.5;
+}
+
+/* Footer Title */
+.footer-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Copyright Text */
+.footer-copyright {
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
+
+/* MUI Typography overrides for footer */
+footer .MuiTypography-body1 {
+  font-family: var(--font-sans) !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+  margin-bottom: var(--space-xs) !important;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+footer .MuiTypography-body2 {
+  font-family: var(--font-sans) !important;
+  font-size: 13px !important;
+  color: var(--text-tertiary) !important;
+}
+
+/* Footer as MUI Box */
+footer.MuiBox-root {
+  padding: var(--space-2xl) var(--space-lg) !important;
+  margin-top: auto !important;
+  text-align: center;
+  position: relative;
+  background: transparent;
+}
+
+footer.MuiBox-root::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 2px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-full);
+  opacity: 0.4;
+}
+
+/* ========================================
+   📱 Responsive Adjustments
+   ======================================== */
+@media (max-width: 600px) {
+  .footer,
+  footer.MuiBox-root {
+    padding: var(--space-xl) var(--space-md) !important;
+  }
+}

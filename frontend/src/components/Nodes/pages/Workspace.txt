@@ -1,0 +1,742 @@
+import React, { useEffect, useState, useMemo } from "react";
+import axios from "axios";
+import CytoscapeComponent from "react-cytoscapejs";
+import "./SearchConnection.css";
+import "./Workspace.css";
+
+const API = import.meta.env.VITE_API_URL;
+const CMP_NS = import.meta.env.VITE_CMP_NS || "https://tucid/cpmo/";
+
+// ---------- helpers ----------
+const local = (iri = "") => iri.split("#").pop().split("/").pop();
+
+function hashToIndex(str, modulo) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) h = (h ^ str.charCodeAt(i)) * 16777619;
+  return Math.abs(h) % modulo;
+}
+
+const PALETTE = [
+  "#ef4444",
+  "#10b981",
+  "#f59e0b",
+  "#8b5cf6",
+  "#14b8a6",
+  "#f97316",
+  "#22c55e",
+  "#3b82f6",
+  "#e11d48",
+  "#06b6d4",
+];
+
+const makeLocalName = (label = "") => {
+  const cleaned = label.replace(/[^A-Za-z0-9]+/g, " ").trim();
+  if (!cleaned) return "";
+  const parts = cleaned.split(/\s+/);
+  return parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join("");
+};
+
+const makeSchemaIri = (label = "") => `${CMP_NS}${makeLocalName(label)}`;
+
+// map simple predicate text → well-known IRIs
+const PREDICATE_MAP = {
+  subclassof: "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+  "rdfs:subclassof": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+  "rdfs-subclassof": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+  hasinputparameter: `${CMP_NS}hasInputParameter`,
+  hasoutputparameter: `${CMP_NS}hasOutputParameter`,
+};
+
+const toSchemaIri = (value) => {
+  const v = value.trim();
+  if (!v) return "";
+  if (v.startsWith("http://") || v.startsWith("https://")) return v;
+  return makeSchemaIri(v);
+};
+
+const toPredicateIri = (value) => {
+  const v = value.trim();
+  if (!v) return "";
+  if (v.startsWith("http://") || v.startsWith("https://")) return v;
+  const key = v.toLowerCase().replace(/\s+/g, "");
+  if (PREDICATE_MAP[key]) return PREDICATE_MAP[key];
+  return makeSchemaIri(v);
+};
+
+// ---------- component ----------
+const Workspace = () => {
+  // workspace init
+  const [initStatus, setInitStatus] = useState("idle");
+  const [initError, setInitError] = useState("");
+
+  // NEW: which workspace schema is active
+  const [schemaId, setSchemaId] = useState("main"); // <--- important
+
+  // search
+  const [q, setQ] = useState("");
+  const [view, setView] = useState("list");
+  const [level, setLevel] = useState("schema");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const [data, setData] = useState(null);
+
+  // edit mode
+  const [editMode, setEditMode] = useState("add"); // add | delete | replace
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState("");
+
+  // ADD triple fields
+  const [addSubj, setAddSubj] = useState("");
+  const [addPred, setAddPred] = useState("");
+  const [addObj, setAddObj] = useState("");
+
+  // DELETE triple fields
+  const [delSubj, setDelSubj] = useState("");
+  const [delPred, setDelPred] = useState("");
+  const [delObj, setDelObj] = useState("");
+
+  // REPLACE triple fields
+  const [oldSubj, setOldSubj] = useState("");
+  const [oldPred, setOldPred] = useState("");
+  const [oldObj, setOldObj] = useState("");
+  const [newSubj, setNewSubj] = useState("");
+  const [newPred, setNewPred] = useState("");
+  const [newObj, setNewObj] = useState("");
+
+  const token = localStorage.getItem("token");
+
+  // ---------- init workspace ----------
+  // IMPORTANT: must pass schema_id
+  useEffect(() => {
+    const init = async () => {
+      if (!token) {
+        setInitStatus("error");
+        setInitError("You must be logged in to use the workspace.");
+        return;
+      }
+      setInitStatus("loading");
+      try {
+        await axios.post(
+          `${API}/workspace/init`,
+          {},
+          {
+            params: { schema_id: schemaId }, // <--- NEW
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setInitStatus("ready");
+      } catch (e) {
+        console.error("Workspace init failed", e);
+        const msg =
+          e?.response?.data?.detail ||
+          e?.response?.data?.message ||
+          "Failed to initialize workspace";
+        setInitError(msg);
+        setInitStatus("error");
+      }
+    };
+    init();
+  }, [token, schemaId]); // <--- NEW: re-init when schema changes
+
+  // ---------- search ----------
+  const doSearch = async (e) => {
+    e?.preventDefault();
+    if (!q.trim()) return;
+    if (!token) {
+      setErr("You must be logged in to query your workspace.");
+      return;
+    }
+    setErr("");
+    setLoading(true);
+    setData(null);
+    try {
+      const res = await axios.get(`${API}/workspace/neighbors`, {
+        params: { schema_id: schemaId, q, limit: 5000, level }, // <--- NEW
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setData(res.data);
+    } catch (e) {
+      console.error("Workspace search error", e);
+      const msg =
+        e?.response?.data?.detail ||
+        e?.response?.data?.message ||
+        e.message ||
+        "Error while searching workspace.";
+      setErr(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------- download ----------
+  const handleDownload = async () => {
+    if (!token) {
+      setErr("You must be logged in to download your workspace.");
+      return;
+    }
+    try {
+      const res = await axios.get(`${API}/workspace/export`, {
+        params: { schema_id: schemaId }, // <--- NEW
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], { type: "text/turtle" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `workspace_schema_${schemaId}.ttl`; // <--- nice
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Download error", e);
+      const msg =
+        e?.response?.data?.detail ||
+        e?.response?.data?.message ||
+        "Failed to download workspace schema.";
+      setErr(msg);
+    }
+  };
+
+  // ---------- graph ----------
+  const cyElements = useMemo(() => {
+    if (!data) return [];
+    const nodes = new Map();
+    const pushNode = (id, isCenter = false) => {
+      if (!id || nodes.has(id)) return;
+      const label = local(id);
+      const color = isCenter
+        ? "#2563eb"
+        : PALETTE[hashToIndex(id, PALETTE.length)];
+      nodes.set(id, {
+        data: { id, label, color, isCenter: String(!!isCenter) },
+      });
+    };
+    if (data.node) pushNode(data.node, true);
+    if (Array.isArray(data.nodes)) {
+      for (const n of data.nodes) {
+        const nid = typeof n === "string" ? n : n?.iri || n?.id || n?.value;
+        pushNode(nid);
+      }
+    }
+    const edges = [];
+    for (const e of data.edges || []) {
+      const source = e.source || e.s || e.from;
+      const target = e.target || e.t || e.to;
+      const relation = e.relation || e.p || e.pred || e.label;
+      const id = `${source}->${relation}->${target}`;
+      pushNode(source);
+      pushNode(target);
+      edges.push({ data: { id, source, target, label: local(relation) } });
+    }
+    return [...nodes.values(), ...edges];
+  }, [data]);
+
+  const stylesheet = useMemo(
+    () => [
+      {
+        selector: "node",
+        style: {
+          "background-color": "data(color)",
+          label: "data(label)",
+          color: "#111827",
+          "font-size": 5,
+          "text-wrap": "wrap",
+          "text-max-width": 50,
+          "text-valign": "center",
+          "text-halign": "center",
+          width: 20,
+          height: 20,
+          "border-width": "none",
+        },
+      },
+      {
+        selector: 'node[isCenter = "true"]',
+        style: {
+          width: 27,
+          height: 27,
+          "font-weight": 700,
+          color: "#0f172a",
+        },
+      },
+      {
+        selector: "edge",
+        style: {
+          width: 1.5,
+          "line-color": "#94a3b8",
+          "target-arrow-color": "#94a3b8",
+          "target-arrow-shape": "triangle",
+          label: "data(label)",
+          "font-size": 5,
+          color: "#171c23ff",
+          "curve-style": "bezier",
+        },
+      },
+      {
+        selector: ":selected",
+        style: {
+          "border-width": 3,
+          "border-color": "#111827",
+          "line-color": "#111827",
+          "target-arrow-color": "#111827",
+        },
+      },
+    ],
+    []
+  );
+
+  // ---------- apply edits ----------
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!token) {
+      setEditError("You must be logged in to edit your workspace.");
+      return;
+    }
+
+    setEditError("");
+    setEditSuccess("");
+    setEditLoading(true);
+
+    try {
+      if (editMode === "add") {
+        const sIri = toSchemaIri(addSubj);
+        const pIri = toPredicateIri(addPred);
+        const oIri = toSchemaIri(addObj);
+
+        if (!sIri || !pIri || !oIri) {
+          setEditError("Subject, predicate, and object are required for Add.");
+          setEditLoading(false);
+          return;
+        }
+
+        const res = await axios.post(
+          `${API}/workspace/triple/add`,
+          { subject: sIri, predicate: pIri, object: oIri },
+          {
+            params: { schema_id: schemaId }, // <--- NEW
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        setEditSuccess("Triple added to your workspace.");
+        if (res.data && res.data.neighbors) setData(res.data.neighbors);
+      } else if (editMode === "delete") {
+        const sIri = toSchemaIri(delSubj);
+        const pIri = toPredicateIri(delPred);
+
+        if (!sIri || !pIri) {
+          setEditError("Subject and predicate are required for Delete.");
+          setEditLoading(false);
+          return;
+        }
+
+        const payload = { subject: sIri, predicate: pIri };
+        const oIri = delObj.trim() ? toSchemaIri(delObj) : "";
+        if (oIri) payload.object = oIri;
+
+        const res = await axios.post(`${API}/workspace/triple/delete`, payload, {
+          params: { schema_id: schemaId }, // <--- NEW
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setEditSuccess("Triple(s) deleted from your workspace.");
+        if (res.data && res.data.neighbors) setData(res.data.neighbors);
+      } else if (editMode === "replace") {
+        const oldSIri = toSchemaIri(oldSubj);
+        const oldPIri = toPredicateIri(oldPred);
+        const oldOIri = toSchemaIri(oldObj);
+
+        const newSIri = toSchemaIri(newSubj);
+        const newPIri = toPredicateIri(newPred);
+        const newOIri = toSchemaIri(newObj);
+
+        if (!oldSIri || !oldPIri || !oldOIri) {
+          setEditError("Old Subject, Predicate and Object are required.");
+          setEditLoading(false);
+          return;
+        }
+        if (!newSIri || !newPIri || !newOIri) {
+          setEditError("New Subject, Predicate and Object are required.");
+          setEditLoading(false);
+          return;
+        }
+
+        await axios.post(
+          `${API}/workspace/triple/delete`,
+          { subject: oldSIri, predicate: oldPIri, object: oldOIri },
+          {
+            params: { schema_id: schemaId }, // <--- NEW
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        const res = await axios.post(
+          `${API}/workspace/triple/add`,
+          { subject: newSIri, predicate: newPIri, object: newOIri },
+          {
+            params: { schema_id: schemaId }, // <--- NEW
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        setEditSuccess("Triple replaced in your workspace.");
+        if (res.data && res.data.neighbors) setData(res.data.neighbors);
+      }
+    } catch (e) {
+      console.error("Workspace edit error", e);
+      const msg =
+        e?.response?.data?.detail ||
+        e?.response?.data?.message ||
+        "Failed to apply change to workspace.";
+      setEditError(msg);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // ---------- render ----------
+  if (initStatus === "loading") {
+    return (
+      <div className="search-container">
+        <div className="search-card">
+          <h2 className="search-title">Workspace</h2>
+          <p className="search-sub">Preparing your personal ontology...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (initStatus === "error") {
+    return (
+      <div className="search-container">
+        <div className="search-card">
+          <h2 className="search-title">Workspace</h2>
+          <div className="error-banner">{initError}</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="search-container">
+      <div className="search-card">
+        {/* Header */}
+        <div className="search-header header-row">
+          <div>
+            <h2 className="search-title">My Workspace</h2>
+            <br />
+          </div>
+
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+            {/* NEW: schema selector */}
+            <select
+              className="search-select"
+              value={schemaId}
+              onChange={(e) => {
+                setSchemaId(e.target.value);
+                setData(null);
+                setErr("");
+              }}
+              title="Select which workspace schema you are editing"
+            >
+              <option value="main">main</option>
+              <option value="schema1">schema1</option>
+              <option value="schema2">schema2</option>
+            </select>
+
+            <button
+              type="button"
+              className="search-btn"
+              style={{ padding: "0.4rem 0.9rem", fontSize: 14 }}
+              onClick={handleDownload}
+            >
+              Download schema
+            </button>
+
+            <div className="view-toggle seg">
+              <button
+                type="button"
+                className={`seg-btn ${view === "list" ? "active" : ""}`}
+                onClick={() => setView("list")}
+              >
+                List
+              </button>
+              <button
+                type="button"
+                className={`seg-btn ${view === "graph" ? "active" : ""}`}
+                onClick={() => setView("graph")}
+              >
+                Graph
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Search form */}
+        <form className="search-row" onSubmit={doSearch}>
+          <input
+            className="search-input"
+            placeholder="Enter term or IRI (e.g., Velocity)"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <select
+            className="search-select"
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+          >
+            <option value="schema">Workspace schema</option>
+          </select>
+          <button className="search-btn" type="submit">
+            Search
+          </button>
+        </form>
+
+        {loading && (
+          <div className="skeleton-wrap">
+            <div className="skeleton-line" />
+            <div className="skeleton-line" />
+            <div className="skeleton-line" />
+          </div>
+        )}
+
+        {err && <div className="error-banner">{err}</div>}
+
+        {data && (
+          <div className="results">
+            <div className="result-meta">
+              <div>
+                <span className="badge">Center</span> {data.node}
+              </div>
+              <div className="meta-right">
+                <span className="badge-outline">
+                  nodes:{" "}
+                  {Array.isArray(data.nodes)
+                    ? data.nodes.length
+                    : cyElements.filter(
+                        (el) => el.data && el.data.id && !el.data.source
+                      ).length}
+                </span>
+                <span className="badge-outline">edges: {data.edges?.length ?? 0}</span>
+              </div>
+            </div>
+
+            {view === "list" && (
+              <div className="edges">
+                {data.edges?.map((e, i) => (
+                  <div className="edge-row" key={i}>
+                    <div className="edge-col">
+                      <span className="dot dot-src" />
+                      <code title={e.source}>{local(e.source)}</code>
+                    </div>
+                    <div className="edge-rel">{local(e.relation)}</div>
+                    <div className="edge-col">
+                      <span className="dot dot-tgt" />
+                      <code title={e.target}>{local(e.target)}</code>
+                    </div>
+                  </div>
+                ))}
+                {(!data.edges || data.edges.length === 0) && (
+                  <div className="empty">No connections found.</div>
+                )}
+              </div>
+            )}
+
+            {view === "graph" && (
+              <div className="graph-wrap">
+                {cyElements.length === 0 ? (
+                  <div className="empty">No graph to display.</div>
+                ) : (
+                  <CytoscapeComponent
+                    elements={cyElements}
+                    layout={{ name: "cose", animate: "end", fit: true, padding: 30 }}
+                    stylesheet={stylesheet}
+                    style={{ width: "100%", height: "520px" }}
+                    wheelSensitivity={0.2}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Edit workspace */}
+        <div className="edit-section" style={{ marginTop: "2rem" }}>
+          <h3 style={{ marginBottom: "0.5rem" }}>
+            Edit your workspace (schema: <code>{schemaId}</code>)
+          </h3>
+
+          <div className="seg" style={{ marginBottom: "0.75rem" }}>
+            <button
+              type="button"
+              className={`seg-btn ${editMode === "add" ? "active" : ""}`}
+              onClick={() => {
+                setEditMode("add");
+                setEditError("");
+                setEditSuccess("");
+              }}
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              className={`seg-btn ${editMode === "delete" ? "active" : ""}`}
+              onClick={() => {
+                setEditMode("delete");
+                setEditError("");
+                setEditSuccess("");
+              }}
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              className={`seg-btn ${editMode === "replace" ? "active" : ""}`}
+              onClick={() => {
+                setEditMode("replace");
+                setEditError("");
+                setEditSuccess("");
+              }}
+            >
+              Update
+            </button>
+          </div>
+
+          <form onSubmit={handleEditSubmit} className="edit-form">
+            {editMode === "add" && (
+              <div className="edit-row">
+                <input
+                  className="search-input"
+                  placeholder="Subject (e.g., HeadSpeed)"
+                  value={addSubj}
+                  onChange={(e) => setAddSubj(e.target.value)}
+                />
+                <input
+                  className="search-input"
+                  placeholder="Predicate (e.g., subClassOf)"
+                  value={addPred}
+                  onChange={(e) => setAddPred(e.target.value)}
+                />
+                <input
+                  className="search-input"
+                  placeholder="Object (e.g., Velocity)"
+                  value={addObj}
+                  onChange={(e) => setAddObj(e.target.value)}
+                />
+              </div>
+            )}
+
+            {editMode === "delete" && (
+              <div className="edit-row">
+                <input
+                  className="search-input"
+                  placeholder="Subject (term or IRI)"
+                  value={delSubj}
+                  onChange={(e) => setDelSubj(e.target.value)}
+                />
+                <input
+                  className="search-input"
+                  placeholder="Predicate (term or IRI, e.g., subClassOf)"
+                  value={delPred}
+                  onChange={(e) => setDelPred(e.target.value)}
+                />
+                <input
+                  className="search-input"
+                  placeholder="Object (optional; empty = delete all objects)"
+                  value={delObj}
+                  onChange={(e) => setDelObj(e.target.value)}
+                />
+              </div>
+            )}
+
+            {editMode === "replace" && (
+              <>
+                <div style={{ fontSize: 13, marginBottom: "0.35rem", fontWeight: 500 }}>
+                  Old triple (what currently exists)
+                </div>
+                <div className="edit-row">
+                  <input
+                    className="search-input"
+                    placeholder="Old Subject (e.g., BottomSpeed)"
+                    value={oldSubj}
+                    onChange={(e) => setOldSubj(e.target.value)}
+                  />
+                  <input
+                    className="search-input"
+                    placeholder="Old Predicate (e.g., subClassOf)"
+                    value={oldPred}
+                    onChange={(e) => setOldPred(e.target.value)}
+                  />
+                  <input
+                    className="search-input"
+                    placeholder="Old Object (e.g., Velocity)"
+                    value={oldObj}
+                    onChange={(e) => setOldObj(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ fontSize: 13, margin: "0.6rem 0 0.35rem", fontWeight: 500 }}>
+                  New triple (what you want instead)
+                </div>
+                <div className="edit-row">
+                  <input
+                    className="search-input"
+                    placeholder="New Subject (e.g., BotSpeed)"
+                    value={newSubj}
+                    onChange={(e) => setNewSubj(e.target.value)}
+                  />
+                  <input
+                    className="search-input"
+                    placeholder="New Predicate (e.g., subClassOf or hasInputParameter)"
+                    value={newPred}
+                    onChange={(e) => setNewPred(e.target.value)}
+                  />
+                  <input
+                    className="search-input"
+                    placeholder="New Object (e.g., Velocity)"
+                    value={newObj}
+                    onChange={(e) => setNewObj(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+
+            {editError && (
+              <div className="error-banner" style={{ marginTop: "0.5rem" }}>
+                {editError}
+              </div>
+            )}
+            {editSuccess && (
+              <div
+                className="success-banner"
+                style={{
+                  marginTop: "0.5rem",
+                  padding: "0.5rem 0.75rem",
+                  borderRadius: 4,
+                  background: "#dcfce7",
+                  color: "#166534",
+                  fontSize: 14,
+                }}
+              >
+                {editSuccess}
+              </div>
+            )}
+
+            <button
+              className="search-btn"
+              type="submit"
+              style={{ marginTop: "0.75rem", width: "220px" }}
+              disabled={editLoading}
+            >
+              {editLoading ? "Saving..." : "Apply change"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Workspace;
