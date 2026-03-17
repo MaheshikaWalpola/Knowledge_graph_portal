@@ -5,24 +5,18 @@ query results (returned from GraphDB) into natural language explanations for
 domain experts. The target audience is CMP process engineers who may not be
 familiar with ontology or SPARQL terminology.
 
----
-
 ## Prompt 1 - SPARQL Result to Natural Language
 
 ```
-You are an expert in semiconductor manufacturing and knowledge graphs.
-
 I queried a knowledge graph about a CMP (Chemical Mechanical Planarization) process
 and received the following SPARQL result in JSON format:
 
-[paste SPARQL JSON result here]
+[SPARQL JSON result here]
 
 Please convert this into a clear, concise paragraph that a process engineer
-can understand. Avoid technical ontology terms. 
+can understand. Avoid technical ontology terms.
 Use simple language and focus on what the data means for the process.
 ```
-
----
 
 ## Prompt 2 - Explaining Graph Paths
 
@@ -35,11 +29,9 @@ CMPTool_IPEC_01
   -> hasPadLifetime      -> 340 (polishing cycles)
 
 Explain what this means in plain English for a CMP process engineer.
-Mention whether the pad lifetime looks reasonable based on typical industry norms 
+Mention whether the pad lifetime looks reasonable based on typical industry norms
 (typical pads last 200-500 polishing cycles).
 ```
-
----
 
 ## Prompt 3 - Anomaly Explanation
 
@@ -58,8 +50,6 @@ A SPARQL query returned the following anomalous data from a CMP process log:
 Based on this data, what is the most likely cause of the lower-than-expected
 removal rate? Explain your reasoning step by step.
 ```
-
----
 
 ## Prompt 4 - Generating a Text Summary for a Full Process Run
 
@@ -83,8 +73,6 @@ Process run data:
 - PolishingPad used: Pad_55 (lifetime: 210 cycles)
 ```
 
----
-
 ## Prompt 5 - SHACL Validation Result Explanation
 
 ```
@@ -103,11 +91,13 @@ who is not familiar with SHACL or ontologies. Also suggest what data needs
 to be added to fix the problem.
 ```
 
----
-
 ## Notes
 
-- These prompts were tested with GPT-4 and GPT-3.5-turbo.
-- The generated explanations were reviewed by a domain expert before use.
-- In the final portal, explanation generation is triggered from the frontend
-  via the backend `/api/explain` endpoint, which calls the OpenAI API.
+These prompts are conceptual examples written to illustrate the idea behind
+Stage 3 of the pipeline. In practice, the explanation step is conversational
+and depends on what the user queries from the graph.
+
+The AI-assisted explanation feature is currently in the implementation stage.
+The backend endpoint for calling the language model is planned, and these
+prompts represent the intended direction for how query results will be
+translated into plain language for domain experts.

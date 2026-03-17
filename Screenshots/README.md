@@ -2,16 +2,12 @@
 
 These screenshots show the main views of the Knowledge Graph Portal.
 
----
-
 ## Home Page
 
 The landing page of the portal. It shows the portal name and a short description.
 Navigation links at the top give access to Search, Ontology, AI Assistant, and Workspace.
 
 ![Home page](Screenshot%202026-03-17%20121909.png)
-
----
 
 ## AI Assistant
 
@@ -21,8 +17,6 @@ or "Explain the schema structure".
 
 ![AI assistant](Screenshot%202026-03-17%20121824.png)
 
----
-
 ## Search - List View
 
 The Search page lets you look up any concept in the ontology.
@@ -30,8 +24,6 @@ Searching for "Pressure" in schema-only mode returns all related classes and the
 listed as triples (subject, predicate, object).
 
 ![Search list view](Screenshot%202026-03-17%20122501.png)
-
----
 
 ## Ontology - Graph View
 
@@ -41,16 +33,12 @@ RetainingRingPressure, InnerTubePressure, DownForcePressure) connected by subCla
 
 ![Ontology graph view](Screenshot%202026-03-17%20122645.png)
 
----
-
 ## Workspace - Search Tab
 
 The Workspace is a personal working area where you can search the schema,
 edit triples directly, or upload CSV files. The Search tab is shown here.
 
 ![Workspace search tab](Screenshot%202026-03-17%20122700.png)
-
----
 
 ## Workspace - Graph Search Result
 
@@ -59,16 +47,12 @@ related classes with labelled edges (is subclass of, input). Results show 6 node
 
 ![Workspace graph result](Screenshot%202026-03-17%20122810.png)
 
----
-
 ## Workspace - Edit Triples
 
 The Edit Triples tab allows you to manually add, delete, or update RDF triples
 in the knowledge graph. You enter the Subject, Predicate, and Object for each triple.
 
 ![Workspace edit triples](Screenshot%202026-03-17%20122823.png)
-
----
 
 ## Workspace - Upload CSV
 
@@ -77,11 +61,9 @@ RDF instance data from it based on the current workspace schema.
 
 ![Workspace upload CSV](Screenshot%202026-03-17%20122840.png)
 
----
-
 ## Workspace - Export
 
 The Export button (top right of the Workspace) lets you download the current
-schema or instance data from the workspace in RDF format.
+schema data from the workspace in RDF format.
 
 ![Workspace export](Screenshot%202026-03-17%20122709.png)

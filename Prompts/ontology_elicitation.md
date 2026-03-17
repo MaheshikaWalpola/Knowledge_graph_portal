@@ -5,12 +5,10 @@ the CMP Process Ontology (CMPO). The goal was to generate an initial ontology
 skeleton covering the domain of Chemical Mechanical Planarization, aligned with
 the Basic Formal Ontology (BFO).
 
----
-
 ## Prompt 1 - Initial Domain Overview
 
 ```
-You are an ontology engineer. I want to model the domain of Chemical Mechanical
+I want to model the domain of Chemical Mechanical
 Planarization (CMP) as used in semiconductor manufacturing.
 
 CMP is a process where a wafer is polished using a rotating polishing pad and a
@@ -26,8 +24,6 @@ Please list the major concepts (classes) in this domain, including:
 
 Give a flat list first, then suggest a possible class hierarchy.
 ```
-
----
 
 ## Prompt 2 - Aligning with BFO
 
@@ -58,8 +54,6 @@ and briefly justify your choice:
 - RemovalRate
 ```
 
----
-
 ## Prompt 3 - Generating Object Properties
 
 ```
@@ -82,8 +76,6 @@ Focus on these relationships:
 Return the result as a turtle snippet using the cmpo: prefix.
 ```
 
----
-
 ## Prompt 4 - Iterative Refinement and Comments
 
 ```
@@ -100,8 +92,6 @@ Please review it and suggest:
 Also add rdfs:comment annotations where the meaning of a class or property
 is not obvious from the name alone.
 ```
-
----
 
 ## Prompt 5 - Generating a Minimal ABox (Instance Example)
 
@@ -122,10 +112,11 @@ Use the prefix: cmpo: <https://tucid/cpmo/>
 Return valid Turtle that can be imported directly into GraphDB.
 ```
 
----
-
 ## Notes
 
-- All prompts were submitted to GPT-4 (OpenAI API, gpt-4-turbo) in March 2024.
-- Responses were reviewed and corrected manually before adding to the ontology files.
-- The final ontology file is `ontology/VSR_CMP_schema.ttl`.
+These prompts are not exact transcripts. They are written here to give a conceptual
+idea of how the ontology was developed conversationally with an AI assistant.
+
+In practice, the process was exploratory. Questions were asked in a back-and-forth
+way to gradually build up an understanding of what classes, properties, and
+relationships make sense for the domain.
