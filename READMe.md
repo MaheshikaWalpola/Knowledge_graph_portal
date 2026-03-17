@@ -1,4 +1,4 @@
-# KG Portal - CMP Process Knowledge Graph
+# Knowledge Graph Portal
 
 A research prototype for visualising and querying an OWL ontology for
 Chemical Mechanical Planarization (CMP) processes in semiconductor manufacturing.
@@ -9,38 +9,40 @@ The portal provides a graph-based interface for exploring instances,
 running SPARQL queries, and generating natural language explanations
 with the help of a large language model.
 
----
+## Research Background
 
-## Method
+Knowledge graphs have emerged as a powerful approach for representing and
+querying complex domain knowledge in manufacturing and industrial settings.
+In the domain of Chemical Mechanical Planarization (CMP), process knowledge
+is distributed across equipment logs, recipes, metrology reports, and expert
+know-how, making it difficult to query and reason over in a unified way.
 
-The ontology and instance data were created through a three-stage pipeline:
+This prototype investigates how an OWL ontology (CMPO), aligned with the
+Basic Formal Ontology (BFO), can serve as a common semantic layer for CMP
+process data. The ontology captures the key classes, properties, and
+relationships of the CMP domain including equipment, consumables, process
+parameters, wafer properties, and agent roles.
 
-**Stage 1 - Ontology Elicitation (LLM-assisted)**
-An LLM (GPT-4) was prompted iteratively to draft classes, properties, and
-BFO alignments for the CMP domain. The generated drafts were reviewed and
-corrected by a domain expert. See `prompts/ontology_elicitation.md`.
+The knowledge graph was built through three stages. Domain concepts were
+first elicited and structured with the help of a large language model, then
+reviewed and corrected by a domain expert. Industrial sensor and process data
+from CSV logs was then mapped to CMPO classes and serialised as RDF triples,
+loaded into GraphDB. A natural language explanation feature is currently in
+progress, aiming to translate SPARQL query results into plain language
+summaries for process engineers using an LLM.
 
-**Stage 2 - Knowledge Graph Population**
-Process data from industrial CSV logs was mapped to CMPO classes and
-serialised as RDF triples in Turtle format. The result is stored in
-`data/instances_v2.ttl` and loaded into a local GraphDB repository.
-
-**Stage 3 - Explanation Generation (LLM-assisted)**
-SPARQL query results returned from the graph are passed to an LLM to
-generate plain-language explanations for process engineers. The prompts
-used for this step are in `prompts/explanation_generation.md`.
-
----
+The portal provides a web interface for exploring the graph, searching schema
+relationships, editing triples, and uploading CSV data to generate instances.
 
 ## Repository Structure
 
 ```
 KGPortal/
-    backend/                    already exists - FastAPI application
-    frontend/                   already exists - React/Vite application
+    backend/                    python
+    frontend/                   React/Vite
     ontology/
         VSR_CMP_schema.ttl      CMPO schema (TBox), BFO-aligned
-        Schema_instance_based.ttl   earlier AI-generated ontology draft
+        Schema_instance_based.ttl
     data/
         instances_v2.ttl        RDF instance data (ABox)
         CMP-training-000.csv    raw PHM sensor data
@@ -56,12 +58,6 @@ KGPortal/
     READMe.md                   this file
 ```
 
-> Note: Industrial datasets are not included in this repository due to
-> confidentiality agreements. The `data/` folder contains a representative
-> sample only.
-
----
-
 ## Prerequisites
 
 Before running the project, make sure you have:
@@ -71,8 +67,6 @@ Before running the project, make sure you have:
 - GraphDB (free edition) - https://graphdb.ontotext.com/
 - Git
 
----
-
 ## 1. GraphDB Setup
 
 1. Install GraphDB and open the workbench at `http://localhost:7200`
@@ -81,8 +75,6 @@ Before running the project, make sure you have:
 4. Go to **Import -> Upload RDF file**
 5. Upload `ontology/VSR_CMP_schema.ttl` and `data/instances_v2.ttl`
 6. Make sure the target repository is `cmp_repo` and click **Import**
-
----
 
 ## 2. Backend Setup (FastAPI)
 
@@ -115,8 +107,6 @@ Start the server:
 uvicorn main:app --reload --port 8000
 ```
 
----
-
 ## 3. Frontend Setup (React / Vite)
 
 ```
@@ -126,8 +116,6 @@ npm run dev
 ```
 
 The portal will be available at `http://localhost:5173`.
-
----
 
 ## Next Steps
 
