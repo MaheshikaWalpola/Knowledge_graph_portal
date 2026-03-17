@@ -1,0 +1,85 @@
+import pandas as pd
+from pathlib import Path
+from rdflib import Graph, Namespace, Literal, RDF, XSD
+
+# ---------- Configuration ----------
+data_folder = Path(r"/Users/maheshikawalpola/Documents/WiProFlex_KG/Ontology_v2/Data")
+output_file = data_folder / "CMP_instances.ttl"
+
+CMPO = Namespace("https://tucid/cpmo/")
+BFO  = Namespace("http://purl.obolibrary.org/obo/BFO_")
+EX   = Namespace("https://tucid/cpmo/instance/")
+
+# Map CSV column -> (ontology class, relation property)
+column_mapping = {
+    # Input pressures
+    "PRESSURIZED_CHAMBER_PRESSURE": ("Pressure", CMPO.hasInputParameter),
+    "MAIN_OUTER_AIR_BAG_PRESSURE": ("Pressure", CMPO.hasInputParameter),
+    "CENTER_AIR_BAG_PRESSURE": ("Pressure", CMPO.hasInputParameter),
+    "RETAINER_RING_PRESSURE": ("RetainingRingPressure", CMPO.hasInputParameter),
+    "RIPPLE_AIR_BAG_PRESSURE": ("Pressure", CMPO.hasInputParameter),
+
+    # Flows
+    "SLURRY_FLOW_LINE_A": ("SlurryType", CMPO.hasInputParameter),
+    "SLURRY_FLOW_LINE_B": ("SlurryType", CMPO.hasInputParameter),
+    "SLURRY_FLOW_LINE_C": ("SlurryType", CMPO.hasInputParameter),
+
+    # Rotations
+    "WAFER_ROTATION": ("Velocity", CMPO.hasInputParameter),
+    "STAGE_ROTATION": ("Velocity", CMPO.hasInputParameter),
+    "HEAD_ROTATION": ("HeadSpeed", CMPO.hasInputParameter),
+
+    # Output
+    "AVG_REMOVAL_RATE": ("MRR", CMPO.hasOutputParameter)
+}
+
+# Required core columns
+required_columns = {"WAFER_ID"}
+
+# ---------- Create RDF graph ----------
+g = Graph()
+g.bind("cmpo", CMPO)
+g.bind("bfo", BFO)
+g.bind("ex", EX)
+
+# ---------- Process CSV files ----------
+for csv_path in data_folder.glob("*.csv"):
+    print(f"\nProcessing: {csv_path.name}")
+    df = pd.read_csv(csv_path, encoding='utf-8', on_bad_lines='skip')
+
+    missing = required_columns - set(df.columns)
+    if missing:
+        print(f"Skipping {csv_path.name} – missing {missing}")
+        continue
+
+    prefix = csv_path.stem
+
+    for i, row in df.iterrows():
+        # Create CMPProcess instance (or use MACHINE_ID+TIMESTAMP if available)
+        process_id = row.get("MACHINE_ID", f"{prefix}_{i}")
+        process_uri = EX[f"CMPProcess_{process_id}"]
+        g.add((process_uri, RDF.type, CMPO.CMPProcess))
+
+        # Link wafer
+        wafer_id = row.get("WAFER_ID", f"{prefix}_wafer_{i}")
+        wafer_uri = EX[f"Wafer_{wafer_id}"]
+        g.add((wafer_uri, RDF.type, CMPO.Wafer))
+        g.add((process_uri, CMPO.actsOn, wafer_uri))
+
+        # Optional timestamp
+        if "TIMESTAMP" in df.columns and pd.notna(row["TIMESTAMP"]):
+            g.add((process_uri, CMPO.hasProperty,
+                   Literal(row["TIMESTAMP"], datatype=XSD.dateTime)))
+
+        # Create triples for mapped columns
+        for col, (class_name, relation) in column_mapping.items():
+            if col in df.columns and pd.notna(row[col]):
+                inst_uri = EX[f"{prefix}_{class_name}_{process_id}_{col}"]
+                g.add((inst_uri, RDF.type, CMPO[class_name]))
+                g.add((inst_uri, CMPO.hasNumericValue,
+                       Literal(row[col], datatype=XSD.float)))
+                g.add((process_uri, relation, inst_uri))
+
+# ---------- Save RDF instance file ----------
+g.serialize(destination=output_file, format="turtle")
+print(f"\n RDF instance file created: {output_file}")
