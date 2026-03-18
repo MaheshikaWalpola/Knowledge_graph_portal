@@ -72,4 +72,4 @@ The portal will be available at `http://localhost:5173`.
 
 The current version is a single-ontology research prototype.
 Planned future work includes extending the portal into a multi-ontology
-editor
+editor.
