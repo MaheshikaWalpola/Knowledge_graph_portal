@@ -59,6 +59,12 @@ def _ensure_schema_iri(iri: str, role: str):
         )
 
 
+
+def graph_has_triples(graph_iri: str) -> bool:
+    """Check if a named graph has any triples (public API)."""
+    return _graph_has_triples(graph_iri)
+
+
 def _graph_has_triples(graph_iri: str) -> bool:
     q = PREFIXES + f"""
     ASK {{

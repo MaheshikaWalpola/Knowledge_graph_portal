@@ -49,6 +49,7 @@ from services.graphdb_service import (
     delete_named_graph,
     add_triple_in_graph_no_ns_check,
     delete_triple_in_graph_no_ns_check,
+    graph_has_triples,
 )
 
 #  BASE ONTOLOGY (READ) -
@@ -378,9 +379,15 @@ def ctrl_workspace_upload_instances(
 
 
 def ctrl_list_user_schemas(user_email: str) -> Dict:
-    """Return all schemas initialized/uploaded by the user."""
+    """Return all schemas initialized/uploaded by the user, filtering out those deleted from GraphDB."""
     schemas = list_user_schemas(user_email)
-    return {"status": "ok", "schemas": schemas}
+    # Only include schemas whose graph still has data in GraphDB
+    valid = []
+    for s in schemas:
+        graph_iri = s.get("graph_iri")
+        if graph_iri and graph_has_triples(graph_iri):
+            valid.append(s)
+    return {"status": "ok", "schemas": valid}
 
 
 def ctrl_delete_user_schema(user_email: str, schema_id: str) -> Dict:
