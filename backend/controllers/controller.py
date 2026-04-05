@@ -59,6 +59,22 @@ def ctrl_full_schema_graph(limit: int) -> Dict:
     """Return the whole base schema graph (no instances)."""
     return full_schema_graph(limit=limit)
 
+def ctrl_workspace_full_schema_graph(user_email: str, schema_id: str, limit: int) -> Dict:
+    """
+    Return the full schema graph for the given user's workspace context.
+    For 'main': returns the base ontology graph.
+    For custom uploaded ontologies: returns the T-Box isolated full schema graph.
+    """
+    if schema_id == "main":
+        return full_schema_graph(limit=limit)
+
+    meta = get_user_schema(user_email, schema_id)
+    if not meta or not meta.get("graph_iri"):
+        raise HTTPException(404, detail="Schema graph not found")
+
+    # Enforce schema_only=True to hide combined graph instance assertions
+    return full_uploaded_schema_graph(meta["graph_iri"], limit=limit, schema_only=True)
+
 
 def _resolve_node_iri_or_404(q: str) -> str:
     """Resolve a term or IRI string to a schema IRI, or raise 404."""

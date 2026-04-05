@@ -987,11 +987,30 @@ def update_schema_triple_in_graph(
 # UPLOADED SCHEMA SUPPORT (NAMESPACE-AGNOSTIC)
 # ──────────────────────────────────────────────────────────────────────
 
-def full_uploaded_schema_graph(graph_iri: str, limit: int = 20000) -> Dict:
+def full_uploaded_schema_graph(graph_iri: str, limit: int = 20000, schema_only: bool = False) -> Dict:
     """
     Return ALL triples from a user's uploaded schema graph.
     No namespace filtering — the named graph already isolates the data.
+    If schema_only is true, it strictly filters to standard T-Box predicates.
     """
+    
+    schema_filter = ""
+    if schema_only:
+        schema_filter = """
+        FILTER(
+          ?relation IN (
+            rdfs:subClassOf, rdfs:domain, rdfs:range, rdfs:subPropertyOf,
+            <http://www.w3.org/2002/07/owl#inverseOf>, <http://www.w3.org/2002/07/owl#equivalentClass>,
+            <http://www.w3.org/2002/07/owl#equivalentProperty>, <http://www.w3.org/2002/07/owl#disjointWith>
+          ) ||
+          (?relation = rdf:type && ?target IN (
+            <http://www.w3.org/2002/07/owl#Class>, rdfs:Class, rdf:Property, 
+            <http://www.w3.org/2002/07/owl#ObjectProperty>, <http://www.w3.org/2002/07/owl#DatatypeProperty>,
+            <http://www.w3.org/2002/07/owl#Ontology>
+          ))
+        )
+        """
+
     q = f"""
     SELECT ?source ?relation ?target
     WHERE {{
@@ -999,6 +1018,7 @@ def full_uploaded_schema_graph(graph_iri: str, limit: int = 20000) -> Dict:
         ?source ?relation ?target .
         FILTER(isIRI(?source))
         FILTER(isIRI(?target))
+        {schema_filter}
       }}
     }}
     LIMIT {limit}

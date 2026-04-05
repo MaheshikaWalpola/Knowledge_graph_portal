@@ -23,6 +23,7 @@ from controllers.controller import (
     ctrl_list_user_schemas,
     ctrl_delete_user_schema,
     ctrl_upload_schema,
+    ctrl_workspace_full_schema_graph,
 )
 
 from core.auth import get_current_user
@@ -98,6 +99,18 @@ def api_workspace_neighbors(
     )
 
 
+@router.get("/workspace/schema/graph")
+def api_workspace_full_schema_graph(
+    schema_id: str = Query(..., description="Which workspace schema to fetch"),
+    limit: int = Query(20000, ge=1, le=100000),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """Fetch the FULL isolated schema graph (T-Box) for the selected uploaded schema."""
+    return ctrl_workspace_full_schema_graph(
+        current_user["email"],
+        schema_id,
+        limit,
+    )
 @router.post("/workspace/triple/add")
 def api_workspace_add_relation(
     schema_id: str = Query(..., description="Which workspace schema to write to"),
