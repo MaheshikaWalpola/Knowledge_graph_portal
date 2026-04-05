@@ -238,7 +238,7 @@ def workspace_instance_groups_for_class(
         else:
             cls_local = cls_iri.rsplit("/", 1)[-1]
 
-        # Convert camelCase/PascalCase to readable: "CenterAirBagPressure" → "Center Air Bag Pressure"
+        # Convert camelCase/PascalCase to readable"
         import re
         readable = re.sub(r'([a-z])([A-Z])', r'\1 \2', cls_local)
         readable = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', readable)
@@ -1017,12 +1017,17 @@ def full_uploaded_schema_graph(graph_iri: str, limit: int = 20000) -> Dict:
 def neighbors_in_uploaded_graph(
     node_iri: str,
     graph_iri: str,
+    schema_only: bool = False,
     limit: int = 5000,
 ) -> Dict:
     """
     Namespace-agnostic neighbor query for uploaded schemas.
     Returns all edges to/from node_iri within the given graph.
+    If schema_only is true, it filters out incoming rdf:type edges (to hide instances).
     """
+    # If we want schema only, we filter out ?source rdf:type ?node
+    filter_incoming_type = "FILTER (?relation != rdf:type)" if schema_only else ""
+
     q = f"""
     SELECT ?source ?relation ?target
     WHERE {{
@@ -1039,6 +1044,7 @@ def neighbors_in_uploaded_graph(
           ?source ?relation ?node .
           BIND(?node AS ?target)
           FILTER(isIRI(?source))
+          {filter_incoming_type}
         }}
       }}
     }}

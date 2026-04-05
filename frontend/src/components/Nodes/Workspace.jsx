@@ -460,21 +460,22 @@ const Workspace = () => {
           "background-color": "data(color)",
           label: "data(label)",
           color: "#111827",
-          "font-size": 6,
+          "font-size": 8,           
           "text-wrap": "wrap",
-          "text-max-width": 60,
+          "text-max-width": 80,     
           "text-valign": "center",
           "text-halign": "center",
-          width: 24,
-          height: 24,
+          width: 36,
+          height: 36,               
           "border-width": 0,
         },
       },
       {
         selector: 'node[isCenter = "true"]',
         style: {
-          width: 32,
-          height: 32,
+          width: 48,                
+          height: 48,               
+          "font-size": 9,           
           "font-weight": 700,
           color: "#0f172a",
         },
@@ -483,12 +484,16 @@ const Workspace = () => {
         selector: "edge",
         style: {
           width: 2,
-          "line-color": "#94a3b8",
-          "target-arrow-color": "#94a3b8",
+          "line-color": "#cbd5e1",
+          "target-arrow-color": "#cbd5e1", 
           "target-arrow-shape": "triangle",
           label: "data(label)",
-          "font-size": 5,
-          color: "#475569",
+          "font-size": 6,          
+          color: "#0f172a",        
+          "text-background-opacity": 1,
+          "text-background-color": "#ffffff",
+          "text-background-padding": 2,
+          "text-background-shape": "roundrectangle",
           "curve-style": "bezier",
         },
       },
@@ -659,34 +664,32 @@ const Workspace = () => {
             </button>
           </form>
 
-          {activeSchemaId && (
-            <div className="active-schema-badge">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              Searching in: <strong>{activeSchemaLabel}</strong>
-            </div>
-          )}
+          <div className="workspace-toolbar">
 
-          {data && (
-            <div className="workspace-view-toggle">
-              <button
-                className={`view-btn ${view === "graph" ? "active" : ""}`}
-                onClick={() => setView("graph")}
-                type="button"
-              >
-                Graph
-              </button>
-              <button
-                className={`view-btn ${view === "list" ? "active" : ""}`}
-                onClick={() => setView("list")}
-                type="button"
-              >
-                List
-              </button>
-            </div>
-          )}
+            {data && (
+              <div className="workspace-view-toggle">
+                <button
+                  className={`view-btn ${view === "graph" ? "active" : ""}`}
+                  onClick={() => setView("graph")}
+                  type="button"
+                >
+                  Graph
+                </button>
+                <button
+                  className={`view-btn ${view === "list" ? "active" : ""}`}
+                  onClick={() => setView("list")}
+                  type="button"
+                >
+                  List
+                </button>
+              </div>
+            )}
+            {data && (
+              <div className="results-count" style={{ marginLeft: "8px", fontSize: "14px", color: "var(--text-tertiary)" }}>
+                {data.nodes?.length || 0} nodes • {data.edges?.length || 0} edges
+              </div>
+            )}
+          </div>
 
           {loading && (
             <div className="workspace-loading-inline">
@@ -699,14 +702,6 @@ const Workspace = () => {
 
           {data && (
             <div className="workspace-results">
-              <div className="results-meta">
-                <span className="results-badge">
-                  Center: {displayLabel(data.node)}
-                </span>
-                <span className="results-count">
-                  {data.nodes?.length || 0} nodes • {data.edges?.length || 0} edges
-                </span>
-              </div>
 
               {view === "graph" && cyElements.length > 0 && (
                 <div className="workspace-graph">

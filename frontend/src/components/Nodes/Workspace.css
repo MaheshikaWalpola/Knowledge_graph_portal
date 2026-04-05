@@ -32,7 +32,7 @@
 .workspace-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-lg);
   margin-bottom: var(--space-xl);
   flex-wrap: wrap;
@@ -63,6 +63,14 @@
   display: flex;
   gap: var(--space-sm);
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.workspace-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-md);
   flex-wrap: wrap;
 }
 
@@ -318,7 +326,6 @@
   background: rgba(124, 58, 237, 0.08);
   border: 1px solid rgba(124, 58, 237, 0.18);
   border-radius: var(--radius-full);
-  margin-bottom: var(--space-lg);
   animation: fadeIn 0.2s ease;
 }
 

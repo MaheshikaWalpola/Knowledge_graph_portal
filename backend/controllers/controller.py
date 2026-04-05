@@ -266,7 +266,8 @@ def _uploaded_workspace_neighbors(
 
     # Schema-only
     if level != "both" or not instance_graph_iri:
-        return neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
+        schema_only_flag = (level != "both")
+        return neighbors_in_uploaded_graph(node_iri, graph_iri, schema_only=schema_only_flag, limit=limit)
 
     # Schema + Data: get schema neighbors first
     schema_result = neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
