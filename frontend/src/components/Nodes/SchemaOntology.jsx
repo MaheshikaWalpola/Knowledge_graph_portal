@@ -35,6 +35,37 @@ export default function SchemaOntology() {
   const [q, setQ] = useState("");
   const cyRef = useRef(null);
 
+  // schemas list & selector
+  const [schemas, setSchemas] = useState([]);
+  const [activeSchemaId, setActiveSchemaId] = useState("");
+  const [schemaSelectorOpen, setSchemaSelectorOpen] = useState(false);
+  const [schemaSearch, setSchemaSearch] = useState("");
+  const selectorRef = useRef(null);
+  const token = localStorage.getItem("token");
+
+  // close selector on outside click
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (selectorRef.current && !selectorRef.current.contains(e.target)) {
+        setSchemaSelectorOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filteredSchemas = useMemo(() => {
+    if (!schemaSearch.trim()) return schemas;
+    const term = schemaSearch.toLowerCase();
+    return schemas.filter(s => s.name?.toLowerCase().includes(term));
+  }, [schemas, schemaSearch]);
+
+  const activeSchemaLabel = useMemo(() => {
+    if (!activeSchemaId) return "Select an Ontology";
+    const found = schemas.find((s) => s.schema_id === activeSchemaId);
+    return found ? found.name : activeSchemaId;
+  }, [activeSchemaId, schemas]);
+
   // Force layout tuned to reduce overlap
   const layout = useMemo(
     () => ({
@@ -51,10 +82,10 @@ export default function SchemaOntology() {
       componentSpacing: 140,
 
       // Force tuning
-      nodeRepulsion: 250000000,
-      idealEdgeLength: 200,
+      nodeRepulsion: 150000000,
+      idealEdgeLength: 80,
       edgeElasticity: 0.12,
-      gravity: 0.06,
+      gravity: 0.1,
 
       // Stability
       randomize: true,
@@ -73,21 +104,21 @@ export default function SchemaOntology() {
           "background-color": "data(color)",
           label: "data(label)",
           color: "#111827",
-          "font-size": 6,
+          "font-size": 8,
           "text-wrap": "wrap",
           "text-max-width": 60,
           "text-valign": "center",
           "text-halign": "center",
-          width: 24,
-          height: 24,
+          width: 36,
+          height: 36,
           "border-width": 0,
         },
       },
       {
         selector: 'node[isCenter = "true"]',
         style: {
-          width: 32,
-          height: 32,
+          width: 48,
+          height: 48,
           "font-weight": 700,
           color: "#0f172a",
         },
@@ -96,12 +127,16 @@ export default function SchemaOntology() {
         selector: "edge",
         style: {
           width: 2,
-          "line-color": "#94a3b8",
-          "target-arrow-color": "#94a3b8",
+          "line-color": "#cbd5e1",
+          "target-arrow-color": "#cbd5e1",
           "target-arrow-shape": "triangle",
           label: "data(label)",
-          "font-size": 5,
-          color: "#475569",
+          "font-size": 8,
+          color: "#0f172a",
+          "text-background-opacity": 1,
+          "text-background-color": "#ffffff",
+          "text-background-padding": 3,
+          "text-background-shape": "roundrectangle",
           "curve-style": "bezier",
         },
       },
@@ -126,15 +161,36 @@ export default function SchemaOntology() {
     [],
   );
 
+  useEffect(() => {
+    const fetchSchemas = async () => {
+      if (!token) return;
+      try {
+        const res = await axios.get(`${API}/workspace/schemas`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const list = (res.data?.schemas || []).filter(s => s.upload_mode !== "base");
+        setSchemas(list);
+        if (list.length > 0 && (!activeSchemaId || activeSchemaId === "main")) {
+          setActiveSchemaId(list[0].schema_id);
+        }
+      } catch (e) {
+        console.error("Failed to fetch schemas", e);
+      }
+    };
+    fetchSchemas();
+  }, [token]);
+
   // Fetch schema graph and build Cytoscape elements
   useEffect(() => {
+    if (!activeSchemaId) return;
     (async () => {
       try {
         setLoading(true);
         setErr("");
 
-        const res = await axios.get(`${API}/schema/graph`, {
-          params: { limit: 20000 },
+        const res = await axios.get(`${API}/workspace/schema/graph`, {
+          params: { schema_id: activeSchemaId, limit: 30000 },
+          headers: { Authorization: `Bearer ${token}` },
         });
         const rawNodes = res.data.nodes || [];
         const rawEdges = res.data.edges || [];
@@ -167,7 +223,7 @@ export default function SchemaOntology() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [activeSchemaId, token]);
 
   // Re-run layout after elements load (helps spacing)
   useEffect(() => {
@@ -254,6 +310,53 @@ export default function SchemaOntology() {
         </div>
 
         <form className="search-row" onSubmit={focusNode}>
+          <div className="schema-selector" ref={selectorRef}>
+            <button
+              type="button"
+              className="schema-selector-btn"
+              onClick={() => setSchemaSelectorOpen(!schemaSelectorOpen)}
+            >
+              <span className="schema-selector-label">
+                Ontology: <strong>{activeSchemaLabel}</strong>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+
+            {schemaSelectorOpen && (
+              <div className="schema-selector-dropdown">
+                <div className="schema-selector-search">
+                  <input
+                    type="text"
+                    placeholder="Search schemas..."
+                    value={schemaSearch}
+                    onChange={(e) => setSchemaSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <ul className="schema-selector-list">
+                  {filteredSchemas.map((s) => (
+                    <li
+                      key={s.schema_id}
+                      className={`schema-selector-item ${activeSchemaId === s.schema_id ? "active" : ""}`}
+                      onClick={() => {
+                        setActiveSchemaId(s.schema_id);
+                        setSchemaSelectorOpen(false);
+                        setSchemaSearch("");
+                      }}
+                    >
+                      {s.name}
+                    </li>
+                  ))}
+                  {filteredSchemas.length === 0 && schemas.length > 0 && (
+                    <li className="schema-selector-empty">No matching schemas</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
           <input
             className="search-input"
             placeholder="Find a node (e.g., Velocity)"

@@ -69,7 +69,7 @@ const Home = () => {
                 <path d="M21 21l-4.35-4.35" />
               </svg>
             </div>
-            <h3 className="feature-title">Smart Search</h3>
+            <h3 className="feature-title">Advanced Search</h3>
             <p className="feature-desc">
               Quickly find entities, relationships, and connections across your
               entire knowledge graph.

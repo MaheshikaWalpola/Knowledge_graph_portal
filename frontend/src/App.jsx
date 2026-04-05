@@ -17,6 +17,7 @@ import VerifyEmail from "./components/model/VerifyEmail";
 import AIAssistance from "./components/Nodes/AIAssistance";
 import Profile from "./components/User/Profile";
 import ResetPassword from "./components/User/ResetPassword";
+import MyOntologies from "./components/Nodes/MyOntologies";
 
 function App() {
   const [user, setUser] = useState(null); // logged-in user
@@ -93,6 +94,7 @@ function App() {
             <Route path="/register" element={<RegistrationForm />} />
             <Route path="/forgotpassword" element={<ForgotPassword />} />
             <Route path="/workspace" element={<Workspace />} />
+            <Route path="/my-ontologies" element={<MyOntologies />} />
             <Route path="/termsandconditions" element={<Terms />} />
             <Route
               path="/verify-email"

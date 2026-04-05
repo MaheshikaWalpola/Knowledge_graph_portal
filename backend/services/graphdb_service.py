@@ -46,6 +46,19 @@ def _exec_select(q: str):
     return s.query().convert()
 
 
+def _exec_update(q: str):
+    s = _update_client()
+    s.setQuery(q)
+    s.query()
+
+
+def drop_named_graph(graph_iri: str):
+    """Executes a DROP GRAPH query for the specified IRI."""
+    _assert_not_base_graph(graph_iri)
+    q = f"DROP GRAPH <{graph_iri}>"
+    _exec_update(q)
+
+
 # safety helpers
 def _assert_not_base_graph(graph_iri: str):
     if graph_iri == BASE_SCHEMA_GRAPH:
@@ -57,6 +70,12 @@ def _ensure_schema_iri(iri: str, role: str):
         raise ValueError(
             f"{role} must be in schema namespace {settings.CMP_NS} (not instance)"
         )
+
+
+
+def graph_has_triples(graph_iri: str) -> bool:
+    """Check if a named graph has any triples (public API)."""
+    return _graph_has_triples(graph_iri)
 
 
 def _graph_has_triples(graph_iri: str) -> bool:
@@ -225,14 +244,25 @@ def workspace_instance_groups_for_class(
 
     for b in res["results"]["bindings"]:
         cls_iri = b["cls"]["value"]
-        cls_local = cls_iri.split("/")[-1]
+
+        # Extract clean local name (handle # and / separators)
+        if "#" in cls_iri:
+            cls_local = cls_iri.rsplit("#", 1)[-1]
+        else:
+            cls_local = cls_iri.rsplit("/", 1)[-1]
+
+        # Convert camelCase/PascalCase to readable"
+        import re
+        readable = re.sub(r'([a-z])([A-Z])', r'\1 \2', cls_local)
+        readable = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', readable)
+        readable = readable.replace("_", " ").strip()
 
         group_node = _make_group_node_iri(cls_iri)
 
         nodes.append(
             {
                 "iri": group_node,
-                "label": cls_local,
+                "label": readable,
                 "kind": "workspace_group",
                 "groupKey": cls_iri,
                 "type": cls_iri,
@@ -964,3 +994,277 @@ def update_schema_triple_in_graph(
 
     delete_schema_triple_in_graph(subject_iri, predicate_iri, old_object_iri, graph_iri)
     add_schema_triple_in_graph(subject_iri, predicate_iri, new_object_iri, graph_iri)
+
+
+# ──────────────────────────────────────────────────────────────────────
+# UPLOADED SCHEMA SUPPORT (NAMESPACE-AGNOSTIC)
+# ──────────────────────────────────────────────────────────────────────
+
+def full_uploaded_schema_graph(graph_iri: str, limit: int = 20000, schema_only: bool = False) -> Dict:
+    """
+    Return ALL triples from a user's uploaded schema graph.
+    No namespace filtering — the named graph already isolates the data.
+    If schema_only is true, it strictly filters to standard T-Box predicates.
+    """
+    
+    schema_filter = ""
+    if schema_only:
+        schema_filter = """
+        FILTER(
+          ?relation IN (
+            rdfs:subClassOf, rdfs:domain, rdfs:range, rdfs:subPropertyOf,
+            <http://www.w3.org/2002/07/owl#inverseOf>, <http://www.w3.org/2002/07/owl#equivalentClass>,
+            <http://www.w3.org/2002/07/owl#equivalentProperty>, <http://www.w3.org/2002/07/owl#disjointWith>
+          ) ||
+          (?relation = rdf:type && ?target IN (
+            <http://www.w3.org/2002/07/owl#Class>, rdfs:Class, rdf:Property, 
+            <http://www.w3.org/2002/07/owl#ObjectProperty>, <http://www.w3.org/2002/07/owl#DatatypeProperty>,
+            <http://www.w3.org/2002/07/owl#Ontology>
+          ))
+        )
+        """
+
+    q = f"""
+    SELECT ?source ?relation ?target
+    WHERE {{
+      GRAPH <{graph_iri}> {{
+        ?source ?relation ?target .
+        FILTER(isIRI(?source))
+        FILTER(isIRI(?target))
+        {schema_filter}
+      }}
+    }}
+    LIMIT {limit}
+    """
+    edges = _edge_rows(_exec_select(q))
+
+    iris: Set[str] = set()
+    for e in edges:
+        iris.add(e["source"])
+        iris.add(e["target"])
+
+    nodes = _fetch_nodes_with_labels_from_graph(iris, graph_iri)
+    return {"nodes": nodes, "edges": edges}
+
+
+def neighbors_in_uploaded_graph(
+    node_iri: str,
+    graph_iri: str,
+    schema_only: bool = False,
+    limit: int = 5000,
+) -> Dict:
+    """
+    Namespace-agnostic neighbor query for uploaded schemas.
+    Returns all edges to/from node_iri within the given graph.
+    If schema_only is true, it filters out incoming rdf:type edges (to hide instances).
+    """
+    # If we want schema only, we filter out ?source rdf:type ?node
+    filter_incoming_type = "FILTER (?relation != rdf:type)" if schema_only else ""
+
+    q = f"""
+    SELECT ?source ?relation ?target
+    WHERE {{
+      GRAPH <{graph_iri}> {{
+        {{
+          BIND(<{node_iri}> AS ?node)
+          ?node ?relation ?target .
+          BIND(?node AS ?source)
+          FILTER(isIRI(?target))
+        }}
+        UNION
+        {{
+          BIND(<{node_iri}> AS ?node)
+          ?source ?relation ?node .
+          BIND(?node AS ?target)
+          FILTER(isIRI(?source))
+          {filter_incoming_type}
+        }}
+      }}
+    }}
+    LIMIT {limit}
+    """
+    edges = _edge_rows(_exec_select(q))
+
+    iris: Set[str] = {node_iri}
+    for e in edges:
+        iris.add(e["source"])
+        iris.add(e["target"])
+
+    nodes = _fetch_nodes_with_labels_from_graph(iris, graph_iri)
+    return {"node": node_iri, "nodes": nodes, "edges": edges}
+
+
+def neighbors_in_uploaded_two_graphs(
+    node_iri: str,
+    schema_graph_iri: str,
+    instance_graph_iri: str,
+    limit: int = 500,
+) -> Dict:
+    """
+    Namespace-agnostic neighbors from both schema + instance graphs.
+    """
+    q = f"""
+    SELECT ?source ?relation ?target WHERE {{
+      {{
+        GRAPH <{schema_graph_iri}> {{
+          {{
+            <{node_iri}> ?relation ?target .
+            BIND(<{node_iri}> AS ?source)
+            FILTER(isIRI(?target))
+          }}
+          UNION
+          {{
+            ?source ?relation <{node_iri}> .
+            BIND(<{node_iri}> AS ?target)
+            FILTER(isIRI(?source))
+          }}
+        }}
+      }}
+      UNION
+      {{
+        GRAPH <{instance_graph_iri}> {{
+          {{
+            <{node_iri}> ?relation ?target .
+            BIND(<{node_iri}> AS ?source)
+            FILTER(isIRI(?target))
+          }}
+          UNION
+          {{
+            ?source ?relation <{node_iri}> .
+            BIND(<{node_iri}> AS ?target)
+            FILTER(isIRI(?source))
+          }}
+        }}
+      }}
+    }}
+    LIMIT {limit}
+    """
+    edges = _edge_rows(_exec_select(q))
+
+    iris: Set[str] = {node_iri}
+    for e in edges:
+        iris.add(e["source"])
+        iris.add(e["target"])
+
+    nodes = _fetch_nodes_with_labels(iris)
+    return {"node": node_iri, "nodes": nodes, "edges": edges}
+
+
+def search_terms_in_graph(
+    term: str,
+    graph_iri: str,
+    limit: int = 15,
+) -> List[Dict]:
+    """
+    Search for classes/properties by local name or label within a specific graph.
+    Namespace-agnostic — works for any uploaded ontology.
+    """
+    t = (term or "").strip().lower()
+    if not t:
+        return []
+
+    q = f"""
+    SELECT DISTINCT ?s (SAMPLE(?lbl) AS ?lbl) WHERE {{
+      GRAPH <{graph_iri}> {{
+        ?s ?p ?o .
+        FILTER(isIRI(?s))
+        OPTIONAL {{ ?s <http://www.w3.org/2000/01/rdf-schema#label> ?lbl }}
+        BIND(LCASE(REPLACE(STR(?s), "^.*/|^.*#", "")) AS ?local)
+        FILTER(
+          CONTAINS(?local, "{t}")
+          || (BOUND(?lbl) && CONTAINS(LCASE(STR(?lbl)), "{t}"))
+        )
+      }}
+    }}
+    GROUP BY ?s
+    LIMIT {limit}
+    """
+    res = _exec_select(q)
+    out = []
+    for b in res["results"]["bindings"]:
+        out.append({"iri": b["s"]["value"], "label": b.get("lbl", {}).get("value")})
+    return out
+
+
+def resolve_term_in_graph(term: str, graph_iri: str) -> Optional[str]:
+    """
+    Resolve a term to an IRI within a specific uploaded graph.
+    Matches by local name or rdfs:label (case-insensitive).
+    """
+    t = (term or "").strip().lower()
+    if not t:
+        return None
+
+    q = f"""
+    SELECT ?s WHERE {{
+      GRAPH <{graph_iri}> {{
+        ?s ?p ?o .
+        FILTER(isIRI(?s))
+        OPTIONAL {{ ?s <http://www.w3.org/2000/01/rdf-schema#label> ?lbl }}
+        BIND(LCASE(REPLACE(STR(?s), "^.*/|^.*#", "")) AS ?local)
+        FILTER(
+          ?local = "{t}"
+          || (BOUND(?lbl) && LCASE(STR(?lbl)) = "{t}")
+        )
+      }}
+    }}
+    LIMIT 1
+    """
+    rows = _exec_select(q)["results"]["bindings"]
+    return rows[0]["s"]["value"] if rows else None
+
+
+def delete_named_graph(graph_iri: str) -> None:
+    """Drop an entire named graph from GraphDB."""
+    _assert_not_base_graph(graph_iri)
+    update = f"DROP GRAPH <{graph_iri}>"
+    u = _update_client()
+    u.setQuery(update)
+    u.query()
+
+
+def add_triple_in_graph_no_ns_check(
+    subject_iri: str,
+    predicate_iri: str,
+    object_iri: str,
+    graph_iri: str,
+) -> None:
+    """Add a triple without namespace validation (for uploaded schemas)."""
+    _assert_not_base_graph(graph_iri)
+    update = f"""
+    INSERT DATA {{
+      GRAPH <{graph_iri}> {{
+        <{subject_iri}> <{predicate_iri}> <{object_iri}> .
+      }}
+    }}
+    """
+    u = _update_client()
+    u.setQuery(update)
+    u.query()
+
+
+def delete_triple_in_graph_no_ns_check(
+    subject_iri: str,
+    predicate_iri: str,
+    object_iri: Optional[str],
+    graph_iri: str,
+) -> None:
+    """Delete a triple without namespace validation (for uploaded schemas)."""
+    _assert_not_base_graph(graph_iri)
+    if object_iri is None:
+        update = f"""
+        WITH <{graph_iri}>
+        DELETE {{ <{subject_iri}> <{predicate_iri}> ?o }}
+        WHERE  {{ <{subject_iri}> <{predicate_iri}> ?o }}
+        """
+    else:
+        update = f"""
+        DELETE DATA {{
+          GRAPH <{graph_iri}> {{
+            <{subject_iri}> <{predicate_iri}> <{object_iri}> .
+          }}
+        }}
+        """
+    u = _update_client()
+    u.setQuery(update)
+    u.query()
