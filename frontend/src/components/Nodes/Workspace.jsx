@@ -745,14 +745,27 @@ const Workspace = () => {
                     const source = e.source || e.s || e.from;
                     const target = e.target || e.t || e.to;
                     const relation = e.relation || e.p || e.pred || e.label;
+                    const sourceLabel = labelMap.get(source) || displayLabel(source);
+                    const targetLabel = labelMap.get(target) || displayLabel(target);
+                    const isClickable = isWorkspaceGroupIri(source) || isWorkspaceGroupIri(target);
 
                     return (
-                      <div className="edge-item" key={i}>
-                        <span className="edge-source">{displayLabel(source)}</span>
+                      <div
+                        className={`edge-item${isClickable ? " clickable" : ""}`}
+                        key={i}
+                        onClick={() => {
+                          const clickIri = isWorkspaceGroupIri(source) ? source : isWorkspaceGroupIri(target) ? target : null;
+                          if (clickIri) {
+                            setSelectedNodeIri(clickIri);
+                            loadDetails(clickIri);
+                          }
+                        }}
+                      >
+                        <span className="edge-source">{sourceLabel}</span>
                         <span className="edge-relation">
                           {displayPredicate(relation)}
                         </span>
-                        <span className="edge-target">{displayLabel(target)}</span>
+                        <span className="edge-target">{targetLabel}</span>
                       </div>
                     );
                   })}
@@ -765,7 +778,7 @@ const Workspace = () => {
 
               {selectedNodeIri && details && (
                 <div className="workspace-details">
-                  <h4>{displayLabel(selectedNodeIri)}</h4>
+                  <h4>{labelMap.get(selectedNodeIri) || displayLabel(selectedNodeIri)}</h4>
 
                   {details.values && details.values.length > 0 && (
                     <>

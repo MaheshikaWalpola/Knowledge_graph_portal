@@ -485,6 +485,16 @@
   border-color: rgba(124, 58, 237, 0.3);
 }
 
+.edge-item.clickable {
+  cursor: pointer;
+}
+
+.edge-item.clickable:hover {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: var(--accent-primary);
+  transform: translateX(4px);
+}
+
 .edge-source,
 .edge-target {
   flex: 1;

@@ -231,14 +231,25 @@ def workspace_instance_groups_for_class(
 
     for b in res["results"]["bindings"]:
         cls_iri = b["cls"]["value"]
-        cls_local = cls_iri.split("/")[-1]
+
+        # Extract clean local name (handle # and / separators)
+        if "#" in cls_iri:
+            cls_local = cls_iri.rsplit("#", 1)[-1]
+        else:
+            cls_local = cls_iri.rsplit("/", 1)[-1]
+
+        # Convert camelCase/PascalCase to readable: "CenterAirBagPressure" → "Center Air Bag Pressure"
+        import re
+        readable = re.sub(r'([a-z])([A-Z])', r'\1 \2', cls_local)
+        readable = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', readable)
+        readable = readable.replace("_", " ").strip()
 
         group_node = _make_group_node_iri(cls_iri)
 
         nodes.append(
             {
                 "iri": group_node,
-                "label": cls_local,
+                "label": readable,
                 "kind": "workspace_group",
                 "groupKey": cls_iri,
                 "type": cls_iri,
@@ -1048,7 +1059,7 @@ def neighbors_in_uploaded_two_graphs(
     node_iri: str,
     schema_graph_iri: str,
     instance_graph_iri: str,
-    limit: int = 5000,
+    limit: int = 500,
 ) -> Dict:
     """
     Namespace-agnostic neighbors from both schema + instance graphs.
@@ -1060,11 +1071,13 @@ def neighbors_in_uploaded_two_graphs(
           {{
             <{node_iri}> ?relation ?target .
             BIND(<{node_iri}> AS ?source)
+            FILTER(isIRI(?target))
           }}
           UNION
           {{
             ?source ?relation <{node_iri}> .
             BIND(<{node_iri}> AS ?target)
+            FILTER(isIRI(?source))
           }}
         }}
       }}
@@ -1074,11 +1087,13 @@ def neighbors_in_uploaded_two_graphs(
           {{
             <{node_iri}> ?relation ?target .
             BIND(<{node_iri}> AS ?source)
+            FILTER(isIRI(?target))
           }}
           UNION
           {{
             ?source ?relation <{node_iri}> .
             BIND(<{node_iri}> AS ?target)
+            FILTER(isIRI(?source))
           }}
         }}
       }}

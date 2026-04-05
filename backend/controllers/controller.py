@@ -22,6 +22,7 @@ from services.graphdb_service import (
 
     # NEW: workspace group details (virtual node click)
     workspace_group_values,
+    workspace_instance_groups_for_class,
 
     # multi-schema workspace helpers
     init_user_schema_graph_from_base,
@@ -226,9 +227,34 @@ def _uploaded_workspace_neighbors(
 ) -> Dict:
     """
     Handle neighbor queries for uploaded schemas using namespace-agnostic queries.
+    For 'both' level: fetch schema neighbors + aggregate instance data by class
+    (same pattern as the base workspace flow).
     """
     graph_iri = meta["graph_iri"]
     instance_graph_iri = meta.get("instance_graph_iri")
+
+    # Handle workspace group node clicks (instance aggregation details)
+    if level == "both" and instance_graph_iri and _is_workspace_group_node(q):
+        details = workspace_group_values(
+            group_node_iri=q,
+            instance_graph_iri=instance_graph_iri,
+            limit=5000,
+        )
+        return {
+            "node": q,
+            "nodes": [
+                {
+                    "iri": q,
+                    "label": None,
+                    "kind": "workspace_group",
+                    "groupKey": details.get("groupKey"),
+                    "summary": details.get("summary"),
+                    "values": details.get("values"),
+                }
+            ],
+            "edges": [],
+            "details": details,
+        }
 
     # Resolve q: if it's a full IRI use it directly, otherwise search in the graph
     if (q or "").startswith("http"):
@@ -238,15 +264,28 @@ def _uploaded_workspace_neighbors(
         if not node_iri:
             raise HTTPException(404, detail=f"Could not resolve '{q}' in the uploaded schema")
 
-    if level == "both" and instance_graph_iri:
-        return neighbors_in_uploaded_two_graphs(
-            node_iri=node_iri,
-            schema_graph_iri=graph_iri,
+    # Schema-only
+    if level != "both" or not instance_graph_iri:
+        return neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
+
+    # Schema + Data: get schema neighbors first
+    schema_result = neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
+
+    # Then get aggregated instance groups for this class
+    try:
+        instance_groups = workspace_instance_groups_for_class(
+            class_iri=node_iri,
             instance_graph_iri=instance_graph_iri,
+            schema_graph_iri=graph_iri,
             limit=limit,
         )
+        # Merge instance group nodes and edges into schema result
+        schema_result["nodes"].extend(instance_groups.get("nodes", []))
+        schema_result["edges"].extend(instance_groups.get("edges", []))
+    except Exception as e:
+        print(f"Warning: instance group query failed: {e}")
 
-    return neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
+    return schema_result
 
 
 # helpers 
