@@ -3,6 +3,13 @@ from fastapi import HTTPException, UploadFile
 from core.config import settings
 
 from services.instance_generation_service import build_instances_from_csvs
+from services.rdf_upload_service import parse_rdf_bytes, split_schema_and_instances
+from services.user_schema_service import (
+    create_schema_meta,
+    list_user_schemas,
+    get_user_schema,
+    delete_user_schema,
+)
 
 from services.graphdb_service import (
     # base ontology (read-only)
@@ -32,6 +39,16 @@ from services.graphdb_service import (
     add_schema_triple_in_graph,
     delete_schema_triple_in_graph,
     update_schema_triple_in_graph,
+
+    # uploaded schema support (namespace-agnostic)
+    full_uploaded_schema_graph,
+    neighbors_in_uploaded_graph,
+    neighbors_in_uploaded_two_graphs,
+    search_terms_in_graph,
+    resolve_term_in_graph,
+    delete_named_graph,
+    add_triple_in_graph_no_ns_check,
+    delete_triple_in_graph_no_ns_check,
 )
 
 #  BASE ONTOLOGY (READ) -
@@ -107,6 +124,13 @@ def ctrl_export_workspace(user_key: str, schema_id: str) -> str:
     """
     if not schema_id:
         raise HTTPException(422, detail="schema_id is required")
+
+    # Check if it's an uploaded schema (stored in MongoDB)
+    meta = get_user_schema(user_key, schema_id)
+    if meta and meta.get("graph_iri"):
+        return export_graph_turtle(meta["graph_iri"])
+
+    # Fallback to base-derived workspace graph
     graph_iri = user_schema_graph(user_key, schema_id)
     return export_graph_turtle(graph_iri)
 
@@ -117,6 +141,11 @@ def _is_workspace_group_node(iri: str) -> bool:
     """
     base = settings.CMP_NS.rstrip("/") + "/instance/group/"
     return (iri or "").startswith(base)
+
+
+def _is_uploaded_schema(meta: Optional[Dict]) -> bool:
+    """Check if a schema metadata doc represents an uploaded schema."""
+    return meta is not None and meta.get("upload_mode") in ("combined", "separate")
 
 
 def ctrl_workspace_neighbors(
@@ -133,13 +162,18 @@ def ctrl_workspace_neighbors(
       - "schema" : only user's workspace schema graph
       - "both"   : user's workspace schema graph + user's workspace instance graph
 
-    IMPORTANT:
-    - For workspace level="both", the graphdb_service now returns "workspace_group" virtual nodes
-      for class searches (e.g., Velocity), so we handle clicks on those virtual nodes here.
+    Supports both base-derived workspaces and uploaded schemas.
     """
     if not schema_id:
         raise HTTPException(422, detail="schema_id is required")
 
+    # Check if this is an uploaded schema
+    meta = get_user_schema(user_key, schema_id)
+
+    if _is_uploaded_schema(meta):
+        return _uploaded_workspace_neighbors(meta, q, limit, level)
+
+    # ─── ORIGINAL BASE-DERIVED WORKSPACE FLOW (unchanged) ───
     schema_graph_iri = user_schema_graph(user_key, schema_id)
 
     # schema-only (unchanged)
@@ -184,6 +218,34 @@ def ctrl_workspace_neighbors(
         instance_graph_iri=instance_graph_iri,
         limit=limit,
     )
+
+
+def _uploaded_workspace_neighbors(
+    meta: Dict, q: str, limit: int, level: str
+) -> Dict:
+    """
+    Handle neighbor queries for uploaded schemas using namespace-agnostic queries.
+    """
+    graph_iri = meta["graph_iri"]
+    instance_graph_iri = meta.get("instance_graph_iri")
+
+    # Resolve q: if it's a full IRI use it directly, otherwise search in the graph
+    if (q or "").startswith("http"):
+        node_iri = q
+    else:
+        node_iri = resolve_term_in_graph(q, graph_iri)
+        if not node_iri:
+            raise HTTPException(404, detail=f"Could not resolve '{q}' in the uploaded schema")
+
+    if level == "both" and instance_graph_iri:
+        return neighbors_in_uploaded_two_graphs(
+            node_iri=node_iri,
+            schema_graph_iri=graph_iri,
+            instance_graph_iri=instance_graph_iri,
+            limit=limit,
+        )
+
+    return neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
 
 
 # helpers 
@@ -312,11 +374,149 @@ def ctrl_workspace_upload_instances(
     # Upload TTL into user's instance graph
     import_turtle_to_named_graph(result.turtle, instance_graph)
 
-    return {
-        "status": "ok",
-        "message": "Instances generated and uploaded",
-        "schema_id": schema_id,
-        "instance_graph": instance_graph,
-        "triples": result.triples,
-        "turtle": result.turtle,
-    }
+    return {"status": "ok", "message": "Instances generated and uploaded", "schema_id": schema_id, "instance_graph": instance_graph, "triples": result.triples, "turtle": result.turtle}
+
+
+def ctrl_list_user_schemas(user_email: str) -> Dict:
+    """Return all schemas initialized/uploaded by the user."""
+    schemas = list_user_schemas(user_email)
+    return {"status": "ok", "schemas": schemas}
+
+
+def ctrl_delete_user_schema(user_email: str, schema_id: str) -> Dict:
+    """Delete a user schema and drop its GraphDB instances."""
+    meta = get_user_schema(user_email, schema_id)
+    if not meta:
+        raise HTTPException(404, detail="Schema not found")
+
+    # Drop graphs
+    if meta.get("graph_iri"):
+        try:
+            delete_named_graph(meta["graph_iri"])
+        except Exception as e:
+            print(f"Warning: could not drop graph {meta['graph_iri']}: {e}")
+
+    if meta.get("instance_graph_iri"):
+        try:
+            delete_named_graph(meta["instance_graph_iri"])
+        except Exception as e:
+            print(f"Warning: could not drop graph {meta['instance_graph_iri']}: {e}")
+
+    # Remove from MongoDB (fallback to generic instance graph if not uploaded)
+    if not meta.get("upload_mode") or meta.get("upload_mode") == "base":
+        inst_graph = user_schema_instance_graph(user_email, schema_id)
+        try:
+            delete_named_graph(inst_graph)
+        except Exception as e:
+            print(f"Warning: could not drop graph {inst_graph}: {e}")
+
+    delete_user_schema(user_email, schema_id)
+    return {"status": "ok", "message": "Schema deleted successfully"}
+
+
+def ctrl_upload_schema(
+    user_email: str,
+    name: str,
+    mode: str,
+    schema_file: UploadFile,
+    instances_file: Optional[UploadFile],
+) -> Dict:
+    """
+    Handle uploading custom ontologies.
+    mode = "combined" | "separate"
+    """
+    if mode not in ["combined", "separate"]:
+        raise HTTPException(422, detail="Invalid upload mode (combined|separate)")
+
+    if not name.strip():
+        raise HTTPException(422, detail="Schema name is required")
+
+    # Prevent duplicate ontology names per user
+    existing = list_user_schemas(user_email)
+    for s in existing:
+        if s.get("name", "").strip().lower() == name.strip().lower():
+            raise HTTPException(
+                409,
+                detail=f"An ontology named '{name.strip()}' already exists. Please choose a different name.",
+            )
+
+    # Generate graph IRIs
+    schema_id = "upload_" + name.replace(" ", "_")[:20] + "_" + str(hash(user_email))[:6]
+    graph_iri = user_schema_graph(user_email, schema_id)
+    instance_graph_iri = user_schema_instance_graph(user_email, schema_id)
+
+    schema_content = schema_file.file.read()
+
+    try:
+        parsed_schema = parse_rdf_bytes(schema_content, schema_file.filename)
+    except Exception as e:
+        raise HTTPException(400, detail=f"Failed to parse schema file: {e}")
+
+    namespace = parsed_schema.namespace
+
+    if mode == "combined":
+        # Import everything into the schema graph
+        try:
+            import_turtle_to_named_graph(parsed_schema.turtle, graph_iri)
+        except Exception as e:
+            raise HTTPException(500, detail=f"Failed to import graph: {e}")
+
+        # Save metadata
+        meta = create_schema_meta(
+            user_email=user_email,
+            name=name,
+            graph_iri=graph_iri,
+            upload_mode="combined",
+            namespace=namespace,
+            instance_graph_iri=None,
+            schema_id=schema_id,
+        )
+
+        return {
+            "status": "ok",
+            "message": "Combined schema uploaded successfully",
+            "schema": meta
+        }
+
+    else:
+        # separate mode
+        if not instances_file:
+            raise HTTPException(422, detail="instances_file is required for separate mode")
+
+        # Import schema file to schema graph
+        try:
+            import_turtle_to_named_graph(parsed_schema.turtle, graph_iri)
+        except Exception as e:
+            raise HTTPException(500, detail=f"Failed to import schema graph: {e}")
+
+        inst_content = instances_file.file.read()
+        try:
+            parsed_inst = parse_rdf_bytes(inst_content, instances_file.filename)
+        except Exception as e:
+            # Rollback
+            delete_named_graph(graph_iri)
+            raise HTTPException(400, detail=f"Failed to parse instances file: {e}")
+
+        try:
+            import_turtle_to_named_graph(parsed_inst.turtle, instance_graph_iri)
+        except Exception as e:
+            # Rollback
+            delete_named_graph(graph_iri)
+            raise HTTPException(500, detail=f"Failed to import instance graph: {e}")
+
+        # Save metadata
+        meta = create_schema_meta(
+            user_email=user_email,
+            name=name,
+            graph_iri=graph_iri,
+            upload_mode="separate",
+            namespace=namespace,
+            instance_graph_iri=instance_graph_iri,
+            schema_id=schema_id,
+        )
+
+        return {
+            "status": "ok",
+            "message": "Schema and instances uploaded successfully",
+            "schema": meta
+        }

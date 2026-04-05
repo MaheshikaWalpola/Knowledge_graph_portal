@@ -1,6 +1,6 @@
 /* ========================================
-   🗂️ WORKSPACE - Personal Ontology Editor
-   Clean, Tabbed Interface Design
+   WORKSPACE - Personal Ontology Explorer
+   Clean Search + Popup Upload Design
    ======================================== */
 
 /* Container */
@@ -27,7 +27,7 @@
 }
 
 /* ========================================
-   📌 Header
+   Header
    ======================================== */
 .workspace-header {
   display: flex;
@@ -67,66 +67,14 @@
 }
 
 /* ========================================
-   🎛️ Tabs Navigation
-   ======================================== */
-.workspace-tabs {
-  display: flex;
-  gap: var(--space-xs);
-  padding: var(--space-xs);
-  background: var(--bg-glass);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
-  margin-bottom: var(--space-xl);
-}
-
-.workspace-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-normal);
-}
-
-.workspace-tab:hover {
-  color: var(--text-primary);
-  background: rgba(124, 58, 237, 0.05);
-}
-
-.workspace-tab.active {
-  color: white;
-  background: var(--gradient-primary);
-  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
-}
-
-.workspace-tab svg {
-  opacity: 0.7;
-  transition: opacity var(--transition-normal);
-}
-
-.workspace-tab.active svg,
-.workspace-tab:hover svg {
-  opacity: 1;
-}
-
-/* ========================================
-   📝 Panel Content
+   Panel Content
    ======================================== */
 .workspace-panel {
   animation: fadeIn 0.3s ease forwards;
 }
 
 /* ========================================
-   🔍 Search Form
+   Search Form
    ======================================== */
 .workspace-search-form {
   display: flex;
@@ -181,12 +129,211 @@
 
 .workspace-select:focus {
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.08);
+}
+
+/* Schema Searchable Combobox */
+.schema-combobox {
+  position: relative;
+  min-width: 240px;
+}
+
+.schema-combobox-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  height: 48px;
+  padding: 0 var(--space-lg);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-normal);
+  user-select: none;
+}
+
+.schema-combobox-trigger.placeholder {
+  color: var(--text-tertiary);
+}
+
+.schema-combobox-trigger:hover,
+.schema-combobox-trigger:focus-visible {
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+.schema-combobox-trigger.open {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+}
+
+.schema-combobox-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.schema-combobox-chevron {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.schema-combobox-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.schema-combobox-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  min-width: 280px;
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(124, 58, 237, 0.06);
+  z-index: 100;
+  animation: fadeIn 0.15s ease;
+  overflow: hidden;
+}
+
+.schema-combobox-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-tertiary);
+}
+
+.schema-combobox-search {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.schema-combobox-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+.schema-combobox-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.schema-combobox-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.schema-combobox-item:hover {
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.schema-combobox-item.selected {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.schema-combobox-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schema-combobox-item-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  color: var(--accent-primary);
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.schema-combobox-item svg {
+  flex-shrink: 0;
+  color: var(--accent-primary);
+}
+
+.schema-combobox-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+/* Empty Prompt */
+.workspace-empty-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
+  color: var(--text-tertiary);
+  animation: fadeIn 0.3s ease;
+}
+
+.workspace-empty-prompt svg {
+  opacity: 0.5;
+}
+
+.workspace-empty-prompt p {
+  margin: 0;
+  font-size: 14px;
+  max-width: 320px;
+}
+
+.active-schema-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--accent-primary);
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-lg);
+  animation: fadeIn 0.2s ease;
+}
+
+.active-schema-badge strong {
+  font-weight: 600;
 }
 
 /* ========================================
-   🔘 Buttons
+   Buttons
    ======================================== */
 .workspace-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
   height: 48px;
   padding: 0 var(--space-xl);
   font-size: 15px;
@@ -214,10 +361,11 @@
 }
 
 .workspace-btn-secondary {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-sm);
-  height: 40px;
+  height: 48px;
   padding: 0 var(--space-lg);
   font-size: 14px;
   font-weight: 500;
@@ -228,6 +376,7 @@
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-normal);
+  white-space: nowrap;
 }
 
 .workspace-btn-secondary:hover {
@@ -237,7 +386,7 @@
 }
 
 /* ========================================
-   🔄 View Toggle
+   View Toggle
    ======================================== */
 .workspace-view-toggle {
   display: inline-flex;
@@ -272,7 +421,7 @@
 }
 
 /* ========================================
-   📊 Results Area
+   Results Area
    ======================================== */
 .workspace-results {
   animation: fadeIn 0.3s ease forwards;
@@ -309,7 +458,7 @@
 }
 
 /* ========================================
-   📋 List View
+   List View
    ======================================== */
 .workspace-list {
   display: flex;
@@ -342,6 +491,7 @@
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
+  word-break: break-word;
 }
 
 .edge-relation {
@@ -355,7 +505,7 @@
 }
 
 /* ========================================
-   📝 Details Panel
+   Details Panel
    ======================================== */
 .workspace-details {
   margin-top: var(--space-xl);
@@ -395,136 +545,38 @@
 }
 
 /* ========================================
-   ✏️ Edit Mode Toggle
-   ======================================== */
-.edit-mode-toggle {
-  display: flex;
-  gap: var(--space-xs);
-  margin-bottom: var(--space-xl);
-}
-
-.edit-mode-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  color: var(--text-secondary);
-  background: var(--bg-glass);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: all var(--transition-normal);
-}
-
-.edit-mode-btn:hover {
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
-}
-
-.edit-mode-btn.active {
-  color: white;
-  background: var(--gradient-primary);
-  border-color: transparent;
-  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
-}
-
-/* ========================================
-   📝 Edit Form
-   ======================================== */
-.edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.edit-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.edit-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.edit-triple-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: var(--space-md);
-}
-
-/* ========================================
-   📤 Upload Section
-   ======================================== */
-.upload-section {
-  text-align: center;
-  padding: var(--space-xl);
-}
-
-.upload-description {
-  margin: 0 0 var(--space-xl) 0;
-  color: var(--text-secondary);
-}
-
-.upload-area {
-  margin-bottom: var(--space-xl);
-}
-
-.upload-input {
-  display: none;
-}
-
-.upload-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-2xl);
-  border: 2px dashed var(--border-medium);
-  border-radius: var(--radius-xl);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-normal);
-}
-
-.upload-label:hover {
-  border-color: var(--accent-primary);
-  background: rgba(124, 58, 237, 0.05);
-  color: var(--accent-primary);
-}
-
-/* ========================================
-   ✅ Status Banners
+   Status Banners
    ======================================== */
 .error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
   font-size: 14px;
   color: #dc2626;
-  background: rgba(220, 38, 38, 0.1);
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.18);
   border-radius: var(--radius-lg);
   margin-bottom: var(--space-md);
+  animation: fadeIn 0.2s ease;
 }
 
 .success-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
   font-size: 14px;
   color: #16a34a;
-  background: rgba(22, 163, 74, 0.1);
-  border: 1px solid rgba(22, 163, 74, 0.2);
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px solid rgba(22, 163, 74, 0.18);
   border-radius: var(--radius-lg);
   margin-bottom: var(--space-md);
+  animation: fadeIn 0.2s ease;
 }
 
 /* ========================================
-   ⏳ Loading States
+   Loading States
    ======================================== */
 .workspace-loading,
 .workspace-error {
@@ -573,7 +625,302 @@
 }
 
 /* ========================================
-   📱 Responsive
+   Popup Upload Modal
+   ======================================== */
+.workspace-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+.workspace-modal {
+  width: 100%;
+  max-width: 580px;
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(124, 58, 237, 0.06);
+  overflow: hidden;
+  animation: modalPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.workspace-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.workspace-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.workspace-modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-lg);
+  color: white;
+  flex-shrink: 0;
+}
+
+.workspace-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.workspace-modal-desc {
+  margin: 2px 0 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.workspace-modal-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition-normal);
+  flex-shrink: 0;
+}
+
+.workspace-modal-close:hover {
+  background: rgba(124, 58, 237, 0.08);
+  color: var(--accent-primary);
+}
+
+.workspace-modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* ========================================
+   Upload Form Inside Modal
+   ======================================== */
+.edit-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.edit-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Ensure inputs inside the modal are full-width */
+.workspace-modal-body .workspace-input {
+  flex: unset;
+  width: 100%;
+  min-width: unset;
+}
+
+/* Upload Mode Toggle */
+.upload-mode-toggle {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.upload-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  height: 44px;
+  padding: 0 var(--space-md);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.upload-mode-btn:hover {
+  border-color: rgba(124, 58, 237, 0.3);
+  color: var(--text-primary);
+}
+
+.upload-mode-btn.active {
+  color: var(--accent-primary);
+  background: rgba(124, 58, 237, 0.08);
+  border-color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* ========================================
+   File Drop Zone
+   ======================================== */
+.file-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl) var(--space-lg);
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-xl);
+  background: var(--bg-glass);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  outline: none;
+}
+
+.file-drop-zone:hover,
+.file-drop-zone:focus-visible {
+  border-color: rgba(124, 58, 237, 0.4);
+  background: rgba(124, 58, 237, 0.04);
+}
+
+.file-drop-zone.drag-over {
+  border-color: var(--accent-primary);
+  background: rgba(124, 58, 237, 0.08);
+  transform: scale(1.01);
+}
+
+.file-drop-icon {
+  color: var(--text-tertiary);
+  opacity: 0.7;
+  transition: all var(--transition-normal);
+}
+
+.file-drop-zone:hover .file-drop-icon,
+.file-drop-zone.drag-over .file-drop-icon {
+  color: var(--accent-primary);
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.file-drop-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.file-drop-cta {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.file-drop-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* ========================================
+   File Chip (selected file)
+   ======================================== */
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: rgba(124, 58, 237, 0.06);
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  border-radius: var(--radius-lg);
+  animation: fadeIn 0.2s ease;
+}
+
+.file-chip-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--gradient-primary);
+  border-radius: var(--radius-md);
+  color: white;
+  flex-shrink: 0;
+}
+
+.file-chip-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.file-chip-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-chip-size {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.file-chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-tertiary);
+  transition: all var(--transition-normal);
+  flex-shrink: 0;
+}
+
+.file-chip-remove:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+/* ========================================
+   Upload actions
+   ======================================== */
+.upload-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+/* ========================================
+   Responsive
    ======================================== */
 @media (max-width: 768px) {
   .workspace-container {
@@ -588,25 +935,88 @@
     flex-direction: column;
   }
 
-  .workspace-tabs {
-    flex-direction: column;
-  }
-
   .workspace-search-form {
     flex-direction: column;
   }
 
-  .edit-triple-row {
-    grid-template-columns: 1fr;
+  .schema-combobox {
+    min-width: unset;
+    width: 100%;
   }
 
   .details-stats {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .workspace-modal {
+    max-width: 100%;
+  }
+
+  .workspace-modal-body {
+    padding: 18px;
+  }
+
+  .upload-actions {
+    flex-direction: column;
+  }
+
+  .upload-actions .workspace-btn-primary,
+  .upload-actions .workspace-btn-secondary {
+    width: 100%;
+  }
+
+  .upload-mode-toggle {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .workspace-card {
+    padding: var(--space-lg);
+  }
+
+  .workspace-title {
+    font-size: 1.6rem;
+  }
+
+  .results-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .edge-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .edge-relation {
+    align-self: flex-start;
+  }
+
+  .details-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-modal-header {
+    padding: 16px 18px;
+  }
+
+  .workspace-modal-header h3 {
+    font-size: 16px;
+  }
+
+  .workspace-modal-title-group {
+    gap: var(--space-sm);
+  }
+
+  .workspace-modal-icon {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 /* ========================================
-   ✨ Animations
+   Animations
    ======================================== */
 @keyframes fadeIn {
   from {
@@ -616,5 +1026,16 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

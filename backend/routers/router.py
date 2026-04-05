@@ -1,6 +1,6 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
-from fastapi import APIRouter, Query, Body, Depends, Response, UploadFile, File
+from fastapi import APIRouter, Query, Body, Depends, Response, UploadFile, File, Form
 
 from controllers.controller import (
     # base ontology (read-only)
@@ -18,6 +18,11 @@ from controllers.controller import (
     ctrl_workspace_update_relation,
     ctrl_export_workspace,
     ctrl_workspace_upload_instances,
+
+    # custom uploaded schemas
+    ctrl_list_user_schemas,
+    ctrl_delete_user_schema,
+    ctrl_upload_schema,
 )
 
 from core.auth import get_current_user
@@ -175,3 +180,36 @@ def api_workspace_instances_upload(
     Returns TTL in the response so the frontend can download it.
     """
     return ctrl_workspace_upload_instances(current_user["email"], schema_id, files)
+@router.get("/workspace/schemas")
+def api_list_user_schemas(current_user: Any = Depends(get_current_user)) -> Dict:
+    """List all schemas available for the current user."""
+    return ctrl_list_user_schemas(current_user["email"])
+
+
+@router.delete("/workspace/schema")
+def api_delete_user_schema(
+    schema_id: str = Query(..., description="Schema ID to delete"),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """Delete a user schema and drop its GraphDB data."""
+    return ctrl_delete_user_schema(current_user["email"], schema_id)
+
+
+@router.post("/workspace/schema/upload")
+def api_upload_schema(
+    name: str = Form(..., description="Display name for the schema"),
+    mode: str = Form(..., description="'combined' or 'separate'"),
+    schema_file: UploadFile = File(...),
+    instances_file: Optional[UploadFile] = File(None),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """
+    Upload a custom RDF ontology.
+    """
+    return ctrl_upload_schema(
+        user_email=current_user["email"],
+        name=name,
+        mode=mode,
+        schema_file=schema_file,
+        instances_file=instances_file
+    )

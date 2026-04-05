@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback, Fragment } from "react";
 import axios from "axios";
 import CytoscapeComponent from "react-cytoscapejs";
 import "./Workspace.css";
@@ -34,40 +34,6 @@ const PALETTE = [
   "#06b6d4",
 ];
 
-const makeLocalName = (label = "") => {
-  const cleaned = label.replace(/[^A-Za-z0-9]+/g, " ").trim();
-  if (!cleaned) return "";
-  const parts = cleaned.split(/\s+/);
-  return parts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join("");
-};
-
-const makeSchemaIri = (label = "") => `${CMP_NS}${makeLocalName(label)}`;
-
-// map simple predicate text → well-known IRIs
-const PREDICATE_MAP = {
-  subclassof: "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-  "rdfs:subclassof": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-  "rdfs-subclassof": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-  hasinputparameter: `${CMP_NS}hasInputParameter`,
-  hasoutputparameter: `${CMP_NS}hasOutputParameter`,
-};
-
-const toSchemaIri = (value) => {
-  const v = value.trim();
-  if (!v) return "";
-  if (v.startsWith("http://") || v.startsWith("https://")) return v;
-  return makeSchemaIri(v);
-};
-
-const toPredicateIri = (value) => {
-  const v = value.trim();
-  if (!v) return "";
-  if (v.startsWith("http://") || v.startsWith("https://")) return v;
-  const key = v.toLowerCase().replace(/\s+/g, "");
-  if (PREDICATE_MAP[key]) return PREDICATE_MAP[key];
-  return makeSchemaIri(v);
-};
-
 const getNodeIri = (n) => {
   if (!n) return "";
   if (typeof n === "string") return n;
@@ -79,60 +45,172 @@ const isWorkspaceGroupIri = (iri = "") => {
   return iri.startsWith(base);
 };
 
-// Format display with CamelCase conversion
 const displayLabel = (iri) => camelToTitleCase(local(iri));
 const displayPredicate = (iri) => {
   const pred = getPredicateDisplay(iri);
   return pred.symbol ? `${pred.symbol} ${pred.name}` : pred.readable;
 };
 
+const formatFileSize = (bytes) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+};
+
+// ---------- FileDropZone component ----------
+const FileDropZone = ({ label, accept, file, onFileSelect, onClear, id }) => {
+  const inputRef = useRef(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleDrop = useCallback(
+    (e) => {
+      e.preventDefault();
+      setDragOver(false);
+      const dropped = e.dataTransfer.files[0];
+      if (dropped) onFileSelect(dropped);
+    },
+    [onFileSelect]
+  );
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => setDragOver(false), []);
+
+  if (file) {
+    return (
+      <div className="file-chip">
+        <div className="file-chip-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+        </div>
+        <div className="file-chip-info">
+          <span className="file-chip-name">{file.name}</span>
+          <span className="file-chip-size">{formatFileSize(file.size)}</span>
+        </div>
+        <button type="button" className="file-chip-remove" onClick={onClear} title="Remove file">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`file-drop-zone${dragOver ? " drag-over" : ""}`}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onClick={() => inputRef.current?.click()}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        onChange={(e) => {
+          if (e.target.files[0]) onFileSelect(e.target.files[0]);
+        }}
+        style={{ display: "none" }}
+        id={id}
+      />
+      <div className="file-drop-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+      </div>
+      <p className="file-drop-text">
+        <span className="file-drop-cta">Click to browse</span> or drag & drop
+      </p>
+      <p className="file-drop-hint">{label}</p>
+    </div>
+  );
+};
+
 // ---------- component ----------
 const Workspace = () => {
-  // workspace init
   const [initStatus, setInitStatus] = useState("idle");
   const [initError, setInitError] = useState("");
-  const groupPrefix = `${CMP_NS}instance/group/`;
-
-  // Active tab for actions
-  const [activeTab, setActiveTab] = useState("search"); // search | edit | upload
-
-  // which workspace schema is active
-  const [schemaId, setSchemaId] = useState("main");
 
   // search
   const [q, setQ] = useState("");
-  const [view, setView] = useState("graph"); // list | graph
+  const [view, setView] = useState("graph");
   const [level, setLevel] = useState("schema");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [data, setData] = useState(null);
 
-  // instance/group details panel
+  // details
   const [selectedNodeIri, setSelectedNodeIri] = useState("");
   const [details, setDetails] = useState(null);
   const [detailsErr, setDetailsErr] = useState("");
 
-  // edit mode
-  const [editMode, setEditMode] = useState("add"); // add | delete | replace
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState("");
-  const [editSuccess, setEditSuccess] = useState("");
+  // upload modal
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadMode, setUploadMode] = useState("single");
+  const [schemaName, setSchemaName] = useState("");
+  const [schemaFile, setSchemaFile] = useState(null);
+  const [instanceFile, setInstanceFile] = useState(null);
+  const [schemaUploadLoading, setSchemaUploadLoading] = useState(false);
+  const [schemaUploadErr, setSchemaUploadErr] = useState("");
+  const [schemaUploadOk, setSchemaUploadOk] = useState("");
 
-  // Triple fields
-  const [subject, setSubject] = useState("");
-  const [predicate, setPredicate] = useState("");
-  const [object, setObject] = useState("");
-  const [oldSubject, setOldSubject] = useState("");
-  const [oldPredicate, setOldPredicate] = useState("");
-  const [oldObject, setOldObject] = useState("");
-
-  // Instance upload
-  const [csvFiles, setCsvFiles] = useState([]);
-  const [instUploadLoading, setInstUploadLoading] = useState(false);
-  const [instUploadErr, setInstUploadErr] = useState("");
-  const [instUploadOk, setInstUploadOk] = useState("");
+  // schemas list & selector
+  const [schemas, setSchemas] = useState([]);
+  const [schemasLoading, setSchemasLoading] = useState(false);
+  const [activeSchemaId, setActiveSchemaId] = useState("");
+  const [schemaSelectorOpen, setSchemaSelectorOpen] = useState(false);
+  const [schemaSearch, setSchemaSearch] = useState("");
+  const selectorRef = useRef(null);
 
   const token = localStorage.getItem("token");
+  const instanceNsPrefix = `${CMP_NS}instance/`;
+
+  // ---------- fetch user schemas ----------
+  const fetchSchemas = useCallback(async () => {
+    if (!token) return;
+    setSchemasLoading(true);
+    try {
+      const res = await axios.get(`${API}/workspace/schemas`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const list = (res.data?.schemas || []).filter(s => s.upload_mode !== "base");
+      setSchemas(list);
+    } catch (e) {
+      console.error("Failed to fetch schemas", e);
+    } finally {
+      setSchemasLoading(false);
+    }
+  }, [token]);
+
+  // ---------- close selector on outside click ----------
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (selectorRef.current && !selectorRef.current.contains(e.target)) {
+        setSchemaSelectorOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Filtered schemas for search
+  const filteredSchemas = useMemo(() => {
+    if (!schemaSearch.trim()) return schemas;
+    const term = schemaSearch.toLowerCase();
+    return schemas.filter(s => s.name?.toLowerCase().includes(term));
+  }, [schemas, schemaSearch]);
 
   // ---------- init workspace ----------
   useEffect(() => {
@@ -148,11 +226,12 @@ const Workspace = () => {
           `${API}/workspace/init`,
           {},
           {
-            params: { schema_id: schemaId },
+            params: { schema_id: "main" },
             headers: { Authorization: `Bearer ${token}` },
-          },
+          }
         );
         setInitStatus("ready");
+        fetchSchemas();
       } catch (e) {
         console.error("Workspace init failed", e);
         const msg =
@@ -164,7 +243,7 @@ const Workspace = () => {
       }
     };
     init();
-  }, [token, schemaId]);
+  }, [token, fetchSchemas]);
 
   // ---------- label map ----------
   const labelMap = useMemo(() => {
@@ -188,7 +267,7 @@ const Workspace = () => {
     try {
       if (isWorkspaceGroupIri(iri)) {
         const res = await axios.get(`${API}/workspace/neighbors`, {
-          params: { schema_id: schemaId, q: iri, limit: 5000, level: "both" },
+          params: { schema_id: activeSchemaId, q: iri, limit: 5000, level: "both" },
           headers: { Authorization: `Bearer ${token}` },
         });
         const node =
@@ -219,6 +298,10 @@ const Workspace = () => {
       setErr("You must be logged in to query your workspace.");
       return;
     }
+    if (!activeSchemaId) {
+      setErr("Please select an ontology first.");
+      return;
+    }
 
     setErr("");
     setLoading(true);
@@ -229,7 +312,7 @@ const Workspace = () => {
 
     try {
       const res = await axios.get(`${API}/workspace/neighbors`, {
-        params: { schema_id: schemaId, q, limit: 5000, level },
+        params: { schema_id: activeSchemaId, q, limit: 5000, level },
         headers: { Authorization: `Bearer ${token}` },
       });
       setData(res.data);
@@ -246,101 +329,97 @@ const Workspace = () => {
     }
   };
 
-  // ---------- download ----------
-  const handleDownload = async () => {
-    if (!token) {
-      setErr("You must be logged in to download your workspace.");
-      return;
-    }
-    try {
-      const res = await axios.get(`${API}/workspace/export`, {
-        params: { schema_id: schemaId },
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: "blob",
-      });
-      const blob = new Blob([res.data], { type: "text/turtle" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `workspace_schema_${schemaId}.ttl`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("Download error", e);
-      const msg =
-        e?.response?.data?.detail ||
-        e?.response?.data?.message ||
-        "Failed to download workspace schema.";
-      setErr(msg);
-    }
-  };
+  // ---------- upload custom schema ----------
+  const handleUploadSchema = async (e) => {
+    e.preventDefault();
 
-  // ---------- upload csvs ----------
-  const handleUploadCsvs = async () => {
     if (!token) {
-      setInstUploadErr("You must be logged in to upload CSV files.");
+      setSchemaUploadErr("You must be logged in to upload schemas.");
       return;
     }
-    if (!csvFiles || csvFiles.length === 0) {
-      setInstUploadErr("Please select one or more CSV files.");
+    if (!schemaName.trim()) {
+      setSchemaUploadErr("Ontology name is required.");
+      return;
+    }
+    if (!schemaFile) {
+      setSchemaUploadErr(
+        uploadMode === "single"
+          ? "Ontology file is required."
+          : "Schema file is required."
+      );
+      return;
+    }
+    if (uploadMode === "separate" && !instanceFile) {
+      setSchemaUploadErr("Instance file is required.");
       return;
     }
 
-    setInstUploadErr("");
-    setInstUploadOk("");
-    setInstUploadLoading(true);
+    setSchemaUploadErr("");
+    setSchemaUploadOk("");
+    setSchemaUploadLoading(true);
 
     try {
       const form = new FormData();
-      for (const f of csvFiles) form.append("files", f);
+      form.append("name", schemaName.trim());
+      form.append("mode", uploadMode === "single" ? "combined" : "separate");
+      form.append("schema_file", schemaFile);
 
-      const res = await axios.post(`${API}/workspace/instances/upload`, form, {
-        params: { schema_id: schemaId },
+      if (uploadMode === "separate" && instanceFile) {
+        form.append("instances_file", instanceFile);
+      }
+
+      const res = await axios.post(`${API}/workspace/schema/upload`, form, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const ttl = res.data?.turtle || "";
-      if (ttl) {
-        const blob = new Blob([ttl], { type: "text/turtle" });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `workspace_instances_${schemaId}.ttl`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
+      setSchemaUploadOk("Ontology uploaded successfully!");
+      setSchemaName("");
+      setSchemaFile(null);
+      setInstanceFile(null);
+
+      // Refresh schemas list and auto-select the new one
+      await fetchSchemas();
+      const newSchemaId = res.data?.schema?.schema_id;
+      if (newSchemaId) {
+        setActiveSchemaId(newSchemaId);
       }
 
-      setInstUploadOk(
-        `Uploaded ${res.data?.triples ?? "?"} triples successfully.`,
-      );
+      setTimeout(() => {
+        setUploadModalOpen(false);
+        setSchemaUploadOk("");
+      }, 1200);
     } catch (e) {
-      const msg =
-        e?.response?.data?.detail ||
-        e?.response?.data?.message ||
-        "Failed to upload CSVs / generate instances.";
-      setInstUploadErr(msg);
+      const msg = e?.response?.data?.detail || "Failed to upload ontology.";
+      setSchemaUploadErr(msg);
     } finally {
-      setInstUploadLoading(false);
+      setSchemaUploadLoading(false);
     }
   };
 
-  const instanceNsPrefix = `${CMP_NS}instance/`;
+  const closeUploadModal = () => {
+    if (schemaUploadLoading) return;
+    setUploadModalOpen(false);
+    setSchemaUploadErr("");
+    setSchemaUploadOk("");
+    setSchemaName("");
+    setSchemaFile(null);
+    setInstanceFile(null);
+    setUploadMode("single");
+  };
 
   // ---------- graph ----------
   const cyElements = useMemo(() => {
     if (!data) return [];
 
     const nodes = new Map();
+
     const pushNode = (id, isCenter = false) => {
       if (!id || nodes.has(id)) return;
       const label = labelMap.get(id) || displayLabel(id);
       const color = isCenter
         ? "#2563eb"
         : PALETTE[hashToIndex(id, PALETTE.length)];
+
       nodes.set(id, {
         data: { id, label, color, isCenter: String(!!isCenter) },
       });
@@ -361,8 +440,10 @@ const Workspace = () => {
       const target = e.target || e.t || e.to;
       const relation = e.relation || e.p || e.pred || e.label;
       const id = `${source}->${relation}->${target}`;
+
       pushNode(source);
       pushNode(target);
+
       edges.push({
         data: { id, source, target, label: displayPredicate(relation) },
       });
@@ -421,134 +502,15 @@ const Workspace = () => {
         },
       },
     ],
-    [],
+    []
   );
 
-  // ---------- apply edits ----------
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!token) {
-      setEditError("You must be logged in to edit your workspace.");
-      return;
-    }
-
-    setEditError("");
-    setEditSuccess("");
-    setEditLoading(true);
-
-    try {
-      if (editMode === "add") {
-        const sIri = toSchemaIri(subject);
-        const pIri = toPredicateIri(predicate);
-        const oIri = toSchemaIri(object);
-
-        if (!sIri || !pIri || !oIri) {
-          setEditError("Subject, predicate, and object are required.");
-          setEditLoading(false);
-          return;
-        }
-
-        const res = await axios.post(
-          `${API}/workspace/triple/add`,
-          { subject: sIri, predicate: pIri, object: oIri },
-          {
-            params: { schema_id: schemaId },
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-
-        setEditSuccess("Triple added successfully.");
-        if (res.data && res.data.neighbors) setData(res.data.neighbors);
-        setSubject("");
-        setPredicate("");
-        setObject("");
-      } else if (editMode === "delete") {
-        const sIri = toSchemaIri(subject);
-        const pIri = toPredicateIri(predicate);
-
-        if (!sIri || !pIri) {
-          setEditError("Subject and predicate are required.");
-          setEditLoading(false);
-          return;
-        }
-
-        const payload = { subject: sIri, predicate: pIri };
-        const oIri = object.trim() ? toSchemaIri(object) : "";
-        if (oIri) payload.object = oIri;
-
-        const res = await axios.post(
-          `${API}/workspace/triple/delete`,
-          payload,
-          {
-            params: { schema_id: schemaId },
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-
-        setEditSuccess("Triple(s) deleted successfully.");
-        if (res.data && res.data.neighbors) setData(res.data.neighbors);
-        setSubject("");
-        setPredicate("");
-        setObject("");
-      } else if (editMode === "replace") {
-        const oldSIri = toSchemaIri(oldSubject);
-        const oldPIri = toPredicateIri(oldPredicate);
-        const oldOIri = toSchemaIri(oldObject);
-        const newSIri = toSchemaIri(subject);
-        const newPIri = toPredicateIri(predicate);
-        const newOIri = toSchemaIri(object);
-
-        if (
-          !oldSIri ||
-          !oldPIri ||
-          !oldOIri ||
-          !newSIri ||
-          !newPIri ||
-          !newOIri
-        ) {
-          setEditError("All fields are required for replace.");
-          setEditLoading(false);
-          return;
-        }
-
-        await axios.post(
-          `${API}/workspace/triple/delete`,
-          { subject: oldSIri, predicate: oldPIri, object: oldOIri },
-          {
-            params: { schema_id: schemaId },
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-
-        const res = await axios.post(
-          `${API}/workspace/triple/add`,
-          { subject: newSIri, predicate: newPIri, object: newOIri },
-          {
-            params: { schema_id: schemaId },
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
-
-        setEditSuccess("Triple replaced successfully.");
-        if (res.data && res.data.neighbors) setData(res.data.neighbors);
-        setOldSubject("");
-        setOldPredicate("");
-        setOldObject("");
-        setSubject("");
-        setPredicate("");
-        setObject("");
-      }
-    } catch (e) {
-      console.error("Workspace edit error", e);
-      const msg =
-        e?.response?.data?.detail ||
-        e?.response?.data?.message ||
-        "Failed to apply change to workspace.";
-      setEditError(msg);
-    } finally {
-      setEditLoading(false);
-    }
-  };
+  // active schema label for display
+  const activeSchemaLabel = useMemo(() => {
+    if (!activeSchemaId) return "";
+    const found = schemas.find((s) => s.schema_id === activeSchemaId);
+    return found ? found.name : activeSchemaId;
+  }, [activeSchemaId, schemas]);
 
   // ---------- render ----------
   if (initStatus === "loading") {
@@ -585,483 +547,464 @@ const Workspace = () => {
           <div className="workspace-header-left">
             <h2 className="workspace-title">My Workspace</h2>
             <p className="workspace-subtitle">
-              Build and explore your personal ontology
+              Explore and visualize your personal ontology
             </p>
           </div>
 
           <div className="workspace-header-actions">
-            <select
-              className="workspace-select"
-              value={schemaId}
-              onChange={(e) => {
-                setSchemaId(e.target.value);
-                setData(null);
-                setErr("");
-                setSelectedNodeIri("");
-                setDetails(null);
-              }}
-              title="Select workspace schema"
-            >
-              <option value="main">Main Schema</option>
-              <option value="schema1">Schema 1</option>
-              <option value="schema2">Schema 2</option>
-            </select>
-
             <button
-              className="workspace-btn-secondary"
-              onClick={handleDownload}
+              className="workspace-btn-primary"
+              onClick={() => setUploadModalOpen(true)}
+              type="button"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              Export
+              Upload Ontology
             </button>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="workspace-tabs">
-          <button
-            className={`workspace-tab ${activeTab === "search" ? "active" : ""}`}
-            onClick={() => setActiveTab("search")}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-            Search
-          </button>
-          <button
-            className={`workspace-tab ${activeTab === "edit" ? "active" : ""}`}
-            onClick={() => setActiveTab("edit")}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-            Edit Triples
-          </button>
-          <button
-            className={`workspace-tab ${activeTab === "upload" ? "active" : ""}`}
-            onClick={() => setActiveTab("upload")}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17,8 12,3 7,8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            Upload CSV
-          </button>
-        </div>
-
         {/* Search Panel */}
-        {activeTab === "search" && (
-          <div className="workspace-panel">
-            <form className="workspace-search-form" onSubmit={doSearch}>
-              <input
-                className="workspace-input"
-                placeholder="Search for a term (e.g., Pressure, Velocity)"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
-              <select
-                className="workspace-select"
-                value={level}
-                onChange={(e) => setLevel(e.target.value)}
+        <div className="workspace-panel">
+          {schemas.length === 0 && !schemasLoading && (
+            <div className="workspace-empty-prompt">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <p>No ontologies uploaded yet. Upload an ontology to start exploring.</p>
+            </div>
+          )}
+
+          <form className="workspace-search-form" onSubmit={doSearch}>
+            {/* Searchable Schema Selector */}
+            <div className="schema-combobox" ref={selectorRef}>
+              <div
+                className={`schema-combobox-trigger${schemaSelectorOpen ? " open" : ""}${!activeSchemaId ? " placeholder" : ""}`}
+                onClick={() => setSchemaSelectorOpen(!schemaSelectorOpen)}
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSchemaSelectorOpen(!schemaSelectorOpen); } }}
               >
-                <option value="schema">Schema only</option>
-                <option value="both">Schema + Data</option>
-              </select>
-              <button
-                className="workspace-btn-primary"
-                type="submit"
-                disabled={loading}
-              >
-                {loading ? "Searching..." : "Search"}
-              </button>
-            </form>
-
-            {/* View toggle */}
-            {data && (
-              <div className="workspace-view-toggle">
-                <button
-                  className={`view-btn ${view === "graph" ? "active" : ""}`}
-                  onClick={() => setView("graph")}
-                >
-                  Graph
-                </button>
-                <button
-                  className={`view-btn ${view === "list" ? "active" : ""}`}
-                  onClick={() => setView("list")}
-                >
-                  List
-                </button>
+                <span className="schema-combobox-value">
+                  {activeSchemaId ? activeSchemaLabel : "Select an ontology..."}
+                </span>
+                <svg className={`schema-combobox-chevron${schemaSelectorOpen ? " rotated" : ""}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
               </div>
-            )}
 
-            {loading && (
-              <div className="workspace-loading-inline">
-                <div className="loading-spinner small"></div>
-                <span>Searching...</span>
-              </div>
-            )}
-
-            {err && <div className="error-banner">{err}</div>}
-
-            {data && (
-              <div className="workspace-results">
-                <div className="results-meta">
-                  <span className="results-badge">
-                    Center: {displayLabel(data.node)}
-                  </span>
-                  <span className="results-count">
-                    {data.nodes?.length || 0} nodes • {data.edges?.length || 0}{" "}
-                    edges
-                  </span>
-                </div>
-
-                {view === "graph" && cyElements.length > 0 && (
-                  <div className="workspace-graph">
-                    <CytoscapeComponent
-                      elements={cyElements}
-                      layout={{
-                        name: "cose",
-                        animate: "end",
-                        fit: true,
-                        padding: 40,
-                      }}
-                      stylesheet={stylesheet}
-                      style={{ width: "100%", height: "450px" }}
-                      wheelSensitivity={0.2}
-                      cy={(cy) => {
-                        cy.off("tap");
-                        cy.on("tap", "node", (evt) => {
-                          const iri = evt.target.id();
-                          if (
-                            iri &&
-                            (isWorkspaceGroupIri(iri) ||
-                              iri.startsWith(instanceNsPrefix))
-                          ) {
-                            setSelectedNodeIri(iri);
-                            loadDetails(iri);
-                          }
-                        });
-                      }}
+              {schemaSelectorOpen && (
+                <div className="schema-combobox-dropdown">
+                  <div className="schema-combobox-search-wrap">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input
+                      className="schema-combobox-search"
+                      placeholder="Search ontologies..."
+                      value={schemaSearch}
+                      onChange={(e) => setSchemaSearch(e.target.value)}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </div>
-                )}
 
-                {view === "list" && (
-                  <div className="workspace-list">
-                    {data.edges?.map((e, i) => {
-                      const source = e.source || e.s || e.from;
-                      const target = e.target || e.t || e.to;
-                      const relation = e.relation || e.p || e.pred || e.label;
-
-                      return (
-                        <div className="edge-item" key={i}>
-                          <span className="edge-source">
-                            {displayLabel(source)}
-                          </span>
-                          <span className="edge-relation">
-                            {displayPredicate(relation)}
-                          </span>
-                          <span className="edge-target">
-                            {displayLabel(target)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {(!data.edges || data.edges.length === 0) && (
-                      <div className="empty-state">No connections found.</div>
+                  <div className="schema-combobox-list">
+                    {filteredSchemas.length === 0 && (
+                      <div className="schema-combobox-empty">No ontologies found</div>
                     )}
+                    {filteredSchemas.map((s) => (
+                      <div
+                        key={s.schema_id}
+                        className={`schema-combobox-item${activeSchemaId === s.schema_id ? " selected" : ""}`}
+                        onClick={() => {
+                          setActiveSchemaId(s.schema_id);
+                          setSchemaSelectorOpen(false);
+                          setSchemaSearch("");
+                          setData(null);
+                          setErr("");
+                        }}
+                      >
+                        <span className="schema-combobox-item-name">{s.name}</span>
+                        {s.upload_mode === "separate" && (
+                          <span className="schema-combobox-item-badge">Schema + Instance</span>
+                        )}
+                        {activeSchemaId === s.schema_id && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                )}
-
-                {/* Details panel */}
-                {selectedNodeIri && details && (
-                  <div className="workspace-details">
-                    <h4>{displayLabel(selectedNodeIri)}</h4>
-                    {details.values && details.values.length > 0 && (
-                      <>
-                        {(() => {
-                          const vals = details.values
-                            .map(Number)
-                            .filter(Number.isFinite);
-                          if (vals.length > 1) {
-                            return (
-                              <SimpleChart
-                                data={vals.slice(0, 100)}
-                                title="Value Distribution"
-                                height={160}
-                              />
-                            );
-                          }
-                          return null;
-                        })()}
-                        <div className="details-stats">
-                          <div>
-                            <strong>Count:</strong>{" "}
-                            {details.summary?.count || details.values.length}
-                          </div>
-                          <div>
-                            <strong>Min:</strong>{" "}
-                            {details.summary?.min ?? "N/A"}
-                          </div>
-                          <div>
-                            <strong>Max:</strong>{" "}
-                            {details.summary?.max ?? "N/A"}
-                          </div>
-                          <div>
-                            <strong>Avg:</strong>{" "}
-                            {details.summary?.avg ?? "N/A"}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    {detailsErr && (
-                      <div className="error-banner">{detailsErr}</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Edit Panel */}
-        {activeTab === "edit" && (
-          <div className="workspace-panel">
-            <div className="edit-mode-toggle">
-              <button
-                className={`edit-mode-btn ${editMode === "add" ? "active" : ""}`}
-                onClick={() => {
-                  setEditMode("add");
-                  setEditError("");
-                  setEditSuccess("");
-                }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Add
-              </button>
-              <button
-                className={`edit-mode-btn ${editMode === "delete" ? "active" : ""}`}
-                onClick={() => {
-                  setEditMode("delete");
-                  setEditError("");
-                  setEditSuccess("");
-                }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Delete
-              </button>
-              <button
-                className={`edit-mode-btn ${editMode === "replace" ? "active" : ""}`}
-                onClick={() => {
-                  setEditMode("replace");
-                  setEditError("");
-                  setEditSuccess("");
-                }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-                </svg>
-                Update
-              </button>
+                </div>
+              )}
             </div>
 
-            <form onSubmit={handleEditSubmit} className="edit-form">
-              {editMode === "replace" && (
-                <div className="edit-section">
-                  <label className="edit-label">Old Triple (to remove)</label>
-                  <div className="edit-triple-row">
-                    <input
-                      className="workspace-input"
-                      placeholder="Subject"
-                      value={oldSubject}
-                      onChange={(e) => setOldSubject(e.target.value)}
-                    />
-                    <input
-                      className="workspace-input"
-                      placeholder="Predicate"
-                      value={oldPredicate}
-                      onChange={(e) => setOldPredicate(e.target.value)}
-                    />
-                    <input
-                      className="workspace-input"
-                      placeholder="Object"
-                      value={oldObject}
-                      onChange={(e) => setOldObject(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
+            <input
+              className="workspace-input"
+              placeholder="Search for a class or term..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <select
+              className="workspace-select"
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+            >
+              <option value="schema">Schema only</option>
+              <option value="both">Schema + Data</option>
+            </select>
+            <button
+              className="workspace-btn-primary"
+              type="submit"
+              disabled={loading || !activeSchemaId}
+            >
+              {loading ? "Searching..." : "Search"}
+            </button>
+          </form>
 
-              <div className="edit-section">
-                <label className="edit-label">
-                  {editMode === "replace"
-                    ? "New Triple"
-                    : editMode === "add"
-                      ? "Add Triple"
-                      : "Delete Triple"}
-                </label>
-                <div className="edit-triple-row">
-                  <input
-                    className="workspace-input"
-                    placeholder="Subject (e.g., HeadSpeed)"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                  />
-                  <input
-                    className="workspace-input"
-                    placeholder="Predicate (e.g., subClassOf)"
-                    value={predicate}
-                    onChange={(e) => setPredicate(e.target.value)}
-                  />
-                  <input
-                    className="workspace-input"
-                    placeholder={
-                      editMode === "delete"
-                        ? "Object (optional)"
-                        : "Object (e.g., Velocity)"
-                    }
-                    value={object}
-                    onChange={(e) => setObject(e.target.value)}
-                  />
-                </div>
+          {activeSchemaId && (
+            <div className="active-schema-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              Searching in: <strong>{activeSchemaLabel}</strong>
+            </div>
+          )}
+
+          {data && (
+            <div className="workspace-view-toggle">
+              <button
+                className={`view-btn ${view === "graph" ? "active" : ""}`}
+                onClick={() => setView("graph")}
+                type="button"
+              >
+                Graph
+              </button>
+              <button
+                className={`view-btn ${view === "list" ? "active" : ""}`}
+                onClick={() => setView("list")}
+                type="button"
+              >
+                List
+              </button>
+            </div>
+          )}
+
+          {loading && (
+            <div className="workspace-loading-inline">
+              <div className="loading-spinner small"></div>
+              <span>Searching...</span>
+            </div>
+          )}
+
+          {err && <div className="error-banner">{err}</div>}
+
+          {data && (
+            <div className="workspace-results">
+              <div className="results-meta">
+                <span className="results-badge">
+                  Center: {displayLabel(data.node)}
+                </span>
+                <span className="results-count">
+                  {data.nodes?.length || 0} nodes • {data.edges?.length || 0} edges
+                </span>
               </div>
 
-              {editError && <div className="error-banner">{editError}</div>}
-              {editSuccess && (
-                <div className="success-banner">{editSuccess}</div>
+              {view === "graph" && cyElements.length > 0 && (
+                <div className="workspace-graph">
+                  <CytoscapeComponent
+                    elements={cyElements}
+                    layout={{
+                      name: "cose",
+                      animate: "end",
+                      fit: true,
+                      padding: 40,
+                    }}
+                    stylesheet={stylesheet}
+                    style={{ width: "100%", height: "450px" }}
+                    wheelSensitivity={0.2}
+                    cy={(cy) => {
+                      cy.off("tap");
+                      cy.on("tap", "node", (evt) => {
+                        const iri = evt.target.id();
+                        if (
+                          iri &&
+                          (isWorkspaceGroupIri(iri) ||
+                            iri.startsWith(instanceNsPrefix))
+                        ) {
+                          setSelectedNodeIri(iri);
+                          loadDetails(iri);
+                        }
+                      });
+                    }}
+                  />
+                </div>
               )}
 
-              <button
-                className="workspace-btn-primary"
-                type="submit"
-                disabled={editLoading}
-              >
-                {editLoading
-                  ? "Saving..."
-                  : `Apply ${editMode === "add" ? "Add" : editMode === "delete" ? "Delete" : "Update"}`}
-              </button>
-            </form>
-          </div>
-        )}
+              {view === "list" && (
+                <div className="workspace-list">
+                  {data.edges?.map((e, i) => {
+                    const source = e.source || e.s || e.from;
+                    const target = e.target || e.t || e.to;
+                    const relation = e.relation || e.p || e.pred || e.label;
 
-        {/* Upload Panel */}
-        {activeTab === "upload" && (
-          <div className="workspace-panel">
-            <div className="upload-section">
-              <p className="upload-description">
-                Upload CSV files to generate instance data for your workspace
-                schema.
-              </p>
+                    return (
+                      <div className="edge-item" key={i}>
+                        <span className="edge-source">{displayLabel(source)}</span>
+                        <span className="edge-relation">
+                          {displayPredicate(relation)}
+                        </span>
+                        <span className="edge-target">{displayLabel(target)}</span>
+                      </div>
+                    );
+                  })}
 
-              <div className="upload-area">
-                <input
-                  type="file"
-                  accept=".csv"
-                  multiple
-                  id="csv-upload"
-                  className="upload-input"
-                  onChange={(e) => {
-                    setCsvFiles(Array.from(e.target.files || []));
-                    setInstUploadErr("");
-                    setInstUploadOk("");
-                  }}
-                />
-                <label htmlFor="csv-upload" className="upload-label">
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
+                  {(!data.edges || data.edges.length === 0) && (
+                    <div className="empty-state">No connections found.</div>
+                  )}
+                </div>
+              )}
+
+              {selectedNodeIri && details && (
+                <div className="workspace-details">
+                  <h4>{displayLabel(selectedNodeIri)}</h4>
+
+                  {details.values && details.values.length > 0 && (
+                    <>
+                      {(() => {
+                        const vals = details.values
+                          .map(Number)
+                          .filter(Number.isFinite);
+
+                        if (vals.length > 1) {
+                          return (
+                            <SimpleChart
+                              data={vals.slice(0, 100)}
+                              title="Value Distribution"
+                              height={160}
+                            />
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      <div className="details-stats">
+                        <div>
+                          <strong>Count:</strong>{" "}
+                          {details.summary?.count || details.values.length}
+                        </div>
+                        <div>
+                          <strong>Min:</strong> {details.summary?.min ?? "N/A"}
+                        </div>
+                        <div>
+                          <strong>Max:</strong> {details.summary?.max ?? "N/A"}
+                        </div>
+                        <div>
+                          <strong>Avg:</strong> {details.summary?.avg ?? "N/A"}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {detailsErr && <div className="error-banner">{detailsErr}</div>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Upload Popup Modal */}
+      {uploadModalOpen && (
+        <div className="workspace-modal-overlay" onClick={closeUploadModal}>
+          <div
+            className="workspace-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="workspace-modal-header">
+              <div className="workspace-modal-title-group">
+                <div className="workspace-modal-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17,8 12,3 7,8" />
+                    <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
-                  {csvFiles.length > 0
-                    ? `${csvFiles.length} file(s) selected`
-                    : "Click to select CSV files"}
-                </label>
+                </div>
+                <div>
+                  <h3>Upload Ontology</h3>
+                  <p className="workspace-modal-desc">Import RDF files into your workspace</p>
+                </div>
               </div>
-
-              {instUploadErr && (
-                <div className="error-banner">{instUploadErr}</div>
-              )}
-              {instUploadOk && (
-                <div className="success-banner">{instUploadOk}</div>
-              )}
-
               <button
-                className="workspace-btn-primary"
-                onClick={handleUploadCsvs}
-                disabled={instUploadLoading || csvFiles.length === 0}
+                type="button"
+                className="workspace-modal-close"
+                onClick={closeUploadModal}
               >
-                {instUploadLoading ? "Uploading..." : "Generate Instances"}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
               </button>
             </div>
+
+            <form onSubmit={handleUploadSchema} className="workspace-modal-body">
+              <div className="edit-section">
+                <label className="edit-label">Ontology Name *</label>
+                <input
+                  className="workspace-input"
+                  placeholder="e.g., Supply Chain Ontology"
+                  value={schemaName}
+                  onChange={(e) => setSchemaName(e.target.value)}
+                />
+              </div>
+
+              <div className="edit-section">
+                <label className="edit-label">Upload Type</label>
+                <div className="upload-mode-toggle">
+                  <button
+                    type="button"
+                    className={`upload-mode-btn ${uploadMode === "single" ? "active" : ""}`}
+                    onClick={() => {
+                      setUploadMode("single");
+                      setSchemaFile(null);
+                      setInstanceFile(null);
+                      setSchemaUploadErr("");
+                      setSchemaUploadOk("");
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    Single File
+                  </button>
+                  <button
+                    type="button"
+                    className={`upload-mode-btn ${uploadMode === "separate" ? "active" : ""}`}
+                    onClick={() => {
+                      setUploadMode("separate");
+                      setSchemaFile(null);
+                      setInstanceFile(null);
+                      setSchemaUploadErr("");
+                      setSchemaUploadOk("");
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                    </svg>
+                    Schema + Instance
+                  </button>
+                </div>
+              </div>
+
+              {uploadMode === "single" ? (
+                <div className="edit-section">
+                  <label className="edit-label">Ontology File *</label>
+                  <FileDropZone
+                    id="ontology-file"
+                    label=".ttl, .rdf, .n3, .owl, .jsonld"
+                    accept=".ttl,.rdf,.n3,.owl,.jsonld"
+                    file={schemaFile}
+                    onFileSelect={setSchemaFile}
+                    onClear={() => setSchemaFile(null)}
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="edit-section">
+                    <label className="edit-label">Schema File *</label>
+                    <FileDropZone
+                      id="schema-file"
+                      label=".ttl, .rdf, .n3, .owl, .jsonld"
+                      accept=".ttl,.rdf,.n3,.owl,.jsonld"
+                      file={schemaFile}
+                      onFileSelect={setSchemaFile}
+                      onClear={() => setSchemaFile(null)}
+                    />
+                  </div>
+
+                  <div className="edit-section">
+                    <label className="edit-label">Instance File *</label>
+                    <FileDropZone
+                      id="instance-file"
+                      label=".ttl, .rdf, .n3, .owl, .jsonld"
+                      accept=".ttl,.rdf,.n3,.owl,.jsonld"
+                      file={instanceFile}
+                      onFileSelect={setInstanceFile}
+                      onClear={() => setInstanceFile(null)}
+                    />
+                  </div>
+                </>
+              )}
+
+              {schemaUploadErr && (
+                <div className="error-banner">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                  {schemaUploadErr}
+                </div>
+              )}
+              {schemaUploadOk && (
+                <div className="success-banner">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  {schemaUploadOk}
+                </div>
+              )}
+
+              <div className="upload-actions">
+                <button
+                  type="button"
+                  className="workspace-btn-secondary"
+                  onClick={closeUploadModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="workspace-btn-primary"
+                  type="submit"
+                  disabled={
+                    schemaUploadLoading ||
+                    !schemaName.trim() ||
+                    !schemaFile ||
+                    (uploadMode === "separate" && !instanceFile)
+                  }
+                >
+                  {schemaUploadLoading ? (
+                    <>
+                      <div className="loading-spinner small"></div>
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      Upload
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -31,7 +31,6 @@ const getInitials = (firstName, lastName, email) => {
 // helper for avatar color (based on email or name)
 const getAvatarColor = (seed) => {
   const colors = [
-    "#1abc9c",
     "#3498db",
     "#9b59b6",
     "#e67e22",
@@ -49,8 +48,8 @@ const getAvatarColor = (seed) => {
 };
 
 export default function Header({ user, onOpenAuth, onLogout }) {
-  const [drawerOpen, setDrawerOpen] = useState(false); // left nav drawer
-  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false); // right profile drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
 
   const isMobile = useMediaQuery("(max-width:910px)");
   const navigate = useNavigate();
@@ -104,13 +103,15 @@ export default function Header({ user, onOpenAuth, onLogout }) {
       <List onClick={toggleDrawer(false)}>
         <ListItem className="list-item" disablePadding>
           <Button
-            component={Link}
-            to="/search"
             variant="text"
             className="navbar__link"
             sx={{ justifyContent: "flex-start", width: "100%" }}
+            onClick={() => {
+              setDrawerOpen(false);
+              handleWorkspaceClick();
+            }}
           >
-            <ListItemText secondary="Search" />
+            <ListItemText secondary="Workspace" />
           </Button>
         </ListItem>
 
@@ -140,15 +141,13 @@ export default function Header({ user, onOpenAuth, onLogout }) {
 
         <ListItem className="list-item" disablePadding>
           <Button
+            component={Link}
+            to="/"
             variant="text"
             className="navbar__link"
             sx={{ justifyContent: "flex-start", width: "100%" }}
-            onClick={() => {
-              setDrawerOpen(false);
-              handleWorkspaceClick();
-            }}
           >
-            <ListItemText secondary="Workspace" />
+            <ListItemText secondary="Main Canvas" />
           </Button>
         </ListItem>
       </List>
@@ -241,11 +240,11 @@ export default function Header({ user, onOpenAuth, onLogout }) {
             >
               <Button
                 component={Link}
-                to="/search"
+                to="/"
                 variant="text"
                 className="header__links_sub"
               >
-                Search
+                Main Canvas
               </Button>
 
               <Button
