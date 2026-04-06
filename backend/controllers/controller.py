@@ -583,3 +583,33 @@ def ctrl_upload_schema(
             "message": "Schema and instances uploaded successfully",
             "schema": meta
         }
+
+
+def ctrl_delete_schema(user_email: str, schema_id: str) -> Dict:
+    """
+    Deletes the schema metadata from MongoDB and clears its matching named graphs from GraphDB.
+    """
+    # 1. Get metadata to fetch the GraphDB iris
+    meta = get_user_schema(user_email, schema_id)
+    if not meta:
+        raise HTTPException(404, detail="Schema not found")
+
+    # 2. Delete actual graphs from GraphDB
+    if meta.get("graph_iri"):
+        try:
+            delete_named_graph(meta["graph_iri"])
+        except Exception as e:
+            print(f"Failed to drop schema graph {meta['graph_iri']}: {e}")
+
+    if meta.get("instance_graph_iri"):
+        try:
+            delete_named_graph(meta["instance_graph_iri"])
+        except Exception as e:
+            print(f"Failed to drop instance graph {meta['instance_graph_iri']}: {e}")
+
+    # 3. Delete from MongoDB
+    success = delete_user_schema(user_email, schema_id)
+    if not success:
+        raise HTTPException(500, detail="Failed to delete schema record")
+
+    return {"status": "ok", "message": "Schema deleted successfully"}

@@ -1,6 +1,6 @@
 from typing import Dict, Any, List, Optional
 
-from fastapi import APIRouter, Query, Body, Depends, Response, UploadFile, File, Form
+from fastapi import APIRouter, Query, Body, Depends, Response, UploadFile, File, Form, Path
 
 from controllers.controller import (
     # base ontology (read-only)
@@ -22,6 +22,7 @@ from controllers.controller import (
     # custom uploaded schemas
     ctrl_list_user_schemas,
     ctrl_delete_user_schema,
+    ctrl_delete_schema,
     ctrl_upload_schema,
     ctrl_workspace_full_schema_graph,
 )
@@ -111,6 +112,15 @@ def api_workspace_full_schema_graph(
         schema_id,
         limit,
     )
+
+
+@router.delete("/workspace/schema/{schema_id}")
+def api_workspace_delete_schema(
+    schema_id: str = Path(..., description="The schema to delete"),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """Delete a user schema completely from the workspace and graph database."""
+    return ctrl_delete_schema(current_user["email"], schema_id)
 @router.post("/workspace/triple/add")
 def api_workspace_add_relation(
     schema_id: str = Query(..., description="Which workspace schema to write to"),

@@ -46,6 +46,19 @@ def _exec_select(q: str):
     return s.query().convert()
 
 
+def _exec_update(q: str):
+    s = _update_client()
+    s.setQuery(q)
+    s.query()
+
+
+def drop_named_graph(graph_iri: str):
+    """Executes a DROP GRAPH query for the specified IRI."""
+    _assert_not_base_graph(graph_iri)
+    q = f"DROP GRAPH <{graph_iri}>"
+    _exec_update(q)
+
+
 # safety helpers
 def _assert_not_base_graph(graph_iri: str):
     if graph_iri == BASE_SCHEMA_GRAPH:

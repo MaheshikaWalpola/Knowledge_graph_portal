@@ -14,6 +14,9 @@ import {
   Avatar,
   Typography,
   Divider,
+  Menu,
+  MenuItem,
+  ListItemIcon,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -49,7 +52,7 @@ const getAvatarColor = (seed) => {
 
 export default function Header({ user, onOpenAuth, onLogout }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
 
   const isMobile = useMediaQuery("(max-width:910px)");
   const navigate = useNavigate();
@@ -63,12 +66,12 @@ export default function Header({ user, onOpenAuth, onLogout }) {
     setDrawerOpen(open);
   };
 
-  const handleAvatarClick = () => {
-    setProfileDrawerOpen(true);
+  const handleAvatarClick = (event) => {
+    setAnchorEl(event.currentTarget);
   };
 
-  const handleProfileDrawerClose = () => {
-    setProfileDrawerOpen(false);
+  const handleMenuClose = () => {
+    setAnchorEl(null);
   };
 
   const initials = user
@@ -334,78 +337,91 @@ export default function Header({ user, onOpenAuth, onLogout }) {
         {list()}
       </Drawer>
 
-      {/* Right profile drawer (avatar click) */}
-      <Drawer
-        anchor="right"
-        open={profileDrawerOpen}
-        onClose={handleProfileDrawerClose}
-        PaperProps={{ sx: { width: 260 } }}
+      {/* Right profile Menu (dropdown) */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            overflow: "visible",
+            filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.15))",
+            mt: 1.5,
+            width: 240,
+            "& .MuiAvatar-root": {
+              width: 32,
+              height: 32,
+              ml: -0.5,
+              mr: 1,
+            },
+            "&:before": {
+              content: '""',
+              display: "block",
+              position: "absolute",
+              top: 0,
+              right: 20,
+              width: 10,
+              height: 10,
+              bgcolor: "background.paper",
+              transform: "translateY(-50%) rotate(45deg)",
+              zIndex: 0,
+            },
+          },
+        }}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
-        <Box
-          sx={{
-            p: 2,
-            display: "flex",
-            flexDirection: "column",
-            height: "100%",
+        {user && (
+          <Box sx={{ px: 2, py: 1.5 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              {user.firstName} {user.lastName}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" noWrap>
+              {user.email}
+            </Typography>
+          </Box>
+        )}
+        <Divider sx={{ mb: 1, mt: 0 }} />
+        
+        <MenuItem
+          onClick={() => {
+            handleMenuClose();
+            navigate("/profile");
           }}
         >
-          {user && (
-            <>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                  mb: 2,
-                  mt: 1,
-                }}
-              >
-                <Avatar
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    bgcolor: avatarColor,
-                    fontSize: 20,
-                  }}
-                >
-                  {initials}
-                </Avatar>
-                <Box>
-                  <Typography variant="subtitle1">
-                    {user.firstName} {user.lastName}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {user.email}
-                  </Typography>
-                </Box>
-              </Box>
+          <ListItemText primary="Profile" />
+        </MenuItem>
 
-              <Divider sx={{ mb: 1 }} />
+        <MenuItem
+          onClick={() => {
+            handleMenuClose();
+            navigate("/guidance"); 
+          }}
+        >
+          <ListItemText primary="User Guidance" />
+        </MenuItem>
 
-              <List>
-                <ListItem
-                  button
-                  onClick={() => {
-                    handleProfileDrawerClose();
-                    navigate("/profile");
-                  }}
-                >
-                  <ListItemText primary="Profile" />
-                </ListItem>
-                <ListItem
-                  button
-                  onClick={() => {
-                    handleProfileDrawerClose();
-                    onLogout && onLogout();
-                  }}
-                >
-                  <ListItemText primary="Logout" />
-                </ListItem>
-              </List>
-            </>
-          )}
-        </Box>
-      </Drawer>
+        <MenuItem
+          onClick={() => {
+            handleMenuClose();
+            navigate("/my-ontologies");
+          }}
+        >
+          <ListItemText primary="My Ontologies" />
+        </MenuItem>
+
+        <Divider />
+
+        <MenuItem
+          onClick={() => {
+            handleMenuClose();
+            onLogout && onLogout();
+          }}
+        >
+          <ListItemText primary="Logout" sx={{ color: "error.main" }} />
+        </MenuItem>
+      </Menu>
     </>
   );
 }
