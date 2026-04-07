@@ -18,6 +18,11 @@
   position: relative;
 }
 
+/* Full-screen mode (no header/footer, e.g. canvas) */
+.app-fullscreen {
+  padding-top: 0 !important;
+}
+
 /* Main content area - this wraps all page content */
 .main-content {
   flex: 1;

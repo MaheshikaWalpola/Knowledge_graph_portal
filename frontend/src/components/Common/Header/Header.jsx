@@ -243,7 +243,7 @@ export default function Header({ user, onOpenAuth, onLogout }) {
             >
               <Button
                 component={Link}
-                to="/"
+                to="/canvas"
                 variant="text"
                 className="header__links_sub"
               >

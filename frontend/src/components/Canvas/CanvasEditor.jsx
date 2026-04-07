@@ -1,0 +1,150 @@
+import React, { useState, useCallback, useEffect } from "react";
+import OntologyPalette from "./OntologyPalette";
+import OntologyCanvas from "./OntologyCanvas";
+import PropertyPanel from "./PropertyPanel";
+import "./CanvasEditor.css";
+
+export default function CanvasEditor() {
+  const [activeEdgeType, setActiveEdgeType] = useState("subClassOf");
+  const [selected, setSelected] = useState(null);
+  const [model, setModel] = useState({ nodes: [], edges: [] });
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
+  const [headerHidden, setHeaderHidden] = useState(false);
+
+  // Toggle a CSS class on the root element to hide/show the app header & footer
+  useEffect(() => {
+    const root = document.documentElement;
+    if (headerHidden) {
+      root.classList.add("ce-header-hidden");
+    } else {
+      root.classList.remove("ce-header-hidden");
+    }
+    // Cleanup on unmount (navigating away from canvas)
+    return () => root.classList.remove("ce-header-hidden");
+  }, [headerHidden]);
+
+  const handleImport = useCallback((data) => {
+    if (data?.nodes && data?.edges) {
+      setModel(data);
+    }
+  }, []);
+
+  return (
+    <div className={`canvas-editor ${!leftOpen ? "left-collapsed" : ""} ${!rightOpen ? "right-collapsed" : ""}`}>
+      {/* Central Floating Dock */}
+      <div className="ce-dock">
+        {/* Toggle Left Palette */}
+        <button
+          className={`ce-dock-btn ${!leftOpen ? "inactive" : ""}`}
+          onClick={() => setLeftOpen((v) => !v)}
+          title={leftOpen ? "Hide Palette" : "Show Palette"}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <line x1="9" y1="3" x2="9" y2="21" />
+          </svg>
+        </button>
+
+        {/* Fullscreen / Header Toggle */}
+        <button
+          className={`ce-dock-btn ${headerHidden ? "active" : ""}`}
+          onClick={() => setHeaderHidden((v) => !v)}
+          title={headerHidden ? "Show navbar & footer" : "Hide navbar & footer (Fullscreen Canvas)"}
+        >
+          {headerHidden ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 3 21 3 21 9" />
+              <polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+              <line x1="3" y1="21" x2="10" y2="14" />
+            </svg>
+          )}
+        </button>
+
+        {/* Toggle Right Panel */}
+        <button
+          className={`ce-dock-btn ${!rightOpen ? "inactive" : ""}`}
+          onClick={() => setRightOpen((v) => !v)}
+          title={rightOpen ? "Hide Properties" : "Show Properties"}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+             <line x1="15" y1="3" x2="15" y2="21" />
+          </svg>
+        </button>
+        
+        <div className="ce-dock-divider" />
+
+        {/* Action: Select All (simulated via basic hook or just visually present for now) */}
+        <button
+          className="ce-dock-btn action-btn"
+          title="Select Mode"
+          onClick={() => {
+            // Future implementation: ensure select mode active instead of hand mode
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+            <path d="M13 13l6 6" />
+          </svg>
+        </button>
+
+        {/* Action: Delete Selected */}
+        <button
+          className={`ce-dock-btn action-btn ${!selected ? "disabled" : ""}`}
+          title={selected ? "Delete selected element(s)" : "Select an element to delete"}
+          onClick={() => {
+            if (selected) {
+              // Trigger a Backspace keydown on the document to let React Flow handle deletion
+              const event = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true });
+              document.querySelector('.react-flow').dispatchEvent(event);
+            }
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Left palette */}
+      <aside className={`ce-left ${!leftOpen ? "collapsed" : ""}`}>
+        {leftOpen && (
+          <OntologyPalette
+            activeEdgeType={activeEdgeType}
+            onEdgeTypeChange={setActiveEdgeType}
+          />
+        )}
+      </aside>
+
+      {/* Center canvas */}
+      <main className="ce-center">
+        <OntologyCanvas
+          activeEdgeType={activeEdgeType}
+          onSelectionChange={setSelected}
+          onModelChange={setModel}
+          externalNodes={model.nodes.length ? model.nodes : undefined}
+          externalEdges={model.edges.length ? model.edges : undefined}
+        />
+      </main>
+
+      {/* Right property panel */}
+      <aside className={`ce-right ${!rightOpen ? "collapsed" : ""}`}>
+        {rightOpen && (
+          <PropertyPanel
+            selected={selected}
+            model={model}
+            onImport={handleImport}
+          />
+        )}
+      </aside>
+    </div>
+  );
+}
