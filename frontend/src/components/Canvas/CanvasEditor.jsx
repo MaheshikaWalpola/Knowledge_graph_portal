@@ -100,10 +100,9 @@ export default function CanvasEditor() {
           className={`ce-dock-btn action-btn ${!selected ? "disabled" : ""}`}
           title={selected ? "Delete selected element(s)" : "Select an element to delete"}
           onClick={() => {
-            if (selected) {
-              // Trigger a Backspace keydown on the document to let React Flow handle deletion
-              const event = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true });
-              document.querySelector('.react-flow').dispatchEvent(event);
+            if (selected && selected.onDelete) {
+              selected.onDelete();
+              setSelected(null); // Clear selection in editor state
             }
           }}
         >

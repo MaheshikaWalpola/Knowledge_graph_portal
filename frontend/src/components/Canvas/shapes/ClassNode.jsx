@@ -1,23 +1,32 @@
 import React, { memo } from "react";
 import { Handle, Position } from "reactflow";
+import { NodeResizer } from "@reactflow/node-resizer";
+import "@reactflow/node-resizer/dist/style.css";
 
 const ClassNode = memo(({ data, selected }) => {
   return (
-    <div
-      className={`onto-node onto-class ${selected ? "selected" : ""}`}
-      style={{ borderColor: data.color || "#3b82f6" }}
-    >
-      <Handle type="target" position={Position.Top} className="onto-handle" />
-      <div className="onto-node-icon">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke={data.color || "#3b82f6"} strokeWidth="2">
-          <rect x="3" y="3" width="18" height="18" rx="4" />
-        </svg>
+    <>
+      <NodeResizer 
+        color={data.color || "#3b82f6"} 
+        isVisible={selected} 
+        minWidth={50} 
+        minHeight={25} 
+        keepAspectRatio={true}
+      />
+      <div
+        className={`onto-node onto-class ${selected ? "selected" : ""}`}
+        style={{ 
+          "--node-color": data.color || "#3b82f6",
+          borderColor: "var(--node-color)" 
+        }}
+      >
+        <Handle type="target" position={Position.Top} className="onto-handle" />
+        <div className="onto-node-label">{data.label || "Unnamed"}</div>
+        <Handle type="source" position={Position.Bottom} className="onto-handle" />
+        <Handle type="source" position={Position.Right} id="right" className="onto-handle" />
+        <Handle type="target" position={Position.Left} id="left" className="onto-handle" />
       </div>
-      <div className="onto-node-label">{data.label || "Class"}</div>
-      <Handle type="source" position={Position.Bottom} className="onto-handle" />
-      <Handle type="source" position={Position.Right} id="right" className="onto-handle" />
-      <Handle type="target" position={Position.Left} id="left" className="onto-handle" />
-    </div>
+    </>
   );
 });
 

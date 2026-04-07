@@ -162,6 +162,10 @@ function CanvasInner({
               )
             );
           },
+          onDelete: () => {
+             setNodes((nds) => nds.filter((nd) => nd.id !== n.id));
+             setEdges((eds) => eds.filter((ed) => ed.source !== n.id && ed.target !== n.id));
+          }
         });
       } else if (selEdges.length === 1) {
         const e = selEdges[0];
@@ -175,6 +179,9 @@ function CanvasInner({
               eds.map((ed) => (ed.id === e.id ? { ...ed, label: v } : ed))
             );
           },
+          onDelete: () => {
+             setEdges((eds) => eds.filter((ed) => ed.id !== e.id));
+          }
         });
       } else {
         onSelectionChange?.(null);

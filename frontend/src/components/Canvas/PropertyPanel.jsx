@@ -7,7 +7,7 @@ const EDGE_TYPE_OPTIONS = [
   { value: "rdfType", label: "rdf:type" },
 ];
 
-function ElementTab({ selected }) {
+function ElementTab({ selected, model }) {
   if (!selected) {
     return (
       <div className="pp-empty">
@@ -17,21 +17,42 @@ function ElementTab({ selected }) {
   }
 
   if (selected.kind === "node") {
+    const liveNode = model?.nodes?.find((n) => n.id === selected.id) || selected;
+    const data = liveNode.data || {};
+    
+    // Map internal node types to human-readable strings
+    let nodeTypeDisplay = "Unknown Node";
+    if (selected.type === "classNode") nodeTypeDisplay = "Class";
+    if (selected.type === "instanceNode") nodeTypeDisplay = "Instance";
+    if (selected.type === "literalNode") nodeTypeDisplay = "Literal";
+    if (selected.type === "propertyNode") {
+      nodeTypeDisplay = data.propertyType === "datatype" ? "Data Property" : "Object Property";
+    }
+
     return (
       <div className="pp-fields">
         <div className="pp-field">
           <label>Label</label>
           <input
             type="text"
-            value={selected.data?.label || ""}
+            value={data.label || ""}
             onChange={(e) => selected.setLabel?.(e.target.value)}
+          />
+        </div>
+        <div className="pp-field">
+          <label>Element Type</label>
+          <input
+            type="text"
+            value={nodeTypeDisplay}
+            disabled
+            style={{ backgroundColor: "#f8fafc", color: "#64748b", cursor: "not-allowed" }}
           />
         </div>
         <div className="pp-field">
           <label>IRI</label>
           <input
             type="text"
-            value={selected.data?.iri || ""}
+            value={data.iri || ""}
             onChange={(e) => selected.setIri?.(e.target.value)}
             placeholder="e.g. http://example.org/MyClass"
           />
@@ -39,7 +60,7 @@ function ElementTab({ selected }) {
         <div className="pp-field">
           <label>Description</label>
           <textarea
-            value={selected.data?.description || ""}
+            value={data.description || ""}
             onChange={(e) => selected.setDescription?.(e.target.value)}
             rows={3}
             placeholder="Optional description..."
@@ -54,13 +75,15 @@ function ElementTab({ selected }) {
   }
 
   if (selected.kind === "edge") {
+    const liveEdge = model?.edges?.find((e) => e.id === selected.id) || selected;
+    
     return (
       <div className="pp-fields">
         <div className="pp-field">
           <label>Relationship Label</label>
           <input
             type="text"
-            value={selected.label || ""}
+            value={liveEdge.label || ""}
             onChange={(e) => selected.setLabel?.(e.target.value)}
           />
         </div>
@@ -231,7 +254,7 @@ export default function PropertyPanel({ selected, model, onImport }) {
       </div>
 
       <div className="pp-body">
-        {tab === "element" && <ElementTab selected={selected} />}
+        {tab === "element" && <ElementTab selected={selected} model={model} />}
         {tab === "io" && <ImportExportTab model={model} onImport={onImport} />}
       </div>
     </aside>

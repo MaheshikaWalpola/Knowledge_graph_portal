@@ -1,5 +1,5 @@
 /* ========================================
-   📱 App Layout Styles
+   App Layout Styles
    MacBook-Inspired Premium Design
    ======================================== */
 
@@ -7,7 +7,7 @@
 @import "./index.css";
 
 /* ========================================
-   🏗️ Main Layout Structure
+   Main Layout Structure
    ======================================== */
 
 /* App wrapper */
@@ -141,7 +141,7 @@ html {
 }
 
 /* ========================================
-   📐 Page Sections
+   Page Sections
    ======================================== */
 .section-header {
   margin-bottom: var(--space-xl);

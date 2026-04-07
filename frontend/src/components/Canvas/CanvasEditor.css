@@ -531,81 +531,140 @@ html.ce-header-hidden .canvas-editor {
    Custom Node Styles
    ═══════════════════════════════════════════════════════ */
 
+/* Base Node wrapper: fill 100% of the ReactFlow wrapper so NodeResizer actually resizes it */
+.react-flow__node > .onto-node {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
 .onto-node {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-width: 84px;
-  padding: 12px 18px;
-  border: 2px solid;
-  border-radius: 14px;
+  justify-content: center;
+  border: 2px solid var(--node-color, #cbd5e1);
   background: #ffffff;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.18s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  padding: 4px;
 }
 
 .onto-node:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
 }
 
 .onto-node.selected {
   box-shadow:
     0 0 0 3px rgba(124, 58, 237, 0.22),
-    0 8px 22px rgba(15, 23, 42, 0.12);
+    0 8px 26px rgba(15, 23, 42, 0.16);
 }
 
+/* Class: Smaller Rounded Rectangle */
 .onto-class {
-  border-radius: 14px;
-}
-
-.onto-property {
-  padding: 4px;
-  border: none;
-  background: none;
-  box-shadow: none;
-}
-
-.onto-property .onto-diamond {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 18px;
-  border: 2px solid;
   border-radius: 6px;
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-  transition: transform 0.15s ease, box-shadow 0.18s ease;
+  min-width: 50px;
+  min-height: 25px;
+  padding: 4px 8px;
 }
 
-.onto-property:hover .onto-diamond {
-  transform: translateY(-1px);
+/* Instance: Smaller Circle */
+.onto-instance {
+  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  min-height: 46px;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  text-align: center;
+}
+
+/* Literal: Smaller Capsule / Pill */
+.onto-literal {
+  border-radius: 9999px;
+  min-width: 54px;
+  min-height: 26px;
+  padding: 4px 10px;
+  font-style: italic;
+  font-family: monospace;
+}
+
+/* Property: Smaller Diamond */
+.onto-property {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  min-height: 46px;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Diamond Background Shape */
+.onto-property::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  border: 1.5px solid var(--node-color, #cbd5e1);
+  border-radius: 3px;
+  transform: rotate(45deg);
+  z-index: -1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  transition: all 0.15s ease;
+}
+
+.onto-property:hover::before {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
 }
 
-.onto-instance {
-  border-radius: 999px;
-  padding: 16px 18px;
+.onto-property.selected::before {
+  box-shadow:
+    0 0 0 3px rgba(124, 58, 237, 0.22),
+    0 8px 26px rgba(15, 23, 42, 0.16);
 }
 
-.onto-literal {
-  border-radius: 24px;
-  padding: 10px 16px;
-  font-style: italic;
+/* Datatype Property: Dot indicator */
+.onto-property.datatype::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background: var(--node-color);
+  border-radius: 50%;
+  z-index: 1;
 }
 
+/* Type Indicator */
+.onto-node-type {
+  font-size: 7px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  pointer-events: none;
+}
+
+/* General Label */
 .onto-node-label {
-  max-width: 110px;
+  max-width: 60px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
-  color: #1e293b;
+  color: #0f172a;
 }
 
 .onto-node-icon {
