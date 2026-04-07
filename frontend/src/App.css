@@ -1,5 +1,5 @@
 /* ========================================
-   📱 App Layout Styles
+   App Layout Styles
    MacBook-Inspired Premium Design
    ======================================== */
 
@@ -7,7 +7,7 @@
 @import "./index.css";
 
 /* ========================================
-   🏗️ Main Layout Structure
+   Main Layout Structure
    ======================================== */
 
 /* App wrapper */
@@ -16,6 +16,11 @@
   display: flex;
   flex-direction: column;
   position: relative;
+}
+
+/* Full-screen mode (no header/footer, e.g. canvas) */
+.app-fullscreen {
+  padding-top: 0 !important;
 }
 
 /* Main content area - this wraps all page content */
@@ -136,7 +141,7 @@ html {
 }
 
 /* ========================================
-   📐 Page Sections
+   Page Sections
    ======================================== */
 .section-header {
   margin-bottom: var(--space-xl);

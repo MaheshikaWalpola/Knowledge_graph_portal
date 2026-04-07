@@ -236,3 +236,160 @@ def api_upload_schema(
         schema_file=schema_file,
         instances_file=instances_file
     )
+
+
+# ────────────────── CANVAS (import / export) ──────────────────
+
+@router.post("/canvas/import")
+async def api_canvas_import(
+    file: UploadFile = File(...),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """
+    Parse an uploaded TTL/RDF file and return { nodes, edges } for React Flow canvas.
+    """
+    from rdflib import Graph as RDFGraph, RDF, RDFS, OWL
+
+    content = await file.read()
+    g = RDFGraph()
+
+    # guess format from filename
+    fname = (file.filename or "").lower()
+    fmt = "turtle"
+    if fname.endswith(".rdf") or fname.endswith(".owl"):
+        fmt = "xml"
+    elif fname.endswith(".nt"):
+        fmt = "nt"
+    elif fname.endswith(".n3"):
+        fmt = "n3"
+
+    try:
+        g.parse(data=content, format=fmt)
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(400, detail=f"Failed to parse file: {e}")
+
+    # Build nodes from all subjects/objects that are URIs
+    node_map = {}  # iri -> node dict
+    edge_list = []
+
+    TYPE_MAP = {
+        str(OWL.Class): "classNode",
+        str(OWL.ObjectProperty): "propertyNode",
+        str(OWL.DatatypeProperty): "propertyNode",
+        str(OWL.NamedIndividual): "instanceNode",
+        str(RDFS.Literal): "literalNode",
+    }
+
+    COLOR_MAP = {
+        "classNode": "#3b82f6",
+        "propertyNode": "#f59e0b",
+        "instanceNode": "#10b981",
+        "literalNode": "#8b5cf6",
+    }
+
+    PRED_MAP = {
+        str(RDFS.subClassOf): "subClassOf",
+        str(RDFS.domain): "domain",
+        str(RDFS.range): "range",
+        str(RDF.type): "rdfType",
+    }
+
+    # First pass: detect types
+    iri_types = {}
+    for s, _, o in g.triples((None, RDF.type, None)):
+        iri_types[str(s)] = str(o)
+
+    # Collect labels
+    iri_labels = {}
+    for s, _, o in g.triples((None, RDFS.label, None)):
+        iri_labels[str(s)] = str(o)
+
+    # Build node set
+    all_iris = set()
+    for s, p, o in g:
+        if hasattr(s, 'toPython'):
+            all_iris.add(str(s))
+        if hasattr(o, 'toPython') and not isinstance(o, type(g.namespace_manager)):
+            from rdflib.term import URIRef
+            if isinstance(o, URIRef):
+                all_iris.add(str(o))
+
+    # Filter out well-known namespace IRIs
+    SKIP = {str(OWL.Class), str(OWL.ObjectProperty), str(OWL.DatatypeProperty),
+            str(OWL.NamedIndividual), str(OWL.Ontology), str(OWL.Thing),
+            str(RDFS.Literal), str(RDFS.Resource)}
+
+    x_offset = 100
+    y_offset = 100
+    col = 0
+    for iri in sorted(all_iris):
+        if iri in SKIP:
+            continue
+        rdf_type = iri_types.get(iri, "")
+        node_type = TYPE_MAP.get(rdf_type, "classNode")
+        local_name = iri.rsplit("#", 1)[-1].rsplit("/", 1)[-1]
+        label = iri_labels.get(iri, local_name)
+        color = COLOR_MAP.get(node_type, "#3b82f6")
+
+        prop_type = ""
+        if rdf_type == str(OWL.DatatypeProperty):
+            prop_type = "datatype"
+        elif rdf_type == str(OWL.ObjectProperty):
+            prop_type = "object"
+
+        node_map[iri] = {
+            "id": iri,
+            "type": node_type,
+            "position": {"x": x_offset + (col % 4) * 200, "y": y_offset + (col // 4) * 150},
+            "data": {
+                "label": label,
+                "color": color,
+                "iri": iri,
+                "description": "",
+                "propertyType": prop_type,
+            },
+        }
+        col += 1
+
+    # Build edges (skip rdf:type edges)
+    edge_idx = 0
+    for s, p, o in g:
+        s_str, p_str, o_str = str(s), str(p), str(o)
+        if p_str == str(RDF.type):
+            continue
+        if p_str == str(RDFS.label) or p_str == str(RDFS.comment):
+            continue
+        if s_str not in node_map or o_str not in node_map:
+            continue
+
+        edge_type = PRED_MAP.get(p_str, "subClassOf")
+        local_pred = p_str.rsplit("#", 1)[-1].rsplit("/", 1)[-1]
+
+        EDGE_COLORS = {
+            "subClassOf": "#6366f1",
+            "domain": "#14b8a6",
+            "range": "#f97316",
+            "rdfType": "#8b5cf6",
+        }
+
+        edge_list.append({
+            "id": f"e_{edge_idx}",
+            "source": s_str,
+            "target": o_str,
+            "label": local_pred,
+            "data": {"edgeType": edge_type},
+            "style": {"stroke": EDGE_COLORS.get(edge_type, "#94a3b8"), "strokeWidth": 2},
+            "markerEnd": {"type": "arrowclosed", "color": EDGE_COLORS.get(edge_type, "#94a3b8")},
+            "labelStyle": {"fill": EDGE_COLORS.get(edge_type, "#94a3b8"), "fontWeight": 600, "fontSize": 11},
+            "labelBgStyle": {"fill": "#ffffff", "fillOpacity": 0.9},
+            "labelBgPadding": [6, 3],
+            "labelBgBorderRadius": 4,
+        })
+        edge_idx += 1
+
+    return {
+        "nodes": list(node_map.values()),
+        "edges": edge_list,
+    }
+

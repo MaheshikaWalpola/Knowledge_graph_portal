@@ -5,6 +5,7 @@ import "./App.css";
 import Footer from "./components/Common/Footer/Footer";
 import Header from "./components/Common/Header/Header";
 import Home from "./components/Nodes/Home";
+import CanvasEditor from "./components/Canvas/CanvasEditor";
 import SearchConnection from "./components/Nodes/SearchConnection";
 import SchemaOntology from "./components/Nodes/SchemaOntology";
 import AuthDialog from "./components/model/AuthDialog";
@@ -20,10 +21,9 @@ import ResetPassword from "./components/User/ResetPassword";
 import MyOntologies from "./components/Nodes/MyOntologies";
 
 function App() {
-  const [user, setUser] = useState(null); // logged-in user
-  const [authOpen, setAuthOpen] = useState(false); // auth modal
+  const [user, setUser] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
 
-  // Load user from localStorage on first render
   useEffect(() => {
     const storedUser = localStorage.getItem("kgp_user");
     if (storedUser) {
@@ -39,19 +39,13 @@ function App() {
   const handleOpenAuth = () => setAuthOpen(true);
   const handleCloseAuth = () => setAuthOpen(false);
 
-  // called when login/registration succeeds
   const handleAuthSuccess = (userData) => {
     if (!userData) return;
-
-    // store token if backend sends it
     const token = userData.access_token || userData.token;
     if (token) localStorage.setItem("token", token);
-
-    // store user object
     const u = userData.user || userData;
     setUser(u);
     localStorage.setItem("kgp_user", JSON.stringify(u));
-
     setAuthOpen(false);
   };
 
@@ -61,13 +55,10 @@ function App() {
     setUser(null);
   };
 
-  // called from VerifyEmail after successful verification
   const handleVerifyLoginSuccess = (userData) => {
     if (!userData) return;
-
     const token = userData.access_token || userData.token;
     if (token) localStorage.setItem("token", token);
-
     const u = userData.user || userData;
     setUser(u);
     localStorage.setItem("kgp_user", JSON.stringify(u));
@@ -95,6 +86,7 @@ function App() {
             <Route path="/forgotpassword" element={<ForgotPassword />} />
             <Route path="/workspace" element={<Workspace />} />
             <Route path="/my-ontologies" element={<MyOntologies />} />
+            <Route path="/canvas" element={<CanvasEditor />} />
             <Route path="/termsandconditions" element={<Terms />} />
             <Route
               path="/verify-email"
