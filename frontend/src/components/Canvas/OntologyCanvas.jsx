@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useMemo, useState } from "react";
+import React, { useCallback, useRef, useMemo, useState, forwardRef, useImperativeHandle } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -24,7 +24,7 @@ const nodeTypes = {
 };
 
 const EDGE_COLORS = {
-  subClassOf: "#6366f1",
+  subClassOf: "#3b82f6",
   domain: "#14b8a6",
   range: "#f97316",
   rdfType: "#8b5cf6",
@@ -41,26 +41,22 @@ const EDGE_LABELS = {
 let idCounter = 0;
 const nextId = () => `node_${++idCounter}`;
 
-function CanvasInner({
+const CanvasInner = forwardRef(({
   activeEdgeType,
   onSelectionChange,
   onModelChange,
-  externalNodes,
-  externalEdges,
-}) {
+}, ref) => {
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(externalNodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(externalEdges || []);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // Sync external data
-  React.useEffect(() => {
-    if (externalNodes) setNodes(externalNodes);
-  }, [externalNodes, setNodes]);
-
-  React.useEffect(() => {
-    if (externalEdges) setEdges(externalEdges);
-  }, [externalEdges, setEdges]);
+  useImperativeHandle(ref, () => ({
+    importData: (data) => {
+      setNodes(data.nodes || []);
+      setEdges(data.edges || []);
+    }
+  }));
 
   // Report model changes upstream
   React.useEffect(() => {
@@ -79,9 +75,9 @@ function CanvasInner({
         animated: false,
         label,
         data: { edgeType: activeEdgeType },
-        style: { stroke: color, strokeWidth: 2 },
+        style: { stroke: color, strokeWidth: 1 },
         markerEnd: { type: MarkerType.ArrowClosed, color },
-        labelStyle: { fill: color, fontWeight: 600, fontSize: 11 },
+        labelStyle: { fill: color, fontWeight: 400, fontSize: 6 },
         labelBgStyle: { fill: "#ffffff", fillOpacity: 0.9 },
         labelBgPadding: [6, 3],
         labelBgBorderRadius: 4,
@@ -179,6 +175,24 @@ function CanvasInner({
               eds.map((ed) => (ed.id === e.id ? { ...ed, label: v } : ed))
             );
           },
+          setEdgeType: (v) => {
+            const color = EDGE_COLORS[v] || EDGE_COLORS.default;
+            const newLabel = EDGE_LABELS[v] || v;
+            setEdges((eds) =>
+              eds.map((ed) =>
+                ed.id === e.id
+                  ? {
+                      ...ed,
+                      label: newLabel,
+                      data: { ...ed.data, edgeType: v },
+                      style: { ...ed.style, stroke: color },
+                      markerEnd: { ...ed.markerEnd, color },
+                      labelStyle: { ...ed.labelStyle, fill: color },
+                    }
+                  : ed
+              )
+            );
+          },
           onDelete: () => {
              setEdges((eds) => eds.filter((ed) => ed.id !== e.id));
           }
@@ -222,12 +236,12 @@ function CanvasInner({
       </ReactFlow>
     </div>
   );
-}
+});
 
-export default function OntologyCanvas(props) {
+export default forwardRef(function OntologyCanvas(props, ref) {
   return (
     <ReactFlowProvider>
-      <CanvasInner {...props} />
+      <CanvasInner {...props} ref={ref} />
     </ReactFlowProvider>
   );
-}
+});

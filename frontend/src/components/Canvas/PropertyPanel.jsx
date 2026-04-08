@@ -80,6 +80,19 @@ function ElementTab({ selected, model }) {
     return (
       <div className="pp-fields">
         <div className="pp-field">
+          <label>Relationship Type</label>
+          <select
+            value={liveEdge.data?.edgeType || "subClassOf"}
+            onChange={(e) => selected.setEdgeType?.(e.target.value)}
+          >
+            {EDGE_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="pp-field">
           <label>Relationship Label</label>
           <input
             type="text"

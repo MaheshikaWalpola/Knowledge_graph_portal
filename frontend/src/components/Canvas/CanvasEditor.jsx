@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import OntologyPalette from "./OntologyPalette";
 import OntologyCanvas from "./OntologyCanvas";
 import PropertyPanel from "./PropertyPanel";
@@ -11,6 +11,8 @@ export default function CanvasEditor() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [headerHidden, setHeaderHidden] = useState(false);
+
+  const canvasRef = useRef(null);
 
   // Toggle a CSS class on the root element to hide/show the app header & footer
   useEffect(() => {
@@ -27,6 +29,8 @@ export default function CanvasEditor() {
   const handleImport = useCallback((data) => {
     if (data?.nodes && data?.edges) {
       setModel(data);
+      // Imperatively push new external state down into ReactFlow
+      canvasRef.current?.importData(data);
     }
   }, []);
 
@@ -81,6 +85,36 @@ export default function CanvasEditor() {
         
         <div className="ce-dock-divider" />
 
+        {/* Action: Undo */}
+        <button
+          className="ce-dock-btn action-btn disabled"
+          title="Undo (Ctrl+Z) - Coming Soon"
+          onClick={() => {
+            console.log("Undo triggered (To be implemented)");
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 14 4 9 9 4" />
+            <path d="M20 20v-7a4 4 0 00-4-4H4" />
+          </svg>
+        </button>
+
+        {/* Action: Redo */}
+        <button
+          className="ce-dock-btn action-btn disabled"
+          title="Redo (Ctrl+Y) - Coming Soon"
+          onClick={() => {
+            console.log("Redo triggered (To be implemented)");
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 14 20 9 15 4" />
+            <path d="M4 20v-7a4 4 0 014-4h12" />
+          </svg>
+        </button>
+        
+        <div className="ce-dock-divider" />
+
         {/* Action: Select All (simulated via basic hook or just visually present for now) */}
         <button
           className="ce-dock-btn action-btn"
@@ -126,11 +160,10 @@ export default function CanvasEditor() {
       {/* Center canvas */}
       <main className="ce-center">
         <OntologyCanvas
+          ref={canvasRef}
           activeEdgeType={activeEdgeType}
           onSelectionChange={setSelected}
           onModelChange={setModel}
-          externalNodes={model.nodes.length ? model.nodes : undefined}
-          externalEdges={model.edges.length ? model.edges : undefined}
         />
       </main>
 

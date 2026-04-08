@@ -12,8 +12,8 @@ const PropertyNode = memo(({ data, selected }) => {
       <NodeResizer 
         color={color} 
         isVisible={selected} 
-        minWidth={46} 
-        minHeight={46} 
+        minWidth={38} 
+        minHeight={38} 
         keepAspectRatio={true}
       />
       <div 
