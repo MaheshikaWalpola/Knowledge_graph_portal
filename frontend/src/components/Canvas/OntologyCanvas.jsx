@@ -51,12 +51,52 @@ const CanvasInner = forwardRef(({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
+  const [past, setPast] = useState([]);
+  const [future, setFuture] = useState([]);
+
+  const takeSnapshot = useCallback(() => {
+    setPast((p) => [...p.slice(-49), { nodes, edges }]);
+    setFuture([]);
+  }, [nodes, edges]);
+
   useImperativeHandle(ref, () => ({
     importData: (data) => {
       setNodes(data.nodes || []);
       setEdges(data.edges || []);
+      setPast([]);
+      setFuture([]);
+    },
+    clearCanvas: () => {
+      setNodes([]);
+      setEdges([]);
+      setPast([]);
+      setFuture([]);
+    },
+    selectAll: () => {
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+      setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));
+    },
+    undo: () => {
+      setPast((p) => {
+        if (p.length === 0) return p;
+        const prev = p[p.length - 1];
+        setFuture((f) => [{ nodes, edges }, ...f]);
+        setNodes(prev.nodes);
+        setEdges(prev.edges);
+        return p.slice(0, -1);
+      });
+    },
+    redo: () => {
+      setFuture((f) => {
+        if (f.length === 0) return f;
+        const next = f[0];
+        setPast((p) => [...p, { nodes, edges }]);
+        setNodes(next.nodes);
+        setEdges(next.edges);
+        return f.slice(1);
+      });
     }
-  }));
+  }), [nodes, edges, setNodes, setEdges]);
 
   // Report model changes upstream
   React.useEffect(() => {
@@ -65,6 +105,7 @@ const CanvasInner = forwardRef(({
 
   const onConnect = useCallback(
     (params) => {
+      takeSnapshot();
       const color = EDGE_COLORS[activeEdgeType] || EDGE_COLORS.default;
       const label = EDGE_LABELS[activeEdgeType] || activeEdgeType;
 
@@ -85,7 +126,7 @@ const CanvasInner = forwardRef(({
 
       setEdges((eds) => addEdge(newEdge, eds));
     },
-    [activeEdgeType, setEdges]
+    [activeEdgeType, setEdges, takeSnapshot]
   );
 
   const onDragOver = useCallback((event) => {
@@ -98,6 +139,8 @@ const CanvasInner = forwardRef(({
       event.preventDefault();
       const type = event.dataTransfer.getData("application/reactflow");
       if (!type || !reactFlowInstance) return;
+
+      takeSnapshot();
 
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
@@ -123,7 +166,7 @@ const CanvasInner = forwardRef(({
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [reactFlowInstance, setNodes]
+    [reactFlowInstance, setNodes, takeSnapshot]
   );
 
   const onSelectionChangeHandler = useCallback(
@@ -136,6 +179,7 @@ const CanvasInner = forwardRef(({
           type: n.type,
           data: n.data,
           setLabel: (v) => {
+            takeSnapshot();
             setNodes((nds) =>
               nds.map((nd) =>
                 nd.id === n.id ? { ...nd, data: { ...nd.data, label: v } } : nd
@@ -143,6 +187,7 @@ const CanvasInner = forwardRef(({
             );
           },
           setIri: (v) => {
+            takeSnapshot();
             setNodes((nds) =>
               nds.map((nd) =>
                 nd.id === n.id ? { ...nd, data: { ...nd.data, iri: v } } : nd
@@ -150,6 +195,7 @@ const CanvasInner = forwardRef(({
             );
           },
           setDescription: (v) => {
+            takeSnapshot();
             setNodes((nds) =>
               nds.map((nd) =>
                 nd.id === n.id
@@ -159,6 +205,7 @@ const CanvasInner = forwardRef(({
             );
           },
           onDelete: () => {
+             takeSnapshot();
              setNodes((nds) => nds.filter((nd) => nd.id !== n.id));
              setEdges((eds) => eds.filter((ed) => ed.source !== n.id && ed.target !== n.id));
           }
@@ -171,11 +218,13 @@ const CanvasInner = forwardRef(({
           label: e.label,
           data: e.data,
           setLabel: (v) => {
+            takeSnapshot();
             setEdges((eds) =>
               eds.map((ed) => (ed.id === e.id ? { ...ed, label: v } : ed))
             );
           },
           setEdgeType: (v) => {
+            takeSnapshot();
             const color = EDGE_COLORS[v] || EDGE_COLORS.default;
             const newLabel = EDGE_LABELS[v] || v;
             setEdges((eds) =>
@@ -194,6 +243,7 @@ const CanvasInner = forwardRef(({
             );
           },
           onDelete: () => {
+             takeSnapshot();
              setEdges((eds) => eds.filter((ed) => ed.id !== e.id));
           }
         });
@@ -201,7 +251,7 @@ const CanvasInner = forwardRef(({
         onSelectionChange?.(null);
       }
     },
-    [onSelectionChange, setNodes, setEdges]
+    [onSelectionChange, setNodes, setEdges, takeSnapshot]
   );
 
   const defaultEdgeOptions = useMemo(
@@ -219,6 +269,7 @@ const CanvasInner = forwardRef(({
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeDragStart={takeSnapshot}
         onConnect={onConnect}
         onInit={setReactFlowInstance}
         onDrop={onDrop}
