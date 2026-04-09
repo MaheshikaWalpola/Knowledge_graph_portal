@@ -153,7 +153,7 @@ export default function SchemaOntology() {
         selector: ".hit",
         style: {
           "border-width": 4,
-          "border-color": "#2563eb",
+          "border-color": "#AAFF00",
           "font-weight": 700,
         },
       },
