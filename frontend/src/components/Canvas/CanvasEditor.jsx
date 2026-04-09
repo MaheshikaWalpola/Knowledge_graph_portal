@@ -11,6 +11,7 @@ export default function CanvasEditor() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [headerHidden, setHeaderHidden] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const canvasRef = useRef(null);
 
@@ -32,6 +33,13 @@ export default function CanvasEditor() {
       // Imperatively push new external state down into ReactFlow
       canvasRef.current?.importData(data);
     }
+  }, []);
+
+  const handleClearCanvas = useCallback(() => {
+    setModel({ nodes: [], edges: [] });
+    canvasRef.current?.clearCanvas?.();
+    setSelected(null);
+    setShowClearConfirm(false);
   }, []);
 
   return (
@@ -145,7 +153,31 @@ export default function CanvasEditor() {
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
         </button>
-      </div>
+
+        {/* Action: Clear Canvas */}
+        <button
+          className="ce-dock-btn action-btn"
+          title="Clear entire canvas"
+          onClick={() => setShowClearConfirm(true)}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {/* outer eraser shape */}
+            <path d="M3 14L14 3c1-1 2.6-1 3.6 0l3.4 3.4c1 1 1 2.6 0 3.6L10 21c-1 1-2.6 1-3.6 0L3 17.6c-1-1-1-2.6 0-3.6z" />
+
+            {/* split line */}
+            <path d="M7 17l10-10" />
+          </svg>
+        </button>
+        </div>
 
       {/* Left palette */}
       <aside className={`ce-left ${!leftOpen ? "collapsed" : ""}`}>
@@ -177,6 +209,30 @@ export default function CanvasEditor() {
           />
         )}
       </aside>
+
+      {/* Clear Canvas Confirmation Dialog */}
+      {showClearConfirm && (
+        <div className="ce-modal-overlay">
+          <div className="ce-modal">
+            <h3>Clear Canvas</h3>
+            <p>Do you want to fully clean the canvas? All nodes and edges will be removed.</p>
+            <div className="ce-modal-actions">
+              <button
+                className="ce-modal-cancel"
+                onClick={() => setShowClearConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="ce-modal-confirm"
+                onClick={handleClearCanvas}
+              >
+                Yes, Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

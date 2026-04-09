@@ -66,6 +66,12 @@ const CanvasInner = forwardRef(({
       setPast([]);
       setFuture([]);
     },
+    clearCanvas: () => {
+      setNodes([]);
+      setEdges([]);
+      setPast([]);
+      setFuture([]);
+    },
     selectAll: () => {
       setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
       setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));
