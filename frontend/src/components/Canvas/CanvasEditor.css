@@ -647,6 +647,16 @@ html.ce-header-hidden .canvas-editor {
   z-index: 1;
 }
 
+/* Property Node Label - Allow wrapping into multiple lines */
+.onto-property .onto-node-label {
+  max-width: 35px;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1;
+  font-size: 4px;
+  overflow-wrap: break-word;
+}
+
 /* Type Indicator */
 .onto-node-type {
   font-size: 7px;
