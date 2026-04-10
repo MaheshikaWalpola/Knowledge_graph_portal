@@ -23,7 +23,7 @@
   height: 100%;
   background: radial-gradient(
     ellipse at 100% 50%,
-    rgba(124, 58, 237, 0.05) 0%,
+    rgba(37, 99, 235, 0.05) 0%,
     transparent 50%
   );
   pointer-events: none;
@@ -201,7 +201,7 @@
 
 .input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
 .input::placeholder {
@@ -238,7 +238,7 @@
   background: var(--gradient-primary);
   color: white;
   border: none;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -261,7 +261,7 @@
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
 .btn:hover::before {
@@ -368,7 +368,7 @@
   .profile-container::before {
     background: radial-gradient(
       ellipse at 100% 50%,
-      rgba(124, 58, 237, 0.08) 0%,
+      rgba(37, 99, 235, 0.08) 0%,
       transparent 50%
     );
   }

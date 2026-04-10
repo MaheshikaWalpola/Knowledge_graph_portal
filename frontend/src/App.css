@@ -58,7 +58,7 @@
   background:
     radial-gradient(
       circle at 20% 80%,
-      rgba(124, 58, 237, 0.06) 0%,
+      rgba(37, 99, 235, 0.06) 0%,
       transparent 25%
     ),
     radial-gradient(
@@ -117,7 +117,7 @@ html {
 
 /* Custom selection color */
 ::selection {
-  background: rgba(124, 58, 237, 0.25);
+  background: rgba(37, 99, 235, 0.25);
   color: var(--text-primary);
 }
 
