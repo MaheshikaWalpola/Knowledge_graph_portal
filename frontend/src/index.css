@@ -11,8 +11,8 @@
    ======================================== */
 :root {
   /* 🌈 Aurora Gradient Colors */
-  --aurora-1: #7c3aed;
-  --aurora-2: #2563eb;
+  --aurora-1: #2563eb;
+  --aurora-2: #3b82f6;
   --aurora-3: #06b6d4;
   --aurora-4: #10b981;
   --aurora-5: #f59e0b;
@@ -53,8 +53,8 @@
   --border-strong: rgba(0, 0, 0, 0.15);
 
   /* 🌟 Accent Colors */
-  --accent-primary: #7c3aed;
-  --accent-secondary: #2563eb;
+  --accent-primary: #2563eb;
+  --accent-secondary: #3b82f6;
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
@@ -82,7 +82,7 @@
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.06), 0 4px 6px rgba(0, 0, 0, 0.04);
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.08), 0 8px 10px rgba(0, 0, 0, 0.04);
   --shadow-glow:
-    0 0 40px rgba(124, 58, 237, 0.15), 0 0 80px rgba(124, 58, 237, 0.1);
+    0 0 40px rgba(37, 99, 235, 0.15), 0 0 80px rgba(37, 99, 235, 0.1);
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
 
   /* ⏱️ Transitions */
@@ -128,7 +128,7 @@
     --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.2);
     --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.4), 0 8px 10px rgba(0, 0, 0, 0.3);
     --shadow-glow:
-      0 0 40px rgba(124, 58, 237, 0.25), 0 0 80px rgba(124, 58, 237, 0.15);
+      0 0 40px rgba(37, 99, 235, 0.25), 0 0 80px rgba(37, 99, 235, 0.15);
     --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
   }
 }
@@ -163,7 +163,7 @@ body {
   background-image:
     radial-gradient(
       ellipse 80% 50% at 20% 40%,
-      rgba(124, 58, 237, 0.08) 0%,
+      rgba(37, 99, 235, 0.08) 0%,
       transparent 50%
     ),
     radial-gradient(
@@ -180,7 +180,7 @@ body {
 }
 
 ::selection {
-  background: rgba(124, 58, 237, 0.3);
+  background: rgba(37, 99, 235, 0.3);
   color: var(--text-primary);
 }
 
@@ -210,13 +210,13 @@ a:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(124, 58, 237, 0.3);
+  background: rgba(37, 99, 235, 0.3);
   border-radius: var(--radius-full);
   transition: background var(--transition-fast);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(124, 58, 237, 0.5);
+  background: rgba(37, 99, 235, 0.5);
 }
 
 /* ========================================
@@ -253,7 +253,7 @@ a:hover {
   cursor: pointer;
   overflow: hidden;
   transition: all var(--transition-normal);
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 
 .btn-aurora::before {
@@ -274,7 +274,7 @@ a:hover {
 
 .btn-aurora:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 6px 25px rgba(37, 99, 235, 0.4);
 }
 
 .btn-aurora:hover::before {
@@ -325,7 +325,7 @@ a:hover {
 
 .input-aurora:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .input-aurora::placeholder {
@@ -344,7 +344,7 @@ a:hover {
   color: white;
   background: var(--gradient-primary);
   border-radius: var(--radius-full);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 .badge-glass {
@@ -376,11 +376,11 @@ a:hover {
 @keyframes pulse-glow {
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 40px rgba(124, 58, 237, 0.5);
+    box-shadow: 0 0 40px rgba(37, 99, 235, 0.5);
     transform: scale(1.02);
   }
 }

@@ -7,8 +7,8 @@
   --ce-text: #0f172a;
   --ce-text-muted: #64748b;
   --ce-text-soft: #94a3b8;
-  --ce-accent: #7c3aed;
-  --ce-accent-soft: rgba(124, 58, 237, 0.08);
+  --ce-accent: #2563eb;
+  --ce-accent-soft: rgba(37, 99, 235, 0.08);
   --ce-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
   --ce-shadow-md: 0 4px 18px rgba(15, 23, 42, 0.06);
   --ce-shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.08);
@@ -119,12 +119,12 @@ html.ce-header-hidden .canvas-editor {
 }
 
 .ce-dock-btn:hover {
-  background: rgba(124, 58, 237, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--ce-accent);
 }
 
 .ce-dock-btn.active {
-  background: rgba(124, 58, 237, 0.12);
+  background: rgba(37, 99, 235, 0.12);
   color: var(--ce-accent);
 }
 
@@ -235,7 +235,7 @@ html.ce-header-hidden .canvas-editor {
 /* React Flow canvas surface */
 .canvas-wrapper .react-flow {
   background:
-    radial-gradient(circle at top, rgba(124, 58, 237, 0.025), transparent 32%),
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.025), transparent 32%),
     linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
 }
 
@@ -287,7 +287,7 @@ html.ce-header-hidden .canvas-editor {
 
 /* Selection box */
 .canvas-wrapper .react-flow__selection {
-  border: 1px solid rgba(124, 58, 237, 0.35);
+  border: 1px solid rgba(37, 99, 235, 0.35);
   background: rgba(124, 58, 237, 0.08);
 }
 
@@ -346,8 +346,8 @@ html.ce-header-hidden .canvas-editor {
 .ce-toggle:hover {
   color: var(--ce-accent);
   background: #ffffff;
-  border-color: rgba(124, 58, 237, 0.26);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.14);
+  border-color: rgba(37, 99, 235, 0.26);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.14);
   transform: translateY(-1px);
 }
 
@@ -408,7 +408,7 @@ html.ce-header-hidden .canvas-editor {
 }
 
 .palette-section-header:hover {
-  background: rgba(124, 58, 237, 0.045);
+  background: rgba(37, 99, 235, 0.045);
   color: var(--ce-text);
 }
 
@@ -455,9 +455,9 @@ html.ce-header-hidden .canvas-editor {
 
 .palette-item:hover {
   transform: translateY(-2px);
-  border-color: rgba(124, 58, 237, 0.24);
-  background: rgba(124, 58, 237, 0.035);
-  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.08);
+  border-color: rgba(37, 99, 235, 0.24);
+  background: rgba(37, 99, 235, 0.035);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.08);
 }
 
 .palette-item:active {
@@ -509,15 +509,15 @@ html.ce-header-hidden .canvas-editor {
 }
 
 .palette-edge-btn:hover {
-  border-color: rgba(124, 58, 237, 0.22);
-  background: rgba(124, 58, 237, 0.04);
+  border-color: rgba(37, 99, 235, 0.22);
+  background: rgba(37, 99, 235, 0.04);
 }
 
 .palette-edge-btn.active {
   color: var(--ce-accent);
-  border-color: rgba(124, 58, 237, 0.34);
-  background: rgba(124, 58, 237, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.08);
+  border-color: rgba(37, 99, 235, 0.34);
+  background: rgba(37, 99, 235, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
 }
 
 .palette-edge-line {
@@ -557,7 +557,7 @@ html.ce-header-hidden .canvas-editor {
 
 .onto-node.selected {
   box-shadow:
-    0 0 0 3px rgba(124, 58, 237, 0.22),
+    0 0 0 3px rgba(37, 99, 235, 0.22),
     0 8px 26px rgba(15, 23, 42, 0.16);
 }
 
@@ -629,7 +629,7 @@ html.ce-header-hidden .canvas-editor {
 
 .onto-property.selected::before {
   box-shadow:
-    0 0 0 3px rgba(124, 58, 237, 0.22),
+    0 0 0 3px rgba(37, 99, 235, 0.22),
     0 8px 26px rgba(15, 23, 42, 0.16);
 }
 
@@ -804,8 +804,8 @@ html.ce-header-hidden .canvas-editor {
 .pp-field select:focus {
   outline: none;
   background: #ffffff;
-  border-color: rgba(124, 58, 237, 0.4);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+  border-color: rgba(37, 99, 235, 0.4);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
 .pp-info {
@@ -875,21 +875,21 @@ html.ce-header-hidden .canvas-editor {
 
 .pp-btn:hover {
   transform: translateY(-1px);
-  border-color: rgba(124, 58, 237, 0.24);
-  background: rgba(124, 58, 237, 0.04);
+  border-color: rgba(37, 99, 235, 0.24);
+  background: rgba(37, 99, 235, 0.04);
   color: var(--ce-accent);
 }
 
 .pp-btn.primary {
   border: none;
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
   color: #ffffff;
-  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.24);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.24);
 }
 
 .pp-btn.primary:hover {
   color: #ffffff;
-  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.3);
 }
 
 .pp-error {
