@@ -21,6 +21,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import ClearIcon from "@mui/icons-material/Clear";
 import "./Header.css";
+import logo from "../../../assets/Logo.png";
 
 // helper for initials
 const getInitials = (firstName, lastName, email) => {
@@ -108,7 +109,11 @@ export default function Header({ user, onOpenAuth, onLogout }) {
           <Button
             variant="text"
             className="navbar__link"
-            sx={{ justifyContent: "flex-start", width: "100%" }}
+            fullWidth
+            sx={{
+              justifyContent: "flex-start",
+              textAlign: "left",
+            }}
             onClick={() => {
               setDrawerOpen(false);
               handleWorkspaceClick();
@@ -190,7 +195,7 @@ export default function Header({ user, onOpenAuth, onLogout }) {
               paddingY: 1,
             }}
           >
-            Account
+            Profile
           </Button>
         )}
       </Box>
@@ -223,11 +228,14 @@ export default function Header({ user, onOpenAuth, onLogout }) {
             component={Link}
             to="/"
             className="navbar__link"
-            sx={{ textTransform: "none" }}
+            sx={{
+              textTransform: "none",
+              padding: 0,
+              minWidth: "auto",
+              marginRight: "auto",
+            }}
           >
-            <p className="title" style={{ margin: 0 }}>
-              Knowledge Graph Portal
-            </p>
+            <img src={logo} alt="KG Portal Logo" style={{ width: "120px", height: "auto", objectFit: "contain" }} />
           </Button>
 
           {/* Center/right nav links for desktop */}

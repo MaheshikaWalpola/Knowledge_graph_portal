@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
 import "./Home.css";
 
-// Use the hero image from public folder
-// const heroImage = "/hero-kg.png";
 import heroImage from "../../assets/home.png";
 
 const Home = () => {
