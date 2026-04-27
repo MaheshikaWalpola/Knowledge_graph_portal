@@ -24,7 +24,7 @@
   height: 600px;
   background: radial-gradient(
     circle,
-    rgba(124, 58, 237, 0.05) 0%,
+    rgba(37, 99, 235, 0.05) 0%,
     transparent 60%
   );
   pointer-events: none;
@@ -251,7 +251,7 @@
   border-color: var(--bubble-user-border);
   color: var(--bubble-user-text);
   border-radius: var(--radius-xl) 4px var(--radius-xl) var(--radius-xl);
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
 }
 
 /* ========================================
@@ -283,7 +283,7 @@
 
 .chat-input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
 .chat-input::placeholder {
@@ -302,7 +302,7 @@
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
   transition: all var(--transition-normal);
   position: relative;
   overflow: hidden;
@@ -326,7 +326,7 @@
 
 .chat-send:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 6px 25px rgba(37, 99, 235, 0.4);
 }
 
 .chat-send:hover::before {
@@ -504,7 +504,7 @@
 }
 
 .quick-reply-btn:hover {
-  background: rgba(124, 58, 237, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
   transform: translateY(-2px);
@@ -523,7 +523,7 @@
 }
 
 .theme-dark .quick-reply-btn:hover {
-  background: rgba(124, 58, 237, 0.15);
+  background: rgba(37, 99, 235, 0.15);
   border-color: var(--accent-primary);
 }
 

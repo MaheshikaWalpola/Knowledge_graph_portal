@@ -19,6 +19,7 @@ import AIAssistance from "./components/Nodes/AIAssistance";
 import Profile from "./components/User/Profile";
 import ResetPassword from "./components/User/ResetPassword";
 import MyOntologies from "./components/Nodes/MyOntologies";
+import UserGuidance from "./components/Nodes/UserGuidance";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -111,6 +112,7 @@ function App() {
               }
             />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/guidance" element={<UserGuidance />} />
           </Routes>
         </main>
 

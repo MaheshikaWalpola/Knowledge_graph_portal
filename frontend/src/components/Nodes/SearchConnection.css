@@ -23,7 +23,7 @@
   height: 100%;
   background: radial-gradient(
     ellipse at 100% 0%,
-    rgba(124, 58, 237, 0.06) 0%,
+    rgba(37, 99, 235, 0.06) 0%,
     transparent 60%
   );
   pointer-events: none;
@@ -101,7 +101,7 @@
 
 .search-input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
 .search-input::placeholder {
@@ -131,7 +131,7 @@
 
 .search-select:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
 /* Search Button */
@@ -146,7 +146,7 @@
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
   transition: all var(--transition-normal);
   position: relative;
   overflow: hidden;
@@ -170,7 +170,7 @@
 
 .search-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 6px 25px rgba(37, 99, 235, 0.4);
 }
 
 .search-btn:hover::before {
@@ -248,7 +248,7 @@
   border-radius: var(--radius-full);
   background: var(--gradient-primary);
   color: white;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .badge-outline {
@@ -296,7 +296,7 @@
 }
 
 .edge-row:hover {
-  background: rgba(124, 58, 237, 0.04);
+  background: rgba(37, 99, 235, 0.04);
 }
 
 /* Edge Columns */
@@ -326,7 +326,7 @@
   font-size: 13px;
   color: var(--accent-primary);
   padding: 6px 12px;
-  background: rgba(124, 58, 237, 0.1);
+  background: rgba(37, 99, 235, 0.1);
   border-radius: var(--radius-md);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -396,7 +396,7 @@
   .search-container::before {
     background: radial-gradient(
       ellipse at 100% 0%,
-      rgba(124, 58, 237, 0.08) 0%,
+      rgba(37, 99, 235, 0.08) 0%,
       transparent 60%
     );
   }
@@ -406,7 +406,7 @@
   }
 
   .edge-rel {
-    background: rgba(124, 58, 237, 0.15);
+    background: rgba(37, 99, 235, 0.15);
   }
 }
 
@@ -531,7 +531,7 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--accent-primary);
-  background: rgba(124, 58, 237, 0.1);
+  background: rgba(37, 99, 235, 0.1);
   border-radius: var(--radius-full);
 }
 
@@ -575,11 +575,11 @@
   padding: var(--space-md);
   background: linear-gradient(
     135deg,
-    rgba(124, 58, 237, 0.08) 0%,
+    rgba(37, 99, 235, 0.08) 0%,
     rgba(37, 99, 235, 0.05) 100%
   );
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(37, 99, 235, 0.15);
   text-align: center;
 }
 

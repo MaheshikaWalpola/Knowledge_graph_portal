@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import "./Home.css";
 
-// Use the hero image from public folder
-const heroImage = "/hero-kg.png";
+import heroImage from "../../assets/home.png";
 
 const Home = () => {
   return (
@@ -10,11 +9,11 @@ const Home = () => {
       {/* Hero Section */}
       <div className="home-card">
         <div className="home-content">
-          <div className="home-badge">🚀 Semantic Web Technology</div>
+          <div className="home-badge">Semantic Web Technology</div>
           <h1 className="home-title">Knowledge Graph Portal</h1>
           <p className="home-text">
-            Explore, visualize, and interact with your semantic knowledge graph.
-            Navigate schema entities, relationships, and instance connections in
+            Explore, visualize and interact with your semantic knowledge graph.
+            Navigate schema entities, relationships and instance connections in
             a clean and intuitive interface.
           </p>
           <div className="home-cta">
@@ -38,7 +37,6 @@ const Home = () => {
         </div>
 
         <div className="home-image-wrapper">
-          <div className="home-image-glow"></div>
           <img
             src={heroImage}
             alt="Knowledge Graph Visualization"
@@ -56,7 +54,7 @@ const Home = () => {
 
         <div className="features-grid">
           <div className="feature-card">
-            <div className="feature-icon">
+            <div className="feature-icon feature-icon-blue-1">
               <svg
                 width="28"
                 height="28"
@@ -69,7 +67,7 @@ const Home = () => {
                 <path d="M21 21l-4.35-4.35" />
               </svg>
             </div>
-            <h3 className="feature-title">Advanced Search</h3>
+            <h3 className="feature-title">Workspace</h3>
             <p className="feature-desc">
               Quickly find entities, relationships, and connections across your
               entire knowledge graph.
@@ -77,7 +75,7 @@ const Home = () => {
           </div>
 
           <div className="feature-card">
-            <div className="feature-icon feature-icon-blue">
+            <div className="feature-icon feature-icon-blue-2">
               <svg
                 width="28"
                 height="28"
@@ -99,7 +97,7 @@ const Home = () => {
           </div>
 
           <div className="feature-card">
-            <div className="feature-icon feature-icon-cyan">
+            <div className="feature-icon feature-icon-blue-3">
               <svg
                 width="28"
                 height="28"
@@ -121,7 +119,7 @@ const Home = () => {
           </div>
 
           <div className="feature-card">
-            <div className="feature-icon feature-icon-green">
+            <div className="feature-icon feature-icon-blue-4">
               <svg
                 width="28"
                 height="28"
@@ -134,7 +132,7 @@ const Home = () => {
                 <path d="M9 9h6v6H9z" />
               </svg>
             </div>
-            <h3 className="feature-title">Workspace</h3>
+            <h3 className="feature-title">MainCanvas</h3>
             <p className="feature-desc">
               Create, edit, and manage your knowledge graph with a powerful
               visual workspace.
@@ -143,27 +141,6 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="stats-section">
-        <div className="stats-grid">
-          <div className="stat-item">
-            <div className="stat-number">∞</div>
-            <div className="stat-label">Entities</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-number">RDF</div>
-            <div className="stat-label">Compatible</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-number">AI</div>
-            <div className="stat-label">Powered</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-number">24/7</div>
-            <div className="stat-label">Available</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

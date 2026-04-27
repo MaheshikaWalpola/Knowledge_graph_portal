@@ -1,10 +1,10 @@
 /* ========================================
-   🎨 MUI COMPONENT OVERRIDES
+   MUI COMPONENT OVERRIDES
    Global Material-UI Styling
    ======================================== */
 
 /* ========================================
-   📋 Dialog / Modal Overrides
+   Dialog / Modal Overrides
    ======================================== */
 .MuiDialog-paper {
   background: var(--bg-glass-strong) !important;
@@ -33,7 +33,7 @@
 }
 
 /* ========================================
-   📝 Tab Overrides
+   Tab Overrides
    ======================================== */
 .MuiTabs-root {
   min-height: 48px !important;
@@ -65,7 +65,7 @@
 }
 
 /* ========================================
-   🔘 Button Overrides
+   Button Overrides
    ======================================== */
 .MuiButton-root {
   font-family: var(--font-sans) !important;
@@ -93,7 +93,7 @@
 }
 
 /* ========================================
-   📝 TextField Overrides
+   TextField Overrides
    ======================================== */
 .MuiTextField-root .MuiOutlinedInput-root {
   font-family: var(--font-sans) !important;
@@ -129,7 +129,7 @@
 }
 
 /* ========================================
-   📋 Select Overrides
+   Select Overrides
    ======================================== */
 .MuiSelect-root {
   font-family: var(--font-sans) !important;
@@ -159,7 +159,7 @@
 }
 
 /* ========================================
-   📢 Alert / Snackbar Overrides
+   Alert / Snackbar Overrides
    ======================================== */
 .MuiAlert-root {
   font-family: var(--font-sans) !important;
@@ -180,7 +180,7 @@
 }
 
 /* ========================================
-   📊 Table Overrides
+   Table Overrides
    ======================================== */
 .MuiTable-root {
   font-family: var(--font-sans) !important;
@@ -209,7 +209,7 @@
 }
 
 /* ========================================
-   💫 Chip Overrides
+   Chip Overrides
    ======================================== */
 .MuiChip-root {
   font-family: var(--font-sans) !important;
@@ -223,14 +223,14 @@
 }
 
 /* ========================================
-   🔄 Circular Progress
+   Circular Progress
    ======================================== */
 .MuiCircularProgress-colorPrimary {
   color: var(--accent-primary) !important;
 }
 
 /* ========================================
-   📋 Card Overrides
+   Card Overrides
    ======================================== */
 .MuiCard-root {
   background: var(--bg-glass-strong) !important;
@@ -256,7 +256,7 @@
 }
 
 /* ========================================
-   📋 Paper Overrides
+   Paper Overrides
    ======================================== */
 .MuiPaper-root {
   background: var(--bg-secondary) !important;
@@ -275,14 +275,14 @@
 }
 
 /* ========================================
-   🔀 Divider
+   Divider
    ======================================== */
 .MuiDivider-root {
   border-color: var(--border-light) !important;
 }
 
 /* ========================================
-   📝 Tooltip
+   Tooltip
    ======================================== */
 .MuiTooltip-tooltip {
   font-family: var(--font-sans) !important;
@@ -296,7 +296,7 @@
 }
 
 /* ========================================
-   📋 List Overrides
+   List Overrides
    ======================================== */
 .MuiList-root {
   font-family: var(--font-sans) !important;
@@ -322,7 +322,7 @@
 }
 
 /* ========================================
-   🌙 Dark Mode for MUI components
+   Dark Mode for MUI components
    ======================================== */
 @media (prefers-color-scheme: dark) {
   .MuiDialog-paper,
