@@ -233,6 +233,35 @@ export default function CanvasEditor({ onOpenAuth }) {
             <path d="M7 17l10-10" />
           </svg>
         </button>
+
+        <div className="ce-dock-divider" />
+        {/* Action: Auto Layout -> Vertical */}
+        <button
+          className="ce-dock-btn action-btn text-btn"
+          title="Vertical Tree Layout"
+          onClick={() => canvasRef.current?.applyLayout("vertical")}
+        >
+          <span style={{ fontSize: "12px", fontWeight: "600", color: "#333" }}>Tree</span>
+        </button>
+
+        {/* Action: Auto Layout -> Horizontal */}
+        <button
+          className="ce-dock-btn action-btn text-btn"
+          title="Horizontal Tree Layout"
+          onClick={() => canvasRef.current?.applyLayout("horizontal")}
+        >
+          <span style={{ fontSize: "12px", fontWeight: "600", color: "#333" }}>Row</span>
+        </button>
+
+        {/* Action: Auto Layout -> Grid */}
+        <button
+          className="ce-dock-btn action-btn text-btn"
+          title="Grid Layout"
+          onClick={() => canvasRef.current?.applyLayout("grid")}
+        >
+          <span style={{ fontSize: "12px", fontWeight: "600", color: "#333" }}>Grid</span>
+        </button>
+
         </div>
 
       {/* Left palette */}

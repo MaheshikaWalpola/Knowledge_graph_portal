@@ -8,6 +8,7 @@ import ReactFlow, {
   useEdgesState,
   ReactFlowProvider,
   MarkerType,
+  Panel
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -15,6 +16,8 @@ import ClassNode from "./shapes/ClassNode";
 import PropertyNode from "./shapes/PropertyNode";
 import InstanceNode from "./shapes/InstanceNode";
 import LiteralNode from "./shapes/LiteralNode";
+
+import dagre from "dagre";
 
 const nodeTypes = {
   classNode: ClassNode,
@@ -36,6 +39,51 @@ const EDGE_LABELS = {
   domain: "rdfs:domain",
   range: "rdfs:range",
   rdfType: "rdf:type",
+};
+
+const getLayoutedElements = (nodes, edges, direction = "BT") => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+  // Generous spacing to accommodate the labels and properties
+  const nodeWidth = 220;
+  const nodeHeight = 100;
+
+  // Protege-style spacing
+  dagreGraph.setGraph({ 
+    rankdir: direction, // BT places targets (parents) at Top, sources (children) at Bottom
+    ranksep: 180, 
+    nodesep: 120,
+  });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+
+  edges.forEach((edge) => {
+    const type = edge.data?.edgeType || "";
+    // Only subclass / type edges dictate the tree backbone
+    const isHierarchy = type === "subClassOf" || type === "rdfType";
+    dagreGraph.setEdge(edge.source, edge.target, { 
+      weight: isHierarchy ? 10 : 0, // Cross-cutting domain/range won't tangle the strict hierarchy
+      minlen: isHierarchy ? 1 : 0 
+    });
+  });
+
+  dagre.layout(dagreGraph);
+
+  const newNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    return {
+      ...node,
+      position: {
+        x: nodeWithPosition.x - nodeWidth / 2,
+        y: nodeWithPosition.y - nodeHeight / 2,
+      },
+    };
+  });
+
+  return { nodes: newNodes, edges };
 };
 
 let idCounter = 0;
@@ -61,10 +109,31 @@ const CanvasInner = forwardRef(({
 
   useImperativeHandle(ref, () => ({
     importData: (data) => {
-      setNodes(data.nodes || []);
-      setEdges(data.edges || []);
+      if (!data || !data.nodes || data.nodes.length === 0) {
+        setNodes([]);
+        setEdges([]);
+        setPast([]);
+        setFuture([]);
+        return;
+      }
+      
+      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+        data.nodes,
+        data.edges || [],
+        "TB"
+      );
+
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
       setPast([]);
       setFuture([]);
+
+      // Auto-fit to view after layout
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView({ padding: 0.1, duration: 600 });
+        }
+      }, 100);
     },
     clearCanvas: () => {
       setNodes([]);
@@ -95,8 +164,30 @@ const CanvasInner = forwardRef(({
         setEdges(next.edges);
         return f.slice(1);
       });
+    },
+    applyLayout: (type) => {
+      takeSnapshot();
+      if (type === "vertical" || type === "horizontal") {
+        const dir = type === "vertical" ? "BT" : "LR";
+        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, dir);
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
+      } else if (type === "grid") {
+        const cols = Math.ceil(Math.sqrt(nodes.length));
+        const newNodes = nodes.map((n, i) => {
+          const x = (i % cols) * 300;
+          const y = Math.floor(i / cols) * 150;
+          return { ...n, position: { x, y } };
+        });
+        setNodes(newNodes);
+      }
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView({ padding: 0.1, duration: 600 });
+        }
+      }, 100);
     }
-  }), [nodes, edges, setNodes, setEdges]);
+  }), [nodes, edges, setNodes, setEdges, reactFlowInstance, takeSnapshot]);
 
   // Report model changes upstream
   React.useEffect(() => {
