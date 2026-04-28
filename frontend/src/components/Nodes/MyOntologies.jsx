@@ -143,8 +143,12 @@ export default function MyOntologies() {
         <Grid container spacing={3}>
           {filteredSchemas.map((schema) => (
             <Grid item xs={12} sm={6} md={4} key={schema.schema_id}>
-              <Card className="ontology-card" elevation={0}>
-                <CardContent>
+              <Card
+                className="ontology-card"
+                elevation={0}
+                onClick={() => navigate(`/canvas?schema_id=${schema.schema_id}`, { state: { originalName: schema.name } })}
+              >
+                <CardContent sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" fontWeight="600" noWrap gutterBottom>
                     {schema.name}
                   </Typography>
@@ -168,7 +172,8 @@ export default function MyOntologies() {
                 <CardActions sx={{ justifyContent: "flex-end", pt: 0, px: 2, pb: 2 }}>
                   <IconButton
                     color="error"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setSchemaToDelete(schema);
                       setDeleteModalOpen(true);
                     }}

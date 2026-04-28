@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 const EDGE_TYPE_OPTIONS = [
   { value: "subClassOf", label: "rdfs:subClassOf" },
@@ -171,8 +171,8 @@ function ElementTab({ selected, model }) {
   return null;
 }
 
-// Import / Export / Save Tab
-function ImportExportTab({ model, onImport }) {
+//  Import / Export / Save Tab 
+function ImportExportTab({ model, onImport, originalSchemaId, originalName }) {
   const fileInputRef = useRef(null);
   const [importError, setImportError] = useState(null);
   const [showTechnical, setShowTechnical] = useState(false);
@@ -181,13 +181,26 @@ function ImportExportTab({ model, onImport }) {
   const [exportName, setExportName] = useState("ontology_canvas");
 
   // Save-to-workspace state
-  const [saveName, setSaveName] = useState("");
+  const [saveName, setSaveName] = useState(originalName || "");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [showSaveTechnical, setShowSaveTechnical] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState("");
 
+  useEffect(() => {
+    if (originalName) {
+      setSaveName(originalName);
+    }
+  }, [originalName]);
+
   const hasContent = model && ((model.nodes?.length || 0) > 0);
+
+  // Determine if we're updating
+  const isUpdate = !!(
+    originalSchemaId && 
+    originalName && 
+    saveName.trim().toLowerCase() === originalName.trim().toLowerCase()
+  );
 
   //  Export handler 
   const handleExportTTL = () => {
@@ -273,6 +286,9 @@ function ImportExportTab({ model, onImport }) {
       form.append("name", saveName.trim());
       form.append("mode", "combined");
       form.append("schema_file", file);
+      if (isUpdate) {
+        form.append("update_schema_id", originalSchemaId);
+      }
 
       const resp = await fetch(`${API}/workspace/schema/upload`, {
         method: "POST",
@@ -289,8 +305,10 @@ function ImportExportTab({ model, onImport }) {
         throw { summary: (typeof d === "string" ? d : null) || "Save failed", technical: "" };
       }
 
-      setSaveSuccess(`"${saveName.trim()}" saved to your workspace!`);
-      setSaveName("");
+      setSaveSuccess(`"${saveName.trim()}" ${isUpdate ? "updated in" : "saved to"} your workspace!`);
+      if (!isUpdate) {
+        setSaveName("");
+      }
       setTimeout(() => setSaveSuccess(""), 3000);
     } catch (err) {
       if (err.summary) {
@@ -363,9 +381,13 @@ function ImportExportTab({ model, onImport }) {
       {/*  Save to Workspace  */}
       <div className="pp-io-section pp-save-section">
         <h4>
-          Save to Workspace
+          {isUpdate ? "Update Ontology" : "Save to Workspace"}
         </h4>
-        <p className="pp-io-desc">Save the current canvas ontology to GraphDB &amp; your workspace.</p>
+        <p className="pp-io-desc">
+          {isUpdate 
+            ? "Overwrite existing graph instances and update metadata."
+            : "Save the current canvas ontology to GraphDB & your workspace."}
+        </p>
         <div className="pp-field">
           <label>Ontology Name</label>
           <input
@@ -394,7 +416,7 @@ function ImportExportTab({ model, onImport }) {
                 <polyline points="17 21 17 13 7 13 7 21" />
                 <polyline points="7 3 7 8 15 8" />
               </svg>
-              Save
+              {isUpdate ? "Update" : "Save"}
             </>
           )}
         </button>
@@ -444,7 +466,7 @@ function ImportExportTab({ model, onImport }) {
   );
 }
 
-export default function PropertyPanel({ selected, model, onImport }) {
+export default function PropertyPanel({ selected, model, onImport, originalSchemaId, originalName }) {
   const [tab, setTab] = useState("element");
 
   return (
@@ -468,7 +490,14 @@ export default function PropertyPanel({ selected, model, onImport }) {
 
       <div className="pp-body">
         {tab === "element" && <ElementTab selected={selected} model={model} />}
-        {tab === "io" && <ImportExportTab model={model} onImport={onImport} />}
+        {tab === "io" && (
+          <ImportExportTab
+            model={model}
+            onImport={onImport}
+            originalSchemaId={originalSchemaId}
+            originalName={originalName}
+          />
+        )}
       </div>
     </aside>
   );

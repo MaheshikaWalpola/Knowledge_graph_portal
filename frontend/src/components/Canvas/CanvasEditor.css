@@ -21,6 +21,35 @@
 }
 
 /* ═══════════════════════════════════════════════════════
+   Loading Overlay
+   ═══════════════════════════════════════════════════════ */
+.ce-overlay-loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 1000;
+  font-family: inherit;
+  color: var(--ce-accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ce-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--ce-accent-soft);
+  border-top-color: var(--ce-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════
    Header Hide/Show Toggle (global CSS class on <html>)
    When CanvasEditor toggles `ce-header-hidden` on
    document.documentElement, this hides the header & footer.

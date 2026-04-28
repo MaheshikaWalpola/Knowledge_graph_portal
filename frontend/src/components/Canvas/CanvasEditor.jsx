@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import OntologyPalette from "./OntologyPalette";
 import OntologyCanvas from "./OntologyCanvas";
 import PropertyPanel from "./PropertyPanel";
@@ -12,8 +13,12 @@ export default function CanvasEditor() {
   const [rightOpen, setRightOpen] = useState(true);
   const [headerHidden, setHeaderHidden] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isLoadingSchema, setIsLoadingSchema] = useState(false);
 
   const canvasRef = useRef(null);
+  const location = useLocation();
+
+  const API = import.meta.env.VITE_API_URL;
 
   // Toggle a CSS class on the root element to hide/show the app header & footer
   useEffect(() => {
@@ -35,6 +40,50 @@ export default function CanvasEditor() {
     }
   }, []);
 
+  // ── Auto-load schema from query param ──
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const schemaId = params.get("schema_id");
+    if (!schemaId) return;
+
+    const loadSchema = async () => {
+      setIsLoadingSchema(true);
+      const token = localStorage.getItem("token");
+      try {
+        // 1. Fetch the TTL export for this schema
+        const exportRes = await fetch(`${API}/workspace/export?schema_id=${schemaId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!exportRes.ok) throw new Error("Failed to fetch schema export");
+        const ttlContent = await exportRes.text();
+
+        // 2. Convert to a File and send to the /canvas/import parser
+        const blob = new Blob([ttlContent], { type: "text/turtle" });
+        const file = new File([blob], `schema_${schemaId}.ttl`, { type: "text/turtle" });
+        
+        const form = new FormData();
+        form.append("file", file);
+
+        const importRes = await fetch(`${API}/canvas/import`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        });
+        
+        if (!importRes.ok) throw new Error("Failed to parse schema for canvas");
+        
+        const data = await importRes.json();
+        handleImport(data);
+      } catch (err) {
+        console.error("Auto-load schema error:", err);
+      } finally {
+        setIsLoadingSchema(false);
+      }
+    };
+
+    loadSchema();
+  }, [location.search, handleImport, API]);
+
   const handleClearCanvas = useCallback(() => {
     setModel({ nodes: [], edges: [] });
     canvasRef.current?.clearCanvas?.();
@@ -44,6 +93,13 @@ export default function CanvasEditor() {
 
   return (
     <div className={`canvas-editor ${!leftOpen ? "left-collapsed" : ""} ${!rightOpen ? "right-collapsed" : ""}`}>
+      {isLoadingSchema && (
+        <div className="ce-overlay-loading">
+          <div className="ce-spinner"></div>
+          <p>Loading ontology...</p>
+        </div>
+      )}
+      
       {/* Central Floating Dock */}
       <div className="ce-dock">
         {/* Toggle Left Palette */}
@@ -206,6 +262,8 @@ export default function CanvasEditor() {
             selected={selected}
             model={model}
             onImport={handleImport}
+            originalSchemaId={new URLSearchParams(location.search).get("schema_id")}
+            originalName={location.state?.originalName}
           />
         )}
       </aside>

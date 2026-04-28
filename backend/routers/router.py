@@ -224,6 +224,7 @@ def api_upload_schema(
     mode: str = Form(..., description="'combined' or 'separate'"),
     schema_file: UploadFile = File(...),
     instances_file: Optional[UploadFile] = File(None),
+    update_schema_id: Optional[str] = Form(None, description="If provided, overwrites the existing schema with this ID"),
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
     """
@@ -234,7 +235,8 @@ def api_upload_schema(
         name=name,
         mode=mode,
         schema_file=schema_file,
-        instances_file=instances_file
+        instances_file=instances_file,
+        update_schema_id=update_schema_id
     )
 
 

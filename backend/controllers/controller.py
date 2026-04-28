@@ -484,6 +484,7 @@ def ctrl_upload_schema(
     mode: str,
     schema_file: UploadFile,
     instances_file: Optional[UploadFile],
+    update_schema_id: Optional[str] = None,
 ) -> Dict:
     """
     Handle uploading custom ontologies.
@@ -495,17 +496,22 @@ def ctrl_upload_schema(
     if not name.strip():
         raise HTTPException(422, detail="Schema name is required")
 
-    # Prevent duplicate ontology names per user
+    # Prevent duplicate ontology names per user (allow if updating self)
     existing = list_user_schemas(user_email)
     for s in existing:
-        if s.get("name", "").strip().lower() == name.strip().lower():
+        if s.get("name", "").strip().lower() == name.strip().lower() and s.get("schema_id") != update_schema_id:
             raise HTTPException(
                 409,
                 detail=f"An ontology named '{name.strip()}' already exists. Please choose a different name.",
             )
+            
+    # Handle overwrite: delete old graphs and metadata if updating
+    if update_schema_id:
+        ctrl_delete_user_schema(user_email, update_schema_id)
+        schema_id = update_schema_id
+    else:
+        schema_id = "upload_" + name.replace(" ", "_")[:20] + "_" + str(hash(user_email))[:6]
 
-    # Generate graph IRIs
-    schema_id = "upload_" + name.replace(" ", "_")[:20] + "_" + str(hash(user_email))[:6]
     graph_iri = user_schema_graph(user_email, schema_id)
     instance_graph_iri = user_schema_instance_graph(user_email, schema_id)
 
