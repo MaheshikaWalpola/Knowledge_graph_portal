@@ -21,7 +21,7 @@ export default function SimpleChart({
   width = "100%",
   height = 200,
   lineColor = "#7c3aed",
-  fillColor = "rgba(124, 58, 237, 0.1)",
+  fillColor = "rgba(37, 99, 235, 0.1)",
 }) {
   const canvasRef = useRef(null);
   const [tooltip, setTooltip] = useState(null);
@@ -99,8 +99,8 @@ export default function SimpleChart({
         0,
         h - padding.bottom,
       );
-      areaGradient.addColorStop(0, "rgba(124, 58, 237, 0.15)");
-      areaGradient.addColorStop(1, "rgba(124, 58, 237, 0.02)");
+      areaGradient.addColorStop(0, "rgba(37, 99, 235, 0.15)");
+      areaGradient.addColorStop(1, "rgba(37, 99, 235, 0.02)");
 
       ctx.beginPath();
       ctx.moveTo(toX(0), toY(data[0]));
@@ -139,7 +139,7 @@ export default function SimpleChart({
         if (isHighlighted) {
           ctx.beginPath();
           ctx.arc(toX(i), toY(data[i]), 12, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(124, 58, 237, 0.2)";
+          ctx.fillStyle = "rgba(37, 99, 235, 0.2)";
           ctx.fill();
         }
 
@@ -207,7 +207,7 @@ export default function SimpleChart({
 
         // Vertical guide line
         ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = "rgba(124, 58, 237, 0.4)";
+        ctx.strokeStyle = "rgba(37, 99, 235, 0.4)";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x, padding.top);
@@ -311,7 +311,7 @@ export default function SimpleChart({
             borderRadius: "8px",
             fontSize: "12px",
             fontWeight: "600",
-            boxShadow: "0 4px 12px rgba(124, 58, 237, 0.4)",
+            boxShadow: "0 4px 12px rgba(37, 99, 235, 0.4)",
             pointerEvents: "none",
             zIndex: 10,
             whiteSpace: "nowrap",

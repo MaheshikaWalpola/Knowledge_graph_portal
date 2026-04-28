@@ -288,7 +288,7 @@ html.ce-header-hidden .canvas-editor {
 /* Selection box */
 .canvas-wrapper .react-flow__selection {
   border: 1px solid rgba(37, 99, 235, 0.35);
-  background: rgba(124, 58, 237, 0.08);
+  background: rgba(37, 99, 235, 0.08);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -819,7 +819,7 @@ html.ce-header-hidden .canvas-editor {
 .pp-badge {
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(124, 58, 237, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--ce-accent);
   font-size: 10px;
   font-weight: 800;

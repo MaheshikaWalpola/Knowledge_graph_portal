@@ -81,7 +81,7 @@
   .MuiOutlinedInput-notchedOutline {
   border-color: var(--accent-primary) !important;
   border-width: 2px !important;
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1) !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1) !important;
 }
 
 .formControl .MuiInputLabel-root {
@@ -108,7 +108,7 @@
 
 .formControl .MuiIconButton-root:hover {
   color: var(--accent-primary) !important;
-  background: rgba(124, 58, 237, 0.08) !important;
+  background: rgba(37, 99, 235, 0.08) !important;
 }
 
 /* ========================================
@@ -126,7 +126,7 @@
   font-family: var(--font-sans) !important;
   text-transform: none !important;
   letter-spacing: 0.02em;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35) !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.35) !important;
   transition: all var(--transition-normal) !important;
   position: relative;
   overflow: hidden;
@@ -150,7 +150,7 @@
 
 .login__form .MuiButton-contained:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 6px 25px rgba(124, 58, 237, 0.45) !important;
+  box-shadow: 0 6px 25px rgba(37, 99, 235, 0.45) !important;
 }
 
 .login__form .MuiButton-contained:hover::before {

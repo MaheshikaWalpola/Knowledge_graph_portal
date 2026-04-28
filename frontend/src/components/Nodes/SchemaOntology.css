@@ -95,7 +95,7 @@
 
 .search-input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
 .search-btn {
@@ -109,7 +109,7 @@
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
   transition: all var(--transition-normal);
   position: relative;
   overflow: hidden;
@@ -133,7 +133,7 @@
 
 .search-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
 .search-btn:hover::before {
@@ -218,7 +218,7 @@
   background: var(--accent-primary);
   color: white;
   border-color: var(--accent-primary);
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
   transform: scale(1.05);
 }
 
@@ -507,6 +507,6 @@
 
 .schema-selector-item:hover,
 .schema-selector-item.active {
-  background: rgba(124, 58, 237, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--accent-primary);
 }
