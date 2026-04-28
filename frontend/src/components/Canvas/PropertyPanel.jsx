@@ -119,6 +119,8 @@ function ImportExportTab({ model, onImport }) {
   const handleExportTTL = () => {
     if (!model) return;
 
+    const ttl = (iri) => (iri.startsWith("http://") || iri.startsWith("https://")) ? `<${iri}>` : iri;
+
     const lines = [
       "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .",
       "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .",
@@ -143,12 +145,12 @@ function ImportExportTab({ model, onImport }) {
       };
 
       const rdfType = typeMap[n.type] || "owl:Thing";
-      lines.push(`${iri} a ${rdfType} .`);
+      lines.push(`${ttl(iri)} a ${rdfType} .`);
       if (n.data?.label) {
-        lines.push(`${iri} rdfs:label "${n.data.label}" .`);
+        lines.push(`${ttl(iri)} rdfs:label "${n.data.label}" .`);
       }
       if (n.data?.description) {
-        lines.push(`${iri} rdfs:comment "${n.data.description}" .`);
+        lines.push(`${ttl(iri)} rdfs:comment "${n.data.description}" .`);
       }
       lines.push("");
     }
@@ -165,7 +167,7 @@ function ImportExportTab({ model, onImport }) {
         rdfType: "rdf:type",
       };
       const pred = predMap[e.data?.edgeType] || e.label || "rdfs:subClassOf";
-      lines.push(`${srcIri} ${pred} ${tgtIri} .`);
+      lines.push(`${ttl(srcIri)} ${ttl(pred)} ${ttl(tgtIri)} .`);
     }
 
     const blob = new Blob([lines.join("\n")], { type: "text/turtle" });
