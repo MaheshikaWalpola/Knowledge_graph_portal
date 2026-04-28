@@ -762,6 +762,7 @@ html.ce-header-hidden .canvas-editor {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  margin-bottom: 5px;
 }
 
 .pp-field label {
@@ -949,6 +950,103 @@ html.ce-header-hidden .canvas-editor {
   word-break: break-all;
   max-height: 160px;
   overflow-y: auto;
+}
+
+/* Save to Workspace section */
+.pp-save-section {
+  padding-top: 20px;
+  border-top: 1px solid rgba(229, 231, 235, 0.9);
+}
+
+.pp-save-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pp-save-section h4 svg {
+  color: var(--ce-accent, #2563eb);
+}
+
+/* Filename input row */
+.pp-filename-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.pp-filename-row input {
+  flex: 1;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-right: none !important;
+}
+
+.pp-filename-ext {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--ce-border, #e2e8f0);
+  border-left: none;
+  border-radius: 0 12px 12px 0;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* Success toast */
+.pp-success {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(187, 247, 208, 0.9);
+  border-radius: 12px;
+  background: rgba(240, 253, 244, 0.95);
+  color: #16a34a;
+  font-size: 12px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fadeIn 0.2s ease;
+}
+
+.pp-success svg {
+  flex-shrink: 0;
+}
+
+/* Spinner */
+.pp-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Hint text */
+.pp-io-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Disabled button */
+.pp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════
