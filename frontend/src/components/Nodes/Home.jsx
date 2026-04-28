@@ -12,8 +12,8 @@ const Home = () => {
           <div className="home-badge">Semantic Web Technology</div>
           <h1 className="home-title">Knowledge Graph Portal</h1>
           <p className="home-text">
-            Explore, visualize, and interact with your semantic knowledge graph.
-            Navigate schema entities, relationships, and instance connections in
+            Explore, visualize and interact with your semantic knowledge graph.
+            Navigate schema entities, relationships and instance connections in
             a clean and intuitive interface.
           </p>
           <div className="home-cta">
@@ -54,7 +54,7 @@ const Home = () => {
 
         <div className="features-grid">
           <div className="feature-card">
-            <div className="feature-icon">
+            <div className="feature-icon feature-icon-blue-1">
               <svg
                 width="28"
                 height="28"
@@ -75,7 +75,7 @@ const Home = () => {
           </div>
 
           <div className="feature-card">
-            <div className="feature-icon feature-icon-blue">
+            <div className="feature-icon feature-icon-blue-2">
               <svg
                 width="28"
                 height="28"
@@ -97,7 +97,7 @@ const Home = () => {
           </div>
 
           <div className="feature-card">
-            <div className="feature-icon feature-icon-cyan">
+            <div className="feature-icon feature-icon-blue-3">
               <svg
                 width="28"
                 height="28"
@@ -119,7 +119,7 @@ const Home = () => {
           </div>
 
           <div className="feature-card">
-            <div className="feature-icon feature-icon-green">
+            <div className="feature-icon feature-icon-blue-4">
               <svg
                 width="28"
                 height="28"
