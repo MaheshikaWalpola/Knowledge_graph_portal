@@ -172,7 +172,7 @@ function ElementTab({ selected, model }) {
 }
 
 //  Import / Export / Save Tab 
-function ImportExportTab({ model, onImport, originalSchemaId, originalName }) {
+function ImportExportTab({ model, onImport, originalSchemaId, originalName, onOpenAuth }) {
   const fileInputRef = useRef(null);
   const [importError, setImportError] = useState(null);
   const [showTechnical, setShowTechnical] = useState(false);
@@ -224,6 +224,12 @@ function ImportExportTab({ model, onImport, originalSchemaId, originalName }) {
     if (!file) return;
 
     const token = localStorage.getItem("token");
+    if (!token) {
+      setImportError({ summary: "Please log into the system to import a diagram.", technical: "" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -255,18 +261,22 @@ function ImportExportTab({ model, onImport, originalSchemaId, originalName }) {
 
   //  Save to workspace handler 
   const handleSaveToWorkspace = async () => {
+    setSaveError(null);
+    setShowSaveTechnical(false);
+    setSaveSuccess("");
+
     if (!saveName.trim()) {
-      setSaveError({ summary: "Please enter a name for your ontology.", technical: "" });
-      return;
-    }
-    if (!hasContent) {
-      setSaveError({ summary: "Canvas is empty. Add some nodes before saving.", technical: "" });
+      setSaveError({ summary: "Please provide a name for the ontology.", technical: "" });
       return;
     }
 
     const token = localStorage.getItem("token");
     if (!token) {
-      setSaveError({ summary: "You must be logged in to save.", technical: "" });
+      if (onOpenAuth) {
+        onOpenAuth();
+      } else {
+        setSaveError({ summary: "You must be logged in to save.", technical: "" });
+      }
       return;
     }
 
@@ -466,7 +476,7 @@ function ImportExportTab({ model, onImport, originalSchemaId, originalName }) {
   );
 }
 
-export default function PropertyPanel({ selected, model, onImport, originalSchemaId, originalName }) {
+export default function PropertyPanel({ selected, model, onImport, originalSchemaId, originalName, onOpenAuth }) {
   const [tab, setTab] = useState("element");
 
   return (
@@ -496,6 +506,7 @@ export default function PropertyPanel({ selected, model, onImport, originalSchem
             onImport={onImport}
             originalSchemaId={originalSchemaId}
             originalName={originalName}
+            onOpenAuth={onOpenAuth}
           />
         )}
       </div>

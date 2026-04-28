@@ -27,7 +27,7 @@ import "./MyOntologies.css";
 
 const API = import.meta.env.VITE_API_URL;
 
-export default function MyOntologies() {
+export default function MyOntologies({ onOpenAuth }) {
   const [schemas, setSchemas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -40,11 +40,12 @@ export default function MyOntologies() {
 
   useEffect(() => {
     if (!token) {
+      if (onOpenAuth) onOpenAuth("/my-ontologies");
       navigate("/");
       return;
     }
     fetchSchemas();
-  }, [token, navigate]);
+  }, [token, navigate, onOpenAuth]);
 
   const fetchSchemas = async () => {
     setLoading(true);

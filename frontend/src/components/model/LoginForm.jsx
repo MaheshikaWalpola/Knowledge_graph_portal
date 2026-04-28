@@ -82,9 +82,6 @@ export default function LoginForm({ onLoginSuccess }) {
           setEmail("");
           setPassword("");
           setLoginError("");
-
-          // go to home (or workspace, whatever you want)
-          navigate("/");
         } else {
           console.error("Invalid response:", response);
           setLoginError("Invalid email or password");

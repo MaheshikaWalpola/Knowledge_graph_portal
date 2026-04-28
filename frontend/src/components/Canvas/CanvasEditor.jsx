@@ -5,7 +5,7 @@ import OntologyCanvas from "./OntologyCanvas";
 import PropertyPanel from "./PropertyPanel";
 import "./CanvasEditor.css";
 
-export default function CanvasEditor() {
+export default function CanvasEditor({ onOpenAuth }) {
   const [activeEdgeType, setActiveEdgeType] = useState("subClassOf");
   const [selected, setSelected] = useState(null);
   const [model, setModel] = useState({ nodes: [], edges: [] });
@@ -264,6 +264,7 @@ export default function CanvasEditor() {
             onImport={handleImport}
             originalSchemaId={new URLSearchParams(location.search).get("schema_id")}
             originalName={location.state?.originalName}
+            onOpenAuth={onOpenAuth}
           />
         )}
       </aside>
