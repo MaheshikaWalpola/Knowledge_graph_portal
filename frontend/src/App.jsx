@@ -24,6 +24,7 @@ import UserGuidance from "./components/Nodes/UserGuidance";
 function App() {
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [redirectAfterAuth, setRedirectAfterAuth] = useState(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("kgp_user");
@@ -37,7 +38,10 @@ function App() {
     }
   }, []);
 
-  const handleOpenAuth = () => setAuthOpen(true);
+  const handleOpenAuth = (redirectUrl = null) => {
+    setRedirectAfterAuth(redirectUrl);
+    setAuthOpen(true);
+  };
   const handleCloseAuth = () => setAuthOpen(false);
 
   const handleAuthSuccess = (userData) => {
@@ -48,12 +52,17 @@ function App() {
     setUser(u);
     localStorage.setItem("kgp_user", JSON.stringify(u));
     setAuthOpen(false);
+
+    if (redirectAfterAuth) {
+      window.location.href = redirectAfterAuth;
+    }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("kgp_user");
     localStorage.removeItem("token");
     setUser(null);
+    window.location.href = "/";
   };
 
   const handleVerifyLoginSuccess = (userData) => {
@@ -63,6 +72,11 @@ function App() {
     const u = userData.user || userData;
     setUser(u);
     localStorage.setItem("kgp_user", JSON.stringify(u));
+  };
+
+  const handleLoginRouteSuccess = (userData) => {
+    handleAuthSuccess(userData);
+    window.location.href = "/";
   };
 
   return (
@@ -78,16 +92,16 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<SearchConnection />} />
-            <Route path="/graph" element={<SchemaOntology />} />
+            <Route path="/graph" element={<SchemaOntology onOpenAuth={handleOpenAuth} />} />
             <Route
               path="/login"
-              element={<LoginForm onLoginSuccess={handleAuthSuccess} />}
+              element={<LoginForm onLoginSuccess={handleLoginRouteSuccess} />}
             />
             <Route path="/register" element={<RegistrationForm />} />
             <Route path="/forgotpassword" element={<ForgotPassword />} />
             <Route path="/workspace" element={<Workspace />} />
-            <Route path="/my-ontologies" element={<MyOntologies />} />
-            <Route path="/canvas" element={<CanvasEditor />} />
+            <Route path="/my-ontologies" element={<MyOntologies onOpenAuth={handleOpenAuth} />} />
+            <Route path="/canvas" element={<CanvasEditor onOpenAuth={handleOpenAuth} />} />
             <Route path="/termsandconditions" element={<Terms />} />
             <Route
               path="/verify-email"

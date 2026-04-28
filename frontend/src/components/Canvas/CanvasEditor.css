@@ -21,6 +21,35 @@
 }
 
 /* ═══════════════════════════════════════════════════════
+   Loading Overlay
+   ═══════════════════════════════════════════════════════ */
+.ce-overlay-loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 1000;
+  font-family: inherit;
+  color: var(--ce-accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ce-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--ce-accent-soft);
+  border-top-color: var(--ce-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════
    Header Hide/Show Toggle (global CSS class on <html>)
    When CanvasEditor toggles `ce-header-hidden` on
    document.documentElement, this hides the header & footer.
@@ -762,6 +791,7 @@ html.ce-header-hidden .canvas-editor {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  margin-bottom: 5px;
 }
 
 .pp-field label {
@@ -901,6 +931,151 @@ html.ce-header-hidden .canvas-editor {
   color: #dc2626;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.pp-error-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.pp-error-summary svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.pp-error-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+
+.pp-error-toggle:hover {
+  color: #991b1b;
+}
+
+.pp-error-details {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.12);
+  color: #7f1d1d;
+  font-size: 10px;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+/* Save to Workspace section */
+.pp-save-section {
+  padding-top: 20px;
+  border-top: 1px solid rgba(229, 231, 235, 0.9);
+}
+
+.pp-save-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pp-save-section h4 svg {
+  color: var(--ce-accent, #2563eb);
+}
+
+/* Filename input row */
+.pp-filename-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.pp-filename-row input {
+  flex: 1;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-right: none !important;
+}
+
+.pp-filename-ext {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--ce-border, #e2e8f0);
+  border-left: none;
+  border-radius: 0 12px 12px 0;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* Success toast */
+.pp-success {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(187, 247, 208, 0.9);
+  border-radius: 12px;
+  background: rgba(240, 253, 244, 0.95);
+  color: #16a34a;
+  font-size: 12px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fadeIn 0.2s ease;
+}
+
+.pp-success svg {
+  flex-shrink: 0;
+}
+
+/* Spinner */
+.pp-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Hint text */
+.pp-io-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Disabled button */
+.pp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════

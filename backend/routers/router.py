@@ -224,6 +224,7 @@ def api_upload_schema(
     mode: str = Form(..., description="'combined' or 'separate'"),
     schema_file: UploadFile = File(...),
     instances_file: Optional[UploadFile] = File(None),
+    update_schema_id: Optional[str] = Form(None, description="If provided, overwrites the existing schema with this ID"),
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
     """
@@ -234,11 +235,15 @@ def api_upload_schema(
         name=name,
         mode=mode,
         schema_file=schema_file,
-        instances_file=instances_file
+        instances_file=instances_file,
+        update_schema_id=update_schema_id
     )
 
 
 # ────────────────── CANVAS (import / export) ──────────────────
+
+from core.parse_errors import friendly_parse_error as _friendly_parse_error
+
 
 @router.post("/canvas/import")
 async def api_canvas_import(
@@ -267,7 +272,11 @@ async def api_canvas_import(
         g.parse(data=content, format=fmt)
     except Exception as e:
         from fastapi import HTTPException
-        raise HTTPException(400, detail=f"Failed to parse file: {e}")
+        raw = str(e)
+        raise HTTPException(400, detail={
+            "summary": _friendly_parse_error(raw, file.filename),
+            "technical": raw,
+        })
 
     # Build nodes from all subjects/objects that are URIs
     node_map = {}  # iri -> node dict

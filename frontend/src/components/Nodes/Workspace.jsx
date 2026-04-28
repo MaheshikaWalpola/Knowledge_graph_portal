@@ -163,8 +163,9 @@ const Workspace = () => {
   const [schemaFile, setSchemaFile] = useState(null);
   const [instanceFile, setInstanceFile] = useState(null);
   const [schemaUploadLoading, setSchemaUploadLoading] = useState(false);
-  const [schemaUploadErr, setSchemaUploadErr] = useState("");
+  const [schemaUploadErr, setSchemaUploadErr] = useState(null);
   const [schemaUploadOk, setSchemaUploadOk] = useState("");
+  const [showUploadTechnical, setShowUploadTechnical] = useState(false);
 
   // schemas list & selector
   const [schemas, setSchemas] = useState([]);
@@ -354,9 +355,10 @@ const Workspace = () => {
       return;
     }
 
-    setSchemaUploadErr("");
+    setSchemaUploadErr(null);
     setSchemaUploadOk("");
     setSchemaUploadLoading(true);
+    setShowUploadTechnical(false);
 
     try {
       const form = new FormData();
@@ -389,8 +391,13 @@ const Workspace = () => {
         setSchemaUploadOk("");
       }, 1200);
     } catch (e) {
-      const msg = e?.response?.data?.detail || "Failed to upload ontology.";
-      setSchemaUploadErr(msg);
+      const d = e?.response?.data?.detail;
+      if (d && typeof d === "object" && d.summary) {
+        setSchemaUploadErr({ summary: d.summary, technical: d.technical || "" });
+      } else {
+        const msg = (typeof d === "string" ? d : null) || "Failed to upload ontology.";
+        setSchemaUploadErr({ summary: msg, technical: "" });
+      }
     } finally {
       setSchemaUploadLoading(false);
     }
@@ -399,12 +406,13 @@ const Workspace = () => {
   const closeUploadModal = () => {
     if (schemaUploadLoading) return;
     setUploadModalOpen(false);
-    setSchemaUploadErr("");
+    setSchemaUploadErr(null);
     setSchemaUploadOk("");
     setSchemaName("");
     setSchemaFile(null);
     setInstanceFile(null);
     setUploadMode("single");
+    setShowUploadTechnical(false);
   };
 
   // ---------- graph ----------
@@ -885,7 +893,7 @@ const Workspace = () => {
                       setUploadMode("single");
                       setSchemaFile(null);
                       setInstanceFile(null);
-                      setSchemaUploadErr("");
+                      setSchemaUploadErr(null);
                       setSchemaUploadOk("");
                     }}
                   >
@@ -956,13 +964,32 @@ const Workspace = () => {
               )}
 
               {schemaUploadErr && (
-                <div className="error-banner">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="15" y1="9" x2="9" y2="15" />
-                    <line x1="9" y1="9" x2="15" y2="15" />
-                  </svg>
-                  {schemaUploadErr}
+                <div className="error-banner expandable-error">
+                  <div className="expandable-error-summary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{schemaUploadErr.summary}</span>
+                  </div>
+                  {schemaUploadErr.technical && (
+                    <>
+                      <button
+                        type="button"
+                        className="expandable-error-toggle"
+                        onClick={() => setShowUploadTechnical(!showUploadTechnical)}
+                      >
+                        {showUploadTechnical ? "Hide" : "Show"} technical details
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showUploadTechnical ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}>
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                      {showUploadTechnical && (
+                        <pre className="expandable-error-details">{schemaUploadErr.technical}</pre>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
               {schemaUploadOk && (

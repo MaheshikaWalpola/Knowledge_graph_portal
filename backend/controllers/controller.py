@@ -4,6 +4,7 @@ from core.config import settings
 
 from services.instance_generation_service import build_instances_from_csvs
 from services.rdf_upload_service import parse_rdf_bytes, split_schema_and_instances
+from core.parse_errors import friendly_parse_error as _friendly_parse_error
 from services.user_schema_service import (
     create_schema_meta,
     list_user_schemas,
@@ -483,6 +484,7 @@ def ctrl_upload_schema(
     mode: str,
     schema_file: UploadFile,
     instances_file: Optional[UploadFile],
+    update_schema_id: Optional[str] = None,
 ) -> Dict:
     """
     Handle uploading custom ontologies.
@@ -494,17 +496,22 @@ def ctrl_upload_schema(
     if not name.strip():
         raise HTTPException(422, detail="Schema name is required")
 
-    # Prevent duplicate ontology names per user
+    # Prevent duplicate ontology names per user (allow if updating self)
     existing = list_user_schemas(user_email)
     for s in existing:
-        if s.get("name", "").strip().lower() == name.strip().lower():
+        if s.get("name", "").strip().lower() == name.strip().lower() and s.get("schema_id") != update_schema_id:
             raise HTTPException(
                 409,
                 detail=f"An ontology named '{name.strip()}' already exists. Please choose a different name.",
             )
+            
+    # Handle overwrite: delete old graphs and metadata if updating
+    if update_schema_id:
+        ctrl_delete_user_schema(user_email, update_schema_id)
+        schema_id = update_schema_id
+    else:
+        schema_id = "upload_" + name.replace(" ", "_")[:20] + "_" + str(hash(user_email))[:6]
 
-    # Generate graph IRIs
-    schema_id = "upload_" + name.replace(" ", "_")[:20] + "_" + str(hash(user_email))[:6]
     graph_iri = user_schema_graph(user_email, schema_id)
     instance_graph_iri = user_schema_instance_graph(user_email, schema_id)
 
@@ -513,7 +520,11 @@ def ctrl_upload_schema(
     try:
         parsed_schema = parse_rdf_bytes(schema_content, schema_file.filename)
     except Exception as e:
-        raise HTTPException(400, detail=f"Failed to parse schema file: {e}")
+        raw = str(e)
+        raise HTTPException(400, detail={
+            "summary": _friendly_parse_error(raw, schema_file.filename),
+            "technical": raw,
+        })
 
     namespace = parsed_schema.namespace
 
@@ -558,7 +569,11 @@ def ctrl_upload_schema(
         except Exception as e:
             # Rollback
             delete_named_graph(graph_iri)
-            raise HTTPException(400, detail=f"Failed to parse instances file: {e}")
+            raw = str(e)
+            raise HTTPException(400, detail={
+                "summary": _friendly_parse_error(raw, instances_file.filename),
+                "technical": raw,
+            })
 
         try:
             import_turtle_to_named_graph(parsed_inst.turtle, instance_graph_iri)

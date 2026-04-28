@@ -578,6 +578,60 @@
   animation: fadeIn 0.2s ease;
 }
 
+.error-banner.expandable-error {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.expandable-error-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.expandable-error-summary svg {
+  margin-top: 2px;
+}
+
+.expandable-error-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+  align-self: flex-start;
+}
+
+.expandable-error-toggle:hover {
+  color: #991b1b;
+}
+
+.expandable-error-details {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.12);
+  color: #7f1d1d;
+  font-size: 11px;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
 .success-banner {
   display: flex;
   align-items: center;

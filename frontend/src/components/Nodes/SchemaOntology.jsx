@@ -27,7 +27,7 @@ const PALETTE = [
   "#06b6d4",
 ];
 
-export default function SchemaOntology() {
+export default function SchemaOntology({ onOpenAuth }) {
   const [elements, setElements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
@@ -42,6 +42,13 @@ export default function SchemaOntology() {
   const [schemaSearch, setSchemaSearch] = useState("");
   const selectorRef = useRef(null);
   const token = localStorage.getItem("token");
+
+  // Prompt login if no token
+  useEffect(() => {
+    if (!token && onOpenAuth) {
+      onOpenAuth("/graph");
+    }
+  }, [token, onOpenAuth]);
 
   // close selector on outside click
   useEffect(() => {

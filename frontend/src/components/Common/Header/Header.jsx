@@ -87,7 +87,15 @@ export default function Header({ user, onOpenAuth, onLogout }) {
     if (user) {
       navigate("/workspace");
     } else {
-      onOpenAuth && onOpenAuth();
+      onOpenAuth && onOpenAuth("/workspace");
+    }
+  };
+
+  const handleOntologyClick = () => {
+    if (user) {
+      navigate("/graph");
+    } else {
+      onOpenAuth && onOpenAuth("/graph");
     }
   };
 
@@ -125,8 +133,10 @@ export default function Header({ user, onOpenAuth, onLogout }) {
 
         <ListItem className="list-item" disablePadding>
           <Button
-            component={Link}
-            to="/graph"
+            onClick={() => {
+              setDrawerOpen(false);
+              handleOntologyClick();
+            }}
             variant="text"
             className="navbar__link"
             sx={{ justifyContent: "flex-start", width: "100%" }}
@@ -259,8 +269,7 @@ export default function Header({ user, onOpenAuth, onLogout }) {
               </Button>
 
               <Button
-                component={Link}
-                to="/graph"
+                onClick={handleOntologyClick}
                 variant="text"
                 className="header__links_sub"
               >
@@ -292,7 +301,7 @@ export default function Header({ user, onOpenAuth, onLogout }) {
               {!user ? (
                 <Button
                   variant="contained"
-                  onClick={onOpenAuth}
+                  onClick={() => onOpenAuth && onOpenAuth()}
                   sx={{
                     backgroundColor: "black",
                     color: "white",
