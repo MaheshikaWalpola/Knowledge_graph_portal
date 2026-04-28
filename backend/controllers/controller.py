@@ -4,6 +4,7 @@ from core.config import settings
 
 from services.instance_generation_service import build_instances_from_csvs
 from services.rdf_upload_service import parse_rdf_bytes, split_schema_and_instances
+from core.parse_errors import friendly_parse_error as _friendly_parse_error
 from services.user_schema_service import (
     create_schema_meta,
     list_user_schemas,
@@ -513,7 +514,11 @@ def ctrl_upload_schema(
     try:
         parsed_schema = parse_rdf_bytes(schema_content, schema_file.filename)
     except Exception as e:
-        raise HTTPException(400, detail=f"Failed to parse schema file: {e}")
+        raw = str(e)
+        raise HTTPException(400, detail={
+            "summary": _friendly_parse_error(raw, schema_file.filename),
+            "technical": raw,
+        })
 
     namespace = parsed_schema.namespace
 
@@ -558,7 +563,11 @@ def ctrl_upload_schema(
         except Exception as e:
             # Rollback
             delete_named_graph(graph_iri)
-            raise HTTPException(400, detail=f"Failed to parse instances file: {e}")
+            raw = str(e)
+            raise HTTPException(400, detail={
+                "summary": _friendly_parse_error(raw, instances_file.filename),
+                "technical": raw,
+            })
 
         try:
             import_turtle_to_named_graph(parsed_inst.turtle, instance_graph_iri)

@@ -240,6 +240,9 @@ def api_upload_schema(
 
 # ────────────────── CANVAS (import / export) ──────────────────
 
+from core.parse_errors import friendly_parse_error as _friendly_parse_error
+
+
 @router.post("/canvas/import")
 async def api_canvas_import(
     file: UploadFile = File(...),
@@ -267,7 +270,11 @@ async def api_canvas_import(
         g.parse(data=content, format=fmt)
     except Exception as e:
         from fastapi import HTTPException
-        raise HTTPException(400, detail=f"Failed to parse file: {e}")
+        raw = str(e)
+        raise HTTPException(400, detail={
+            "summary": _friendly_parse_error(raw, file.filename),
+            "technical": raw,
+        })
 
     # Build nodes from all subjects/objects that are URIs
     node_map = {}  # iri -> node dict

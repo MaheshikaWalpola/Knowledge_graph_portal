@@ -113,7 +113,8 @@ function ElementTab({ selected, model }) {
 
 function ImportExportTab({ model, onImport }) {
   const fileInputRef = useRef(null);
-  const [importError, setImportError] = useState("");
+  const [importError, setImportError] = useState(null);
+  const [showTechnical, setShowTechnical] = useState(false);
 
   const handleExportTTL = () => {
     if (!model) return;
@@ -177,7 +178,8 @@ function ImportExportTab({ model, onImport }) {
   };
 
   const handleImportFile = async (e) => {
-    setImportError("");
+    setImportError(null);
+    setShowTechnical(false);
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -194,12 +196,20 @@ function ImportExportTab({ model, onImport }) {
       });
       if (!resp.ok) {
         const detail = await resp.json().catch(() => ({}));
-        throw new Error(detail.detail || "Import failed");
+        const d = detail.detail;
+        if (d && typeof d === "object" && d.summary) {
+          throw { summary: d.summary, technical: d.technical || "" };
+        }
+        throw { summary: (typeof d === "string" ? d : null) || "Import failed", technical: "" };
       }
       const data = await resp.json();
       onImport?.(data);
     } catch (err) {
-      setImportError(err.message);
+      if (err.summary) {
+        setImportError(err);
+      } else {
+        setImportError({ summary: err.message || "Import failed", technical: "" });
+      }
     }
     // Reset input
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -225,7 +235,35 @@ function ImportExportTab({ model, onImport }) {
           </svg>
           Choose File
         </button>
-        {importError && <div className="pp-error">{importError}</div>}
+        {importError && (
+          <div className="pp-error">
+            <div className="pp-error-summary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{importError.summary}</span>
+            </div>
+            {importError.technical && (
+              <>
+                <button
+                  type="button"
+                  className="pp-error-toggle"
+                  onClick={() => setShowTechnical(!showTechnical)}
+                >
+                  {showTechnical ? "Hide" : "Show"} technical details
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showTechnical ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {showTechnical && (
+                  <pre className="pp-error-details">{importError.technical}</pre>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="pp-io-section">
