@@ -51,7 +51,7 @@ const getLayoutedElements = (nodes, edges, direction = "BT") => {
 
   // Protege-style spacing
   dagreGraph.setGraph({ 
-    rankdir: direction, // BT places targets (parents) at Top, sources (children) at Bottom
+    rankdir: direction,
     ranksep: 180, 
     nodesep: 120,
   });
@@ -65,7 +65,7 @@ const getLayoutedElements = (nodes, edges, direction = "BT") => {
     // Only subclass / type edges dictate the tree backbone
     const isHierarchy = type === "subClassOf" || type === "rdfType";
     dagreGraph.setEdge(edge.source, edge.target, { 
-      weight: isHierarchy ? 10 : 0, // Cross-cutting domain/range won't tangle the strict hierarchy
+      weight: isHierarchy ? 10 : 0,
       minlen: isHierarchy ? 1 : 0 
     });
   });
@@ -210,14 +210,9 @@ const CanvasInner = forwardRef(({
         id: `e_${params.source}_${params.target}_${Date.now()}`,
         type: "default",
         animated: false,
-        label,
         data: { edgeType: activeEdgeType },
         style: { stroke: color, strokeWidth: 1 },
         markerEnd: { type: MarkerType.ArrowClosed, color },
-        labelStyle: { fill: color, fontWeight: 400, fontSize: 6 },
-        labelBgStyle: { fill: "#ffffff", fillOpacity: 0.9 },
-        labelBgPadding: [6, 3],
-        labelBgBorderRadius: 4,
       };
 
       setEdges((eds) => addEdge(newEdge, eds));
@@ -311,28 +306,18 @@ const CanvasInner = forwardRef(({
         onSelectionChange?.({
           kind: "edge",
           id: e.id,
-          label: e.label,
           data: e.data,
-          setLabel: (v) => {
-            takeSnapshot();
-            setEdges((eds) =>
-              eds.map((ed) => (ed.id === e.id ? { ...ed, label: v } : ed))
-            );
-          },
           setEdgeType: (v) => {
             takeSnapshot();
             const color = EDGE_COLORS[v] || EDGE_COLORS.default;
-            const newLabel = EDGE_LABELS[v] || v;
             setEdges((eds) =>
               eds.map((ed) =>
                 ed.id === e.id
                   ? {
                       ...ed,
-                      label: newLabel,
                       data: { ...ed.data, edgeType: v },
                       style: { ...ed.style, stroke: color },
                       markerEnd: { ...ed.markerEnd, color },
-                      labelStyle: { ...ed.labelStyle, fill: color },
                     }
                   : ed
               )
