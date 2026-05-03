@@ -22,6 +22,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ClearIcon from "@mui/icons-material/Clear";
 import "./Header.css";
 import logo from "../../../assets/Logo.png";
+import logo1 from "../../../assets/KG_Portal.png"
 
 // helper for initials
 const getInitials = (firstName, lastName, email) => {
@@ -243,9 +244,11 @@ export default function Header({ user, onOpenAuth, onLogout }) {
               padding: 0,
               minWidth: "auto",
               marginRight: "auto",
+              fontSize: "1.1rem",
             }}
           >
-            <img src={logo} alt="KG Portal Logo" style={{ width: "120px", height: "auto", objectFit: "contain" }} />
+            {/* <img src={logo} alt="KG Portal Logo" style={{ width: "120px", height: "auto", objectFit: "contain" }} /> */}
+            <img src={logo1} alt="KG Portal Logo" style={{ width: "50px", height: "50px", objectFit: "contain" }} /> Konwledge Graph Portal
           </Button>
 
           {/* Center/right nav links for desktop */}
