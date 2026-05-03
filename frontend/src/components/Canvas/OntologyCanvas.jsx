@@ -117,9 +117,14 @@ const CanvasInner = forwardRef(({
         return;
       }
       
+      const strippedEdges = (data.edges || []).map(e => {
+        const { label, labelStyle, labelBgStyle, labelBgPadding, labelBgBorderRadius, ...rest } = e;
+        return rest;
+      });
+
       const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
         data.nodes,
-        data.edges || [],
+        strippedEdges,
         "TB"
       );
 
