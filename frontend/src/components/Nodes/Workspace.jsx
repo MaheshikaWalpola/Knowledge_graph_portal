@@ -174,6 +174,7 @@ const Workspace = () => {
   const [schemaSelectorOpen, setSchemaSelectorOpen] = useState(false);
   const [schemaSearch, setSchemaSearch] = useState("");
   const selectorRef = useRef(null);
+  const cyRef = useRef(null);
 
   const token = localStorage.getItem("token");
   const instanceNsPrefix = `${CMP_NS}instance/`;
@@ -637,6 +638,9 @@ const Workspace = () => {
                         {s.upload_mode === "separate" && (
                           <span className="schema-combobox-item-badge">Schema + Instance</span>
                         )}
+                        {s.upload_mode === "combined" && (
+                          <span className="schema-combobox-item-badge combined">Combined</span>
+                        )}
                         {activeSchemaId === s.schema_id && (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12" />
@@ -712,7 +716,18 @@ const Workspace = () => {
             <div className="workspace-results">
 
               {view === "graph" && cyElements.length > 0 && (
-                <div className="workspace-graph">
+                <div className="workspace-graph" style={{ position: "relative" }}>
+                  <div className="graph-controls">
+                    <button className="graph-control-btn" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.2)} title="Zoom In">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                    </button>
+                    <button className="graph-control-btn" onClick={() => cyRef.current?.zoom(cyRef.current.zoom() / 1.2)} title="Zoom Out">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                    </button>
+                    <button className="graph-control-btn" onClick={() => cyRef.current?.fit()} title="Fit to Screen">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                    </button>
+                  </div>
                   <CytoscapeComponent
                     elements={cyElements}
                     layout={{
@@ -725,6 +740,7 @@ const Workspace = () => {
                     style={{ width: "100%", height: "450px" }}
                     wheelSensitivity={0.2}
                     cy={(cy) => {
+                      cyRef.current = cy;
                       cy.off("tap");
                       cy.on("tap", "node", (evt) => {
                         const iri = evt.target.id();

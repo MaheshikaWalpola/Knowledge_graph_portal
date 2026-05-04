@@ -49,12 +49,6 @@
   animation: spin 1s linear infinite;
 }
 
-/* ═══════════════════════════════════════════════════════
-   Header Hide/Show Toggle (global CSS class on <html>)
-   When CanvasEditor toggles `ce-header-hidden` on
-   document.documentElement, this hides the header & footer.
-   ═══════════════════════════════════════════════════════ */
-
 html.ce-header-hidden {
   /* Prevent scrollbars or blank bottom boxes when canvas expands */
   overflow: hidden !important;
@@ -78,10 +72,6 @@ html.ce-header-hidden .footer {
     opacity 0.25s ease !important;
 }
 
-/* ═══════════════════════════════════════════════════════
-   Canvas Editor — 3-Pane Layout
-   ═══════════════════════════════════════════════════════ */
-
 .canvas-editor {
   display: flex;
   gap: var(--ce-gap);
@@ -104,10 +94,6 @@ html.ce-header-hidden .canvas-editor {
   height: 100vh;
   transform: translateY(calc(-1 * var(--ce-top-offset)));
 }
-
-/* ═══════════════════════════════════════════════════════
-   Floating Central Dock
-   ═══════════════════════════════════════════════════════ */
 
 .ce-dock {
   position: absolute;
@@ -627,10 +613,10 @@ html.ce-header-hidden .canvas-editor {
 
 /* Property: Smaller Diamond */
 .onto-property {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
   aspect-ratio: 1 / 1;
   padding: 0;
   border: none !important;
@@ -678,17 +664,17 @@ html.ce-header-hidden .canvas-editor {
 
 /* Property Node Label - Allow wrapping into multiple lines */
 .onto-property .onto-node-label {
-  max-width: 35px;
-  word-break: break-word;
+  max-width: 48px;
+  word-break: normal;
   white-space: normal;
-  line-height: 1;
-  font-size: 4px;
-  overflow-wrap: break-word;
+  line-height: 1.1;
+  font-size: 9px;
+  overflow-wrap: normal;
 }
 
 /* Type Indicator */
 .onto-node-type {
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
@@ -703,7 +689,7 @@ html.ce-header-hidden .canvas-editor {
   word-break: break-word;
   white-space: normal;
   text-align: center;
-  font-size: 5px;
+  font-size: 11px;
   font-weight: 500;
   line-height: 1.1;
   color: #0f172a;

@@ -152,14 +152,6 @@ function ElementTab({ selected, model }) {
             ))}
           </select>
         </div>
-        <div className="pp-field">
-          <label>Relationship Label</label>
-          <input
-            type="text"
-            value={liveEdge.label || ""}
-            onChange={(e) => selected.setLabel?.(e.target.value)}
-          />
-        </div>
         <div className="pp-info">
           <span className="pp-badge">Edge</span>
           <span className="pp-id">ID: {selected.id}</span>
