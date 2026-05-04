@@ -282,6 +282,11 @@
   white-space: nowrap;
 }
 
+.schema-combobox-item-badge.combined {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
 .schema-combobox-item svg {
   flex-shrink: 0;
   color: var(--accent-primary);
