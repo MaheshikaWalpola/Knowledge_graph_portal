@@ -99,8 +99,10 @@ def _edge_rows(res) -> List[Dict]:
         edges.append(
             {
                 "source": b["source"]["value"],
+                "source_type": b.get("source", {}).get("type"),
                 "relation": b["relation"]["value"],
                 "target": b["target"]["value"],
+                "target_type": b.get("target", {}).get("type"),
             }
         )
     return edges
@@ -111,10 +113,17 @@ def _fetch_nodes_with_labels(iris: set[str]) -> list[dict]:
     Fetch rdfs:label for a set of IRIs (schema or instances),
     without restricting to a single named graph.
     """
-    if not iris:
+    valid_iris = []
+    for iri in list(iris)[:2000]:
+        # Filter out literals that were accidentally collected as IRIs
+        if not iri or " " in iri or "<" in iri or ">" in iri or '"' in iri or "\n" in iri:
+            continue
+        valid_iris.append(iri)
+
+    if not valid_iris:
         return []
 
-    values = " ".join(f"<{iri}>" for iri in list(iris)[:2000])
+    values = " ".join(f"<{iri}>" for iri in valid_iris)
 
     q = PREFIXES + f"""
     SELECT ?s ?lbl WHERE {{
@@ -141,9 +150,16 @@ def _fetch_nodes_with_labels_from_graph(iris: Set[str], graph_iri: str) -> List[
     Always fetch labels from the SAME graph you queried.
     This prevents "workspace labels leaking into base" and vice-versa.
     """
-    if not iris:
+    valid_iris = []
+    for iri in list(iris)[:2000]:
+        if not iri or " " in iri or "<" in iri or ">" in iri or '"' in iri or "\n" in iri:
+            continue
+        valid_iris.append(iri)
+
+    if not valid_iris:
         return []
-    values = " ".join(f"<{iri}>" for iri in list(iris)[:2000])  # safety cap
+        
+    values = " ".join(f"<{iri}>" for iri in valid_iris)
 
     q = PREFIXES + f"""
     SELECT ?s (SAMPLE(?lbl) AS ?lbl) WHERE {{
@@ -385,6 +401,58 @@ def search_base_schema_terms(term: str, limit: int = 15) -> List[Dict]:
         out.append({"iri": b["s"]["value"], "label": b.get("lbl", {}).get("value")})
     return out
 
+
+def resolve_schema_term_to_iri_global(term: str) -> Optional[str]:
+    t = (term or "").strip().lower()
+    if not t:
+        return None
+
+    inst_ns = settings.CMP_INSTANCE_NS
+
+    q = PREFIXES + f"""
+    SELECT ?s WHERE {{
+        ?s ?p ?o .
+        FILTER(STRSTARTS(STR(?s), STR(cmpo:)))
+        FILTER(!STRSTARTS(STR(?s), "{inst_ns}"))
+        OPTIONAL {{ ?s rdfs:label ?lbl }}
+        BIND(LCASE("{t}") AS ?t)
+        BIND(LCASE(STRAFTER(STR(?s), STR(cmpo:))) AS ?local)
+        FILTER( ?local = ?t || (BOUND(?lbl) && LCASE(STR(?lbl)) = ?t) )
+    }}
+    LIMIT 1
+    """
+
+    rows = _exec_select(q)["results"]["bindings"]
+    return rows[0]["s"]["value"] if rows else None
+
+
+def search_schema_terms_global(term: str, limit: int = 15) -> List[Dict]:
+    t = (term or "").strip().lower()
+    if not t:
+        return []
+
+    inst_ns = settings.CMP_INSTANCE_NS
+
+    q = PREFIXES + f"""
+    SELECT DISTINCT ?s (SAMPLE(?lbl) AS ?lbl) WHERE {{
+        ?s ?p ?o .
+        FILTER(STRSTARTS(STR(?s), STR(cmpo:)))
+        FILTER(!STRSTARTS(STR(?s), "{inst_ns}"))
+        OPTIONAL {{ ?s rdfs:label ?lbl }}
+        BIND(LCASE("{t}") AS ?t)
+        BIND(LCASE(STRAFTER(STR(?s), STR(cmpo:))) AS ?local)
+        FILTER(CONTAINS(?local, ?t) || (BOUND(?lbl) && CONTAINS(LCASE(STR(?lbl)), ?t)))
+    }}
+    GROUP BY ?s
+    LIMIT {limit}
+    """
+    res = _exec_select(q)
+    out = []
+    for b in res["results"]["bindings"]:
+        out.append({"iri": b["s"]["value"], "label": b.get("lbl", {}).get("value")})
+    return out
+
+
 # READ APIs: BASE ONTOLOGY (STRICT)
 def full_schema_graph(limit: int = 20000) -> Dict:
     """
@@ -406,8 +474,10 @@ def full_schema_graph(limit: int = 20000) -> Dict:
 
     iris: Set[str] = set()
     for e in edges:
-        iris.add(e["source"])
-        iris.add(e["target"])
+        if e.get("source_type") == "uri" or "source_type" not in e:
+            iris.add(e["source"])
+        if e.get("target_type") == "uri":
+            iris.add(e["target"])
 
     nodes = _fetch_nodes_with_labels_from_graph(iris, BASE_SCHEMA_GRAPH)
     return {"nodes": nodes, "edges": edges}
@@ -446,8 +516,10 @@ def neighbors_schema(node_iri: str, limit: int = 5000) -> Dict:
 
     iris: Set[str] = {node_iri}
     for e in edges:
-        iris.add(e["source"])
-        iris.add(e["target"])
+        if e.get("source_type") == "uri" or "source_type" not in e:
+            iris.add(e["source"])
+        if e.get("target_type") == "uri":
+            iris.add(e["target"])
 
     nodes = _fetch_nodes_with_labels_from_graph(iris, BASE_SCHEMA_GRAPH)
     return {"node": node_iri, "nodes": nodes, "edges": edges}
@@ -483,8 +555,10 @@ def neighbors_both(node_iri: str, limit: int = 5000) -> Dict:
 
     iris: Set[str] = {node_iri}
     for e in edges:
-        iris.add(e["source"])
-        iris.add(e["target"])
+        if e.get("source_type") == "uri" or "source_type" not in e:
+            iris.add(e["source"])
+        if e.get("target_type") == "uri":
+            iris.add(e["target"])
 
     nodes = _fetch_nodes_with_labels_from_graph(iris, BASE_SCHEMA_GRAPH)
     return {"node": node_iri, "nodes": nodes, "edges": edges}
@@ -534,8 +608,39 @@ def neighbors_schema_and_instances(node_iri: str, limit: int = 5000) -> Dict:
 
     iris: Set[str] = {node_iri}
     for e in edges:
-        iris.add(e["source"])
-        iris.add(e["target"])
+        if e.get("source_type") == "uri" or "source_type" not in e:
+            iris.add(e["source"])
+        if e.get("target_type") == "uri":
+            iris.add(e["target"])
+
+    nodes = _fetch_nodes_with_labels(iris)
+    return {"node": node_iri, "nodes": nodes, "edges": edges}
+
+
+def neighbors_schema_and_instances_global(node_iri: str, limit: int = 5000) -> Dict:
+    q = PREFIXES + f"""
+    SELECT ?source ?relation ?target WHERE {{
+      {{
+        <{node_iri}> ?relation ?target .
+        BIND(<{node_iri}> AS ?source)
+      }}
+      UNION
+      {{
+        ?source ?relation <{node_iri}> .
+        BIND(<{node_iri}> AS ?target)
+      }}
+    }}
+    LIMIT {limit}
+    """
+
+    edges = _edge_rows(_exec_select(q))
+
+    iris: Set[str] = {node_iri}
+    for e in edges:
+        if e.get("source_type") == "uri" or "source_type" not in e:
+            iris.add(e["source"])
+        if e.get("target_type") == "uri":
+            iris.add(e["target"])
 
     nodes = _fetch_nodes_with_labels(iris)
     return {"node": node_iri, "nodes": nodes, "edges": edges}
@@ -700,8 +805,10 @@ def neighbors_schema_and_instances_in_two_graphs(
 
     iris: Set[str] = {node_iri}
     for e in edges:
-        iris.add(e["source"])
-        iris.add(e["target"])
+        if e.get("source_type") == "uri" or "source_type" not in e:
+            iris.add(e["source"])
+        if e.get("target_type") == "uri":
+            iris.add(e["target"])
 
     nodes = _fetch_nodes_with_labels(iris)
     return {"node": node_iri, "nodes": nodes, "edges": edges}
@@ -733,6 +840,41 @@ def connected_classes_in_base_schema(class_iri: str, limit: int = 200) -> List[D
         GRAPH <{BASE_SCHEMA_GRAPH}> {{ ?other rdfs:label ?lbl }}
       }}
     }}
+    LIMIT {limit}
+    """
+    res = _exec_select(q)
+
+    out: List[Dict] = []
+    for b in res["results"]["bindings"]:
+        out.append({
+            "class": b["other"]["value"],
+            "label": b.get("lbl", {}).get("value"),
+            "relation": b["rel"]["value"],
+            "direction": b["dir"]["value"],  # "in" or "out"
+        })
+    return out
+
+
+def connected_classes_global(class_iri: str, limit: int = 200) -> List[Dict]:
+    q = PREFIXES + f"""
+    SELECT DISTINCT ?other ?rel ?dir (SAMPLE(?lbl) AS ?lbl)
+    WHERE {{
+        {{
+          <{class_iri}> ?rel ?other .
+          BIND("out" AS ?dir)
+        }}
+        UNION
+        {{
+          ?other ?rel <{class_iri}> .
+          BIND("in" AS ?dir)
+        }}
+
+        ?other a owl:Class .
+        FILTER(STRSTARTS(STR(?other), STR(cmpo:)))
+        
+        OPTIONAL {{ ?other rdfs:label ?lbl }}
+    }}
+    GROUP BY ?other ?rel ?dir
     LIMIT {limit}
     """
     res = _exec_select(q)

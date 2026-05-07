@@ -75,11 +75,16 @@ export default function AIAssistance() {
       );
 
       const answer = res.data?.answer ?? "No answer returned.";
+      const options = res.data?.options || [];
 
       setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
 
-      // Show contextual quick replies after successful response
-      setQuickReplies(QUICK_REPLIES.afterResponse);
+      if (options.length > 0) {
+        setQuickReplies(options);
+      } else {
+        // Show contextual quick replies after successful response
+        setQuickReplies(QUICK_REPLIES.afterResponse);
+      }
     } catch (e) {
       setMessages((prev) => [
         ...prev,
@@ -147,15 +152,18 @@ export default function AIAssistance() {
             {/* Quick Replies */}
             {!loading && quickReplies.length > 0 && (
               <div className="quick-replies">
-                {quickReplies.map((reply, idx) => (
-                  <button
-                    key={idx}
-                    className="quick-reply-btn"
-                    onClick={() => handleQuickReply(reply)}
-                  >
-                    {reply}
-                  </button>
-                ))}
+                {quickReplies.map((reply, idx) => {
+                  const safeReply = typeof reply === 'string' ? reply : (reply?.option || reply?.name || JSON.stringify(reply));
+                  return (
+                    <button
+                      key={idx}
+                      className="quick-reply-btn"
+                      onClick={() => handleQuickReply(safeReply)}
+                    >
+                      {safeReply}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
