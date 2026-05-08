@@ -11,6 +11,10 @@ from services.graphdb_service import (
     neighbors_schema_and_instances_global,
     connected_classes_global,
     numeric_stats_for_class,
+    find_graphs_by_name,
+    resolve_term_in_graph,
+    neighbors_in_uploaded_two_graphs,
+    search_terms_in_graph
 )
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
@@ -44,7 +48,38 @@ def extract_connected_to_term(q: str) -> str:
     return q.strip()
 
 
-def build_evidence_for_term(term: str) -> str:
+def build_evidence_for_term(term: str, graph_name: str = "") -> str:
+    matched_graphs = []
+    if graph_name:
+        matched_graphs = find_graphs_by_name(graph_name)
+        
+    if matched_graphs:
+        out = []
+        out.append(f"Matched {len(matched_graphs)} graphs for '{graph_name}'")
+        for g_iri in matched_graphs:
+            iri = resolve_term_in_graph(term, g_iri)
+            if not iri:
+                continue
+                
+            instance_g_iri = g_iri + "/instances"
+            g = neighbors_in_uploaded_two_graphs(iri, g_iri, instance_g_iri, limit=400)
+            edges = g.get("edges") or []
+            nodes = g.get("nodes") or []
+            
+            out.append(f"\nGraph: {g_iri}")
+            out.append(f"Resolved term '{term}' to IRI: {iri}")
+            out.append(f"Edges (source --predicate--> target), count={len(edges)}:")
+            for e in edges[:200]:
+                out.append(f"{e['source']} -- {e['relation']} --> {e['target']}")
+                
+            out.append(f"Nodes (IRI | label), count={len(nodes)}:")
+            for n in nodes[:200]:
+                out.append(f"{n.get('iri')} | {n.get('label') or ''}")
+                
+        if len(out) > 1:
+            return "\n".join(out)
+
+    # Default to global resolution if graph wasn't provided or no matches found
     iri = resolve_schema_term_to_iri_global(term)
 
     if not iri:
@@ -108,6 +143,7 @@ def chat(req: ChatReq):
             }
 
         entity_term = intent.get("entity_term") or last_user.strip()
+        graph_name = intent.get("graph_name", "").strip()
 
         # Special intent: average/avg/mean of a term (numeric instance stats)
         if m_avg:
@@ -117,21 +153,46 @@ def chat(req: ChatReq):
                 last_user,
                 flags=re.IGNORECASE
             )
-            term = (m_term.group(1).strip() if m_term else entity_term)
+            term = entity_term
+            if not term or term == last_user.strip():
+                term = (m_term.group(1).strip() if m_term else last_user.strip())
+            # Strip trailing punctuation like "?"
+            term = term.rstrip("?")
 
-            iri = resolve_schema_term_to_iri_global(term)
+            iri = None
+            stats = None
+            if graph_name:
+                matched_graphs = find_graphs_by_name(graph_name)
+                for g_iri in matched_graphs:
+                    iri = resolve_term_in_graph(term, g_iri)
+                    if iri:
+                        stats = numeric_stats_for_class(iri, instance_graph_iri=g_iri + "/instances", schema_graph_iri=g_iri)
+                        if stats and stats["count"] > 0:
+                            break
+            
             if not iri:
-                candidates = search_schema_terms_global(term, limit=10)
-                if not candidates:
-                    return {"answer": f"'{term}' was not found in the base schema graph.", "options": []}
+                iri = resolve_schema_term_to_iri_global(term)
+                if iri:
+                    stats = numeric_stats_for_class(iri)
 
-                options = [c.get("label") or c["iri"].split("/")[-1] for c in candidates]
+            if not iri:
+                candidates = []
+                if graph_name:
+                    matched_graphs = find_graphs_by_name(graph_name)
+                    for g_iri in matched_graphs:
+                        candidates.extend(search_terms_in_graph(term, g_iri, limit=5))
+                else:
+                    candidates = search_schema_terms_global(term, limit=10)
+
+                if not candidates:
+                    return {"answer": f"'{term}' was not found.", "options": []}
+
+                options = list({c.get("label") or c["iri"].split("/")[-1] for c in candidates})[:10]
                 return {
                     "answer": f"'{term}' was not found. Did you mean:",
                     "options": options
                 }
 
-            stats = numeric_stats_for_class(iri)
             if not stats or stats["count"] == 0 or stats["avg"] is None:
                 return {"answer": f"No numeric instance values found for '{term}'.", "options": []}
 
@@ -148,27 +209,59 @@ def chat(req: ChatReq):
 
         # 2) Special intent: "What classes are connected to X"
         if is_connected_q:
-            term = extract_connected_to_term(last_user)
-            iri = resolve_schema_term_to_iri_global(term)
+            term = entity_term
+            if not term or term == last_user.strip():
+                term = extract_connected_to_term(last_user)
+            term = term.rstrip("?")
+
+            iri = None
+            rows = []
+            
+            if graph_name:
+                matched_graphs = find_graphs_by_name(graph_name)
+                for g_iri in matched_graphs:
+                    iri = resolve_term_in_graph(term, g_iri)
+                    if iri:
+                        # Extract schema connections using neighbors
+                        g = neighbors_in_uploaded_graph(iri, g_iri, schema_only=True, limit=200)
+                        edges = g.get("edges") or []
+                        nodes = g.get("nodes") or []
+                        
+                        node_map = {n["iri"]: n.get("label") or n["iri"].split("/")[-1] for n in nodes}
+                        
+                        for e in edges:
+                            other = e["target"] if e["source"] == iri else e["source"]
+                            direction = "out" if e["source"] == iri else "in"
+                            rows.append({
+                                "class": other,
+                                "label": node_map.get(other, other.split("/")[-1]),
+                                "relation": e["relation"],
+                                "direction": direction
+                            })
+                        if rows:
+                            break
+
+            if not iri:
+                iri = resolve_schema_term_to_iri_global(term)
+                if iri:
+                    rows = connected_classes_global(iri, limit=200)
 
             if not iri:
                 answer = svc.chat_general(
-                    f"{last_user}\n\nNote: '{term}' was not found in the base schema.", history=history
+                    f"{last_user}\n\nNote: '{term}' was not found.", history=history
                 )
                 return {"answer": answer, "options": []}
 
-            rows = connected_classes_global(iri, limit=200)
             if not rows:
-                return {"answer": f"No connected classes found for '{term}' in the base schema.", "options": []}
+                return {"answer": f"No connected classes found for '{term}'.", "options": []}
 
             evidence_lines = [
                 f"Target class IRI: {iri}",
                 "Connected classes (label | classIRI | direction | relationIRI):",
             ]
             for r in rows[:80]:
-                label = r.get("label") or r["class"].split("/")[-1]
                 evidence_lines.append(
-                    f"{label} | {r['class']} | {r['direction']} | {r['relation']}"
+                    f"{r['label']} | {r['class']} | {r['direction']} | {r['relation']}"
                 )
 
             answer = svc.chat_grounded(
@@ -179,29 +272,35 @@ def chat(req: ChatReq):
 
         # 3) Default routing using extracted entity_term
         term = entity_term
-        iri = resolve_schema_term_to_iri_global(term)
+        evidence = build_evidence_for_term(term, graph_name)
         
-        if not iri:
+        if not evidence:
             # Disambiguate if possible
-            candidates = search_schema_terms_global(term, limit=10)
+            candidates = []
+            if graph_name:
+                matched_graphs = find_graphs_by_name(graph_name)
+                for g_iri in matched_graphs:
+                    candidates.extend(search_terms_in_graph(term, g_iri, limit=5))
+            else:
+                candidates = search_schema_terms_global(term, limit=10)
+
             if candidates:
-                options = [c.get("label") or c["iri"].split("/")[-1] for c in candidates]
+                options = list({c.get("label") or c["iri"].split("/")[-1] for c in candidates})[:10]
                 return {
                     "answer": f"Multiple or fuzzy matches found for '{term}'. Did you mean:",
                     "options": options
                 }
             else:
                 # If even the extracted entity isn't in graphDB, try raw last_user
-                candidates_raw = search_schema_terms_global(last_user.strip(), limit=10)
-                if candidates_raw:
-                    options = [c.get("label") or c["iri"].split("/")[-1] for c in candidates_raw]
-                    return {
-                        "answer": f"Multiple matches found. Did you mean:",
-                        "options": options
-                    }
-                evidence = ""
-        else:
-            evidence = build_evidence_for_term(term)
+                if not graph_name:
+                    candidates_raw = search_schema_terms_global(last_user.strip(), limit=10)
+                    if candidates_raw:
+                        options = list({c.get("label") or c["iri"].split("/")[-1] for c in candidates_raw})[:10]
+                        return {
+                            "answer": f"Multiple matches found. Did you mean:",
+                            "options": options
+                        }
+
 
         if not evidence:
             if intent.get("requires_graphdb", True):

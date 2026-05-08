@@ -688,10 +688,11 @@ def numeric_stats_for_class(
       (MAX(xsd:float(?v)) AS ?max)
       (AVG(xsd:float(?v)) AS ?avg)
     WHERE {{
-      GRAPH <{instance_graph_iri}> {{
+      GRAPH ?g {{
         ?s rdf:type ?cls .
         ?s cmpo:hasNumericValue ?v .
       }}
+      FILTER(?g IN (<{instance_graph_iri}>, <{schema_graph_iri}>))
       GRAPH <{schema_graph_iri}> {{
         ?cls rdfs:subClassOf* <{class_iri}> .
       }}
@@ -1331,29 +1332,85 @@ def search_terms_in_graph(
 def resolve_term_in_graph(term: str, graph_iri: str) -> Optional[str]:
     """
     Resolve a term to an IRI within a specific uploaded graph.
-    Matches by local name or rdfs:label (case-insensitive).
+    Matches by local name or rdfs:label (case-insensitive) using fast string operations.
     """
     t = (term or "").strip().lower()
     if not t:
         return None
 
+    # First, try to match by label or local name where ?s is a class or property
     q = f"""
-    SELECT ?s WHERE {{
+    SELECT DISTINCT ?s WHERE {{
       GRAPH <{graph_iri}> {{
-        ?s ?p ?o .
-        FILTER(isIRI(?s))
+        ?s a ?type .
+        FILTER(?type IN (
+          <http://www.w3.org/2002/07/owl#Class>, 
+          <http://www.w3.org/2000/01/rdf-schema#Class>, 
+          <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property>, 
+          <http://www.w3.org/2002/07/owl#ObjectProperty>, 
+          <http://www.w3.org/2002/07/owl#DatatypeProperty>
+        ))
         OPTIONAL {{ ?s <http://www.w3.org/2000/01/rdf-schema#label> ?lbl }}
-        BIND(LCASE(REPLACE(STR(?s), "^.*/|^.*#", "")) AS ?local)
         FILTER(
-          ?local = "{t}"
-          || (BOUND(?lbl) && LCASE(STR(?lbl)) = "{t}")
+          LCASE(STR(?lbl)) = "{t}" ||
+          STRENDS(LCASE(STR(?s)), "/{t}") || 
+          STRENDS(LCASE(STR(?s)), "#{t}")
         )
       }}
     }}
     LIMIT 1
     """
     rows = _exec_select(q)["results"]["bindings"]
-    return rows[0]["s"]["value"] if rows else None
+    if rows:
+        return rows[0]["s"]["value"]
+
+    # Fallback: check ANY subject by label or local name
+    q2 = f"""
+    SELECT DISTINCT ?s WHERE {{
+      GRAPH <{graph_iri}> {{
+        {{
+          ?s <http://www.w3.org/2000/01/rdf-schema#label> ?lbl .
+          FILTER(LCASE(STR(?lbl)) = "{t}")
+        }}
+        UNION
+        {{
+          ?s a ?type .
+          FILTER(
+            STRENDS(LCASE(STR(?s)), "/{t}") || 
+            STRENDS(LCASE(STR(?s)), "#{t}")
+          )
+        }}
+      }}
+      FILTER(isIRI(?s))
+    }}
+    LIMIT 1
+    """
+    rows2 = _exec_select(q2)["results"]["bindings"]
+    return rows2[0]["s"]["value"] if rows2 else None
+
+
+def find_graphs_by_name(name_hint: str) -> List[str]:
+    """Find workspace graph IRIs that match the given name hint."""
+    t = name_hint.strip().lower()
+    if not t:
+        return []
+
+    q = PREFIXES + f"""
+    SELECT DISTINCT ?g WHERE {{
+        GRAPH ?g {{ ?s ?p ?o }}
+    }}
+    """
+    res = _exec_select(q)
+    matched = []
+    
+    t_search = t.replace(" ", "_")
+    
+    for b in res["results"]["bindings"]:
+        g = b["g"]["value"]
+        if "workspace" in g.lower() and not g.endswith("/instances") and (t in g.lower() or t_search in g.lower()):
+            matched.append(g)
+            
+    return matched
 
 
 def delete_named_graph(graph_iri: str) -> None:

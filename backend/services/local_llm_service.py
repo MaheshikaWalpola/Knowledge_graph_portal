@@ -88,12 +88,13 @@ class LocalLLMService:
             "You are an intent analyzer for a Knowledge Graph Portal. "
             "The user asks questions about ontology schemas, classes, instances, and properties. "
             "Analyze the user's latest query along with any provided history. "
-            "If the query is ambiguous, missing context (e.g., they ask 'what are the classes' but didn't specify which schema, or ask a general term), "
-            "you MUST ask a clarifying question and provide 2-4 reasonable 'options' for them to select from. "
+            "IMPORTANT: If the user explicitly mentions a specific entity (e.g. 'Pressure', 'Sensor') or context (e.g. 'in CMP data ontology'), the query IS CLEAR and you MUST set is_clear to true. "
+            "ONLY if the query is extremely vague (e.g., 'what are the classes?' with no other context), you may ask a clarifying question and provide 2-4 reasonable 'options'. "
             "Output EXACTLY a JSON object with this schema: "
-            "{\"is_clear\": bool, \"clarification_message\": string, \"options\": [string, string], \"entity_term\": string, \"requires_graphdb\": bool} "
-            "If the query is clear and specific, set is_clear to true, clarification_message to empty string, and options to empty array. "
+            "{\"is_clear\": bool, \"clarification_message\": string, \"options\": [string, string], \"entity_term\": string, \"graph_name\": string, \"requires_graphdb\": bool} "
+            "If the query is clear, set is_clear to true, clarification_message to \"\", and options to []. "
             "Also, if the query is clear, extract the main entity, class, or instance name the user is asking about into 'entity_term' (e.g. 'Pressure', 'Sensor', etc). "
+            "If the user specifies an ontology name or graph context (e.g., 'in CMP data ontology', 'for CMP data'), extract the name ('CMP data') into 'graph_name'. If not specified, set it to \"\". "
             "Set 'requires_graphdb' to true if the user is asking about domain knowledge, ontology, classes, instances, or properties. Set it to false ONLY if it's a pure greeting or general chat."
             "IMPORTANT: ONLY output valid JSON. Nothing else."
         )
@@ -109,4 +110,4 @@ class LocalLLMService:
             return json.loads(ans)
         except json.JSONDecodeError:
             # Fallback if the LLM didn't return valid JSON
-            return {"is_clear": True, "clarification_message": "", "options": [], "entity_term": user_text, "requires_graphdb": True}
+            return {"is_clear": True, "clarification_message": "", "options": [], "entity_term": user_text, "graph_name": "", "requires_graphdb": True}
