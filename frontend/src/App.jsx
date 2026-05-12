@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import axios from "axios";
 import "./App.css";
 
 import Footer from "./components/Common/Footer/Footer";
@@ -64,6 +65,52 @@ function App() {
     setUser(null);
     window.location.href = "/";
   };
+
+  // Global axios interceptor for 401 Unauthorized
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          // Token expired or invalid
+          console.log("401 Unauthorized, logging out");
+          handleLogout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []);
+
+  // Auto-logout due to inactivity (1 hour)
+  useEffect(() => {
+    let timeoutId;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      // 1 hour = 60 * 60 * 1000 ms
+      timeoutId = setTimeout(() => {
+        if (user) {
+          console.log("Logging out due to inactivity");
+          handleLogout();
+        }
+      }, 60 * 60 * 1000);
+    };
+
+    if (user) {
+      resetTimer();
+      const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+      events.forEach(event => document.addEventListener(event, resetTimer));
+
+      return () => {
+        clearTimeout(timeoutId);
+        events.forEach(event => document.removeEventListener(event, resetTimer));
+      };
+    }
+  }, [user]);
 
   const handleVerifyLoginSuccess = (userData) => {
     if (!userData) return;

@@ -506,15 +506,7 @@ const Workspace = () => {
           "curve-style": "bezier",
         },
       },
-      {
-        selector: ":selected",
-        style: {
-          "border-width": 3,
-          "border-color": "#7c3aed",
-          "line-color": "#7c3aed",
-          "target-arrow-color": "#7c3aed",
-        },
-      },
+
     ],
     []
   );
