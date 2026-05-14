@@ -38,6 +38,3 @@ dist-ssr
 *.sln
 *.sw?
 .env
-
-# ---- Data / Analysis Files ----
-schema_instance_analysis.txt
