@@ -48,6 +48,39 @@ def extract_connected_to_term(q: str) -> str:
     return q.strip()
 
 
+def generate_options_for_stats(term: str, iri: str, graph_name: str = "") -> List[str]:
+    """
+    Generate meaningful follow-up options based on connected classes/entities.
+    For example, if user asks for "average of Ripple Air Bag Pressure",
+    suggest "average of [related_class]" from connected entities.
+    """
+    options = []
+    
+    try:
+        # Get connected classes to this term
+        connected = connected_classes_global(iri, limit=50)
+        
+        if not connected:
+            return []
+        
+        # Extract unique labels/names from connected classes
+        seen = set()
+        for row in connected[:20]:  # Check first 20 connections
+            label = row.get("label") or row.get("class", "").split("/")[-1]
+            if label and label not in seen:
+                seen.add(label)
+                # Generate option text
+                direction = "(" + row.get("direction", "related") + ")"
+                options.append(f"Average of {label} {direction}")
+                if len(options) >= 3:  # Limit to 3 suggestions
+                    break
+        
+        return options
+    except Exception as e:
+        print(f"Error generating stat options: {e}")
+        return []
+
+
 def build_evidence_for_term(term: str, graph_name: str = "") -> str:
     matched_graphs = []
     if graph_name:
@@ -196,6 +229,9 @@ def chat(req: ChatReq):
             if not stats or stats["count"] == 0 or stats["avg"] is None:
                 return {"answer": f"No numeric instance values found for '{term}'.", "options": []}
 
+            # Generate meaningful follow-up options based on related entities
+            suggested_options = generate_options_for_stats(term, iri, graph_name)
+
             return {
                 "answer": (
                     f"Stats for {term}:\n"
@@ -204,7 +240,7 @@ def chat(req: ChatReq):
                     f"- min: {stats['min']}\n"
                     f"- max: {stats['max']}"
                 ),
-                "options": []
+                "options": suggested_options
             }
 
         # 2) Special intent: "What classes are connected to X"
