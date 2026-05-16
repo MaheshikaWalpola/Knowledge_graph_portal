@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
 import "./AIAssistance.css";
 
@@ -10,88 +10,107 @@ const INITIAL_MESSAGE = {
     "Hi! I'm your Knowledge Graph assistant.\n\nAsk me general questions, or ask about any ontology you have uploaded. For graph-specific answers, mention the ontology or graph name so I can explore its classes, properties, relationships, instances, and process variables using graph-grounded data.",
 };
 
-// Version key — bump to clear stale localStorage
-const CHAT_VERSION = "v4";
-
-// Generate a unique ID
+// Generate a unique numeric-ish ID (float so it round-trips through the DB float path_id)
 const genId = () => Date.now() + Math.random();
 
+// ── Axios helper (adds auth header) ──────────────────────────────────────────
+const authHeaders = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
+
 export default function AIAssistance({ onOpenAuth }) {
-  // ── Auth gate (same pattern as Workspace) ─────────────────────────
+  // ── Auth gate ──────────────────────────────────────────────────────────────
   const token = localStorage.getItem("token");
 
-  // ── State ──
-  const [chats, setChats] = useState(() => {
-    try {
-      const ver = localStorage.getItem("kg_chats_version");
-      const raw = localStorage.getItem("kg_chats");
-      if (ver !== CHAT_VERSION || !raw) {
-        localStorage.setItem("kg_chats_version", CHAT_VERSION);
-        return [{ id: 1, title: "Conversation 1", messages: [INITIAL_MESSAGE], saved: true }];
-      }
-      const parsed = JSON.parse(raw);
-      return parsed.map((c) => ({
-        ...c,
-        saved: c.saved !== false,
-        messages: c.messages?.length ? c.messages : [INITIAL_MESSAGE],
-      }));
-    } catch {
-      return [{ id: 1, title: "Conversation 1", messages: [INITIAL_MESSAGE], saved: true }];
-    }
-  });
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [chats, setChats]                   = useState([]);
+  const [currentChatId, setCurrentChatId]   = useState(null);
+  const [chatsLoading, setChatsLoading]     = useState(true);   // initial fetch
+  const [input, setInput]                   = useState("");
+  const [loading, setLoading]               = useState(false);
+  const [sidebarOpen, setSidebarOpen]       = useState(false);
+  const [renaming, setRenaming]             = useState(null);   // { id, value }
 
-  const [currentChatId, setCurrentChatId] = useState(() => {
-    const raw = localStorage.getItem("kg_current_chat");
-    return raw ? parseInt(raw) : 1;
-  });
-
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Rename state: { id, value }
-  const [renaming, setRenaming] = useState(null);
   const renameInputRef = useRef(null);
-  const bottomRef = useRef(null);
+  const bottomRef      = useRef(null);
 
-  // ── Derived 
-  // Only show saved conversations in the sidebar list
-  const savedChats = chats.filter((c) => c.saved);
-  const currentChat = chats.find((c) => c.id === currentChatId) || chats[0];
-  const messages = currentChat?.messages || [];
+  // ── Derived ────────────────────────────────────────────────────────────────
+  // Only saved conversations appear in the sidebar (unsaved = new empty chat)
+  const savedChats  = chats.filter((c) => c.saved);
+  const currentChat = chats.find((c) => c.id === currentChatId) ?? chats[0];
+  const messages    = currentChat?.messages ?? [];
 
-  // Track message count & loading to detect NEW arrivals (not initial load).
-  // Refs survive React Strict-Mode’s double-invoke so this is reliable in dev too.
-  const prevMsgCountRef = useRef(messages.length);
+  // Scroll tracking — avoid auto-scroll on initial load
+  const prevMsgCountRef = useRef(0);
   const prevLoadingRef  = useRef(false);
 
-  // ── Persistence 
-  useEffect(() => {
-    localStorage.setItem("kg_chats", JSON.stringify(chats));
-  }, [chats]);
+  // ── Load conversations from MongoDB on mount ───────────────────────────────
+  const loadChats = useCallback(async () => {
+    if (!token) return;
+    setChatsLoading(true);
+    try {
+      const res  = await axios.get(`${API}/chats`, authHeaders(token));
+      const from_db = (res.data?.conversations ?? []).map((c) => ({
+        id:       c.chat_id,
+        title:    c.title,
+        messages: c.messages ?? [INITIAL_MESSAGE],
+        saved:    true,
+      }));
 
+      if (from_db.length === 0) {
+        // No conversations yet — start with one unsaved (blank) chat
+        const fresh = { id: genId(), title: "Conversation 1", messages: [INITIAL_MESSAGE], saved: false };
+        setChats([fresh]);
+        setCurrentChatId(fresh.id);
+      } else {
+        setChats(from_db);
+        // Restore last-active tab
+        const savedId = parseFloat(localStorage.getItem("kg_current_chat") ?? "0");
+        const valid   = from_db.find((c) => c.id === savedId) ? savedId : from_db[0].id;
+        setCurrentChatId(valid);
+      }
+
+      prevMsgCountRef.current = 0; // reset scroll guard after load
+    } catch (e) {
+      console.error("Failed to load conversations", e);
+      // Fallback: create a blank local chat so the UI isn't broken
+      const fresh = { id: genId(), title: "Conversation 1", messages: [INITIAL_MESSAGE], saved: false };
+      setChats([fresh]);
+      setCurrentChatId(fresh.id);
+    } finally {
+      setChatsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { loadChats(); }, [loadChats]);
+
+  // ── Persist active tab locally ─────────────────────────────────────────────
   useEffect(() => {
-    localStorage.setItem("kg_current_chat", currentChatId.toString());
+    if (currentChatId !== null)
+      localStorage.setItem("kg_current_chat", String(currentChatId));
   }, [currentChatId]);
 
-  // Only scroll when a new message is added or the typing indicator appears.
-  // Using message count (not the array reference) avoids false triggers.
-  useEffect(() => {
-    const msgAdded     = messages.length > prevMsgCountRef.current;
-    const typingStarted = loading && !prevLoadingRef.current;
-    prevMsgCountRef.current = messages.length;
-    prevLoadingRef.current  = loading;
-    if (msgAdded || typingStarted) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages.length, loading]);
-
-  // Focus rename input when it appears
+  // ── Rename input focus ─────────────────────────────────────────────────────
   useEffect(() => {
     if (renaming) renameInputRef.current?.focus();
   }, [renaming]);
 
-  // ── Helpers 
+  // ── Scroll — only on new content ──────────────────────────────────────────
+  useEffect(() => {
+    const msgAdded      = messages.length > prevMsgCountRef.current;
+    const typingStarted = loading && !prevLoadingRef.current;
+    prevMsgCountRef.current = messages.length;
+    prevLoadingRef.current  = loading;
+    if (msgAdded || typingStarted)
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length, loading]);
+
+  // ── Auth gate useEffect ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!token) onOpenAuth?.();
+  }, [token, onOpenAuth]);
+
+  if (!token) return null;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
   const updateCurrentChat = (newMessages) => {
     setChats((prev) =>
       prev.map((chat) =>
@@ -108,20 +127,35 @@ export default function AIAssistance({ onOpenAuth }) {
     );
   };
 
-  // ── Send message 
+  // Save a conversation to MongoDB
+  const persistChat = async (chatId, title, msgs) => {
+    try {
+      await axios.put(
+        `${API}/chats/${chatId}`,
+        { title, messages: msgs },
+        authHeaders(token)
+      );
+    } catch (e) {
+      console.error("Failed to save conversation", e);
+    }
+  };
+
+  // ── Send message ───────────────────────────────────────────────────────────
   const sendMessage = async (text) => {
     const trimmed = (text || input).trim();
     if (!trimmed || loading) return;
 
-    // If this is an unsaved (new/empty) chat, mark it as saved now
+    const nextMessages = [...messages, { role: "user", content: trimmed }];
+    const chatTitle    = currentChat?.title ?? "Conversation 1";
+
+    // Atomic state update: mark saved + add user message
     setChats((prev) =>
       prev.map((chat) =>
-        chat.id === currentChatId ? { ...chat, saved: true } : chat
+        chat.id === currentChatId
+          ? { ...chat, saved: true, messages: nextMessages }
+          : chat
       )
     );
-
-    const nextMessages = [...messages, { role: "user", content: trimmed }];
-    updateCurrentChat(nextMessages);
     setInput("");
     setLoading(true);
 
@@ -132,22 +166,18 @@ export default function AIAssistance({ onOpenAuth }) {
         { headers: { "Content-Type": "application/json" } }
       );
 
-      const answer = res.data?.answer ?? "No answer returned.";
-      updateCurrentChat((prev) => [
-        ...prev,
-        { role: "assistant", content: answer },
-      ]);
+      const answer    = res.data?.answer ?? "No answer returned.";
+      const finalMsgs = [...nextMessages, { role: "assistant", content: answer }];
+      updateCurrentChat(finalMsgs);
+
+      // Persist to MongoDB after the full exchange
+      await persistChat(currentChatId, chatTitle, finalMsgs);
     } catch (e) {
-      updateCurrentChat((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            e?.response?.data?.detail ||
-            e?.message ||
-            "Error calling the assistant API.",
-        },
-      ]);
+      const errMsg =
+        e?.response?.data?.detail || e?.message || "Error calling the assistant API.";
+      const finalMsgs = [...nextMessages, { role: "assistant", content: errMsg }];
+      updateCurrentChat(finalMsgs);
+      await persistChat(currentChatId, chatTitle, finalMsgs);
     } finally {
       setLoading(false);
     }
@@ -155,97 +185,97 @@ export default function AIAssistance({ onOpenAuth }) {
 
   const send = () => sendMessage(input);
 
-  // ── New chat ───
+  // ── New chat ───────────────────────────────────────────────────────────────
   const handleNewChat = () => {
-    const newId = genId();
-    const newIndex = chats.length + 1;
+    const newId    = genId();
+    const newIndex = savedChats.length + 1;
     setChats((prev) => [
       ...prev,
       {
-        id: newId,
-        title: `Conversation ${newIndex}`,
+        id:       newId,
+        title:    `Conversation ${newIndex}`,
         messages: [INITIAL_MESSAGE],
-        saved: false, // not shown in sidebar until first message
+        saved:    false, // not in sidebar / DB until first message
       },
     ]);
     setCurrentChatId(newId);
     setSidebarOpen(false);
   };
 
-  // ── Delete chat 
-  const handleDeleteChat = (e, chatId) => {
+  // ── Delete chat ────────────────────────────────────────────────────────────
+  const handleDeleteChat = async (e, chatId) => {
     e.stopPropagation();
-    const remaining = chats.filter((c) => c.id !== chatId);
 
+    // Delete from MongoDB (fire-and-forget — don't block UI)
+    const chatToDelete = chats.find((c) => c.id === chatId);
+    if (chatToDelete?.saved) {
+      try {
+        await axios.delete(`${API}/chats/${chatId}`, authHeaders(token));
+      } catch (err) {
+        console.error("Failed to delete conversation from DB", err);
+      }
+    }
+
+    const remaining = chats.filter((c) => c.id !== chatId);
     if (remaining.length === 0) {
-      // All deleted → create a brand-new unsaved chat
-      const freshId = genId();
-      const freshChat = {
-        id: freshId,
-        title: "Conversation 1",
-        messages: [INITIAL_MESSAGE],
-        saved: false,
-      };
-      setChats([freshChat]);
-      setCurrentChatId(freshId);
+      const fresh = { id: genId(), title: "Conversation 1", messages: [INITIAL_MESSAGE], saved: false };
+      setChats([fresh]);
+      setCurrentChatId(fresh.id);
     } else {
       setChats(remaining);
-      if (currentChatId === chatId) {
+      if (currentChatId === chatId)
         setCurrentChatId(remaining[remaining.length - 1].id);
-      }
     }
   };
 
-  // ── Rename ─
+  // ── Rename ─────────────────────────────────────────────────────────────────
   const startRename = (e, chatId, currentTitle) => {
     e.stopPropagation();
     setRenaming({ id: chatId, value: currentTitle });
   };
 
-  const commitRename = () => {
+  const commitRename = async () => {
     if (!renaming) return;
     const trimmed = renaming.value.trim();
     if (trimmed) {
       setChats((prev) =>
         prev.map((c) => (c.id === renaming.id ? { ...c, title: trimmed } : c))
       );
+      // Persist updated title to MongoDB
+      const chat = chats.find((c) => c.id === renaming.id);
+      if (chat?.saved) {
+        await persistChat(renaming.id, trimmed, chat.messages);
+      }
     }
     setRenaming(null);
   };
 
   const cancelRename = () => setRenaming(null);
 
-  // ── Auth gate — pop the login dialog for guests, same as CanvasEditor ──
-  useEffect(() => {
-    if (!token) onOpenAuth?.();
-  }, [token, onOpenAuth]);
+  // ── Render ─────────────────────────────────────────────────────────────────
+  if (chatsLoading) {
+    return (
+      <div className="ai-workspace theme-light">
+        <div className="ai-main">
+          <div className="ai-card" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 340 }}>
+            <div className="loading-spinner" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  if (!token) return null; // AuthDialog is already open; nothing else to render
-
-  // ── Render ──
   return (
     <div className="ai-workspace theme-light">
 
-      {/* ── Conversations Sidebar ─────────────────────────────── */}
+      {/* ── Conversations Sidebar ──────────────────────────────────── */}
       <div className={`ai-sidebar ${sidebarOpen ? "open" : "closed"}`}>
         <div className="sidebar-header">
-          <button
-            type="button"
-            className="new-chat-btn"
-            onClick={handleNewChat}
-            title="Start new conversation"
-          >
+          <button type="button" className="new-chat-btn" onClick={handleNewChat} title="Start new conversation">
             <span className="plus-icon">+</span>
             <span className="btn-text">New Conversation</span>
           </button>
-
-          <button
-            type="button"
-            className="sidebar-toggle"
-            onClick={() => setSidebarOpen(false)}
-            title="Close panel"
-            aria-label="Close conversations panel"
-          >
+          <button type="button" className="sidebar-toggle" onClick={() => setSidebarOpen(false)} title="Close panel" aria-label="Close conversations panel">
             ✕
           </button>
         </div>
@@ -257,17 +287,14 @@ export default function AIAssistance({ onOpenAuth }) {
 
           {savedChats.map((chat) =>
             renaming?.id === chat.id ? (
-              /* ── Inline rename input ── */
               <div key={chat.id} className="chat-item renaming">
                 <input
                   ref={renameInputRef}
                   className="rename-input"
                   value={renaming.value}
-                  onChange={(e) =>
-                    setRenaming((r) => ({ ...r, value: e.target.value }))
-                  }
+                  onChange={(e) => setRenaming((r) => ({ ...r, value: e.target.value }))}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Enter")  commitRename();
                     if (e.key === "Escape") cancelRename();
                   }}
                   onBlur={commitRename}
@@ -275,40 +302,20 @@ export default function AIAssistance({ onOpenAuth }) {
                 />
               </div>
             ) : (
-              /* ── Normal chat row ── */
               <div
                 key={chat.id}
                 className={`chat-item ${currentChatId === chat.id ? "active" : ""}`}
-                onClick={() => {
-                  setCurrentChatId(chat.id);
-                  setSidebarOpen(false);
-                }}
+                onClick={() => { setCurrentChatId(chat.id); setSidebarOpen(false); }}
               >
                 <span className="chat-title">{chat.title}</span>
-
                 <div className="chat-item-actions">
-                  {/* Rename button */}
-                  <button
-                    type="button"
-                    className="chat-action-btn rename-btn"
-                    onClick={(e) => startRename(e, chat.id, chat.title)}
-                    title="Rename conversation"
-                    aria-label="Rename conversation"
-                  >
+                  <button type="button" className="chat-action-btn rename-btn" onClick={(e) => startRename(e, chat.id, chat.title)} title="Rename" aria-label="Rename conversation">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                   </button>
-
-                  {/* Delete button */}
-                  <button
-                    type="button"
-                    className="chat-action-btn delete-btn"
-                    onClick={(e) => handleDeleteChat(e, chat.id)}
-                    title="Delete conversation"
-                    aria-label="Delete conversation"
-                  >
+                  <button type="button" className="chat-action-btn delete-btn" onClick={(e) => handleDeleteChat(e, chat.id)} title="Delete" aria-label="Delete conversation">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />
                       <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
@@ -323,15 +330,10 @@ export default function AIAssistance({ onOpenAuth }) {
         </div>
       </div>
 
-      {/* Overlay — close sidebar on outside click */}
-      {sidebarOpen && (
-        <div
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Overlay */}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
 
-      {/* ── Main Chat Card  */}
+      {/* ── Main Chat Card ─────────────────────────────────────────── */}
       <div className="ai-main">
         <div className="ai-card">
 
@@ -341,20 +343,8 @@ export default function AIAssistance({ onOpenAuth }) {
               <h1 className="ai-title">Knowledge Graph Assistant</h1>
               <p className="ai-subtitle">Ask questions about your ontology</p>
             </div>
-
-            <button
-              type="button"
-              className="header-settings-btn"
-              onClick={() => setSidebarOpen(true)}
-              title="Manage conversations"
-              aria-label="Open conversations panel"
-            >
-              {/* Settings icon — opens the conversations sidebar */}
-              <svg
-                width="20" height="20" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              >
+            <button type="button" className="header-settings-btn" onClick={() => setSidebarOpen(true)} title="Manage conversations" aria-label="Open conversations panel">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
@@ -387,7 +377,6 @@ export default function AIAssistance({ onOpenAuth }) {
               <div ref={bottomRef} />
             </div>
 
-            {/* Input footer */}
             <div className="chat-footer">
               <input
                 className="chat-input"
@@ -395,19 +384,10 @@ export default function AIAssistance({ onOpenAuth }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    send();
-                  }
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
                 }}
               />
-
-              <button
-                className="chat-send"
-                onClick={send}
-                disabled={loading}
-                title="Send message"
-              >
+              <button className="chat-send" onClick={send} disabled={loading} title="Send message">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" />
                 </svg>
