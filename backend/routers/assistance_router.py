@@ -14,8 +14,10 @@ from services.graphdb_service import (
     find_graphs_by_name,
     resolve_term_in_graph,
     neighbors_in_uploaded_two_graphs,
-    search_terms_in_graph
+    search_terms_in_graph,
+    execute_safe_select
 )
+from services.schema_service import get_ontology_schema
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 svc = LocalLLMService()
@@ -210,190 +212,57 @@ def chat(req: ChatReq):
         entity_term = intent.get("entity_term") or last_user.strip()
         graph_name = intent.get("graph_name", "").strip()
 
-        # Special intent: average/avg/mean of a term (numeric instance stats)
-        if m_avg:
-            # extract term after "of" or "for" if present
-            m_term = re.search(
-                r"\b(?:average|avg|mean)\s+(?:of|for)\s+(.+)$",
-                last_user,
-                flags=re.IGNORECASE
-            )
-            term = entity_term
-            if not term or term == last_user.strip():
-                term = (m_term.group(1).strip() if m_term else last_user.strip())
-            # Strip trailing punctuation like "?"
-            term = term.rstrip("?")
+        graph_name = intent.get("graph_name", "").strip()
 
-            iri = None
-            stats = None
-            if graph_name:
-                matched_graphs = find_graphs_by_name(graph_name)
-                for g_iri in matched_graphs:
-                    iri = resolve_term_in_graph(term, g_iri)
-                    if iri:
-                        stats = numeric_stats_for_class(iri, instance_graph_iri=g_iri + "/instances", schema_graph_iri=g_iri)
-                        if stats and stats["count"] > 0:
-                            break
-            
-            if not iri:
-                iri = resolve_schema_term_to_iri_global(term)
-                if iri:
-                    stats = numeric_stats_for_class(iri)
+        # Check if it's a general concept question not needing GraphDB
+        is_general = (
+            not intent.get("requires_graphdb", True)
+            or is_general_concept_question(entity_term, last_user)
+        )
 
-            if not iri:
-                candidates = []
-                if graph_name:
-                    matched_graphs = find_graphs_by_name(graph_name)
-                    for g_iri in matched_graphs:
-                        candidates.extend(search_terms_in_graph(term, g_iri, limit=5))
-                else:
-                    candidates = search_schema_terms_global(term, limit=10)
-
-                if not candidates:
-                    return {"answer": f"'{term}' was not found.", "options": []}
-
-                options = list({c.get("label") or c["iri"].split("/")[-1] for c in candidates})[:10]
-                return {
-                    "answer": f"'{term}' was not found. Did you mean:",
-                    "options": options
-                }
-
-            if not stats or stats["count"] == 0 or stats["avg"] is None:
-                return {"answer": f"No numeric instance values found for '{term}'.", "options": []}
-
-            # Generate meaningful follow-up options based on related entities
-            suggested_options = generate_options_for_stats(term, iri, graph_name)
-
-            return {
-                "answer": (
-                    f"Stats for {term}:\n"
-                    f"- count: {stats['count']}\n"
-                    f"- avg: {stats['avg']}\n"
-                    f"- min: {stats['min']}\n"
-                    f"- max: {stats['max']}"
-                ),
-                "options": suggested_options
-            }
-
-        # 2) Special intent: "What classes are connected to X"
-        if is_connected_q:
-            term = entity_term
-            if not term or term == last_user.strip():
-                term = extract_connected_to_term(last_user)
-            term = term.rstrip("?")
-
-            iri = None
-            rows = []
-            
-            if graph_name:
-                matched_graphs = find_graphs_by_name(graph_name)
-                for g_iri in matched_graphs:
-                    iri = resolve_term_in_graph(term, g_iri)
-                    if iri:
-                        # Extract schema connections using neighbors
-                        g = neighbors_in_uploaded_graph(iri, g_iri, schema_only=True, limit=200)
-                        edges = g.get("edges") or []
-                        nodes = g.get("nodes") or []
-                        
-                        node_map = {n["iri"]: n.get("label") or n["iri"].split("/")[-1] for n in nodes}
-                        
-                        for e in edges:
-                            other = e["target"] if e["source"] == iri else e["source"]
-                            direction = "out" if e["source"] == iri else "in"
-                            rows.append({
-                                "class": other,
-                                "label": node_map.get(other, other.split("/")[-1]),
-                                "relation": e["relation"],
-                                "direction": direction
-                            })
-                        if rows:
-                            break
-
-            if not iri:
-                iri = resolve_schema_term_to_iri_global(term)
-                if iri:
-                    rows = connected_classes_global(iri, limit=200)
-
-            if not iri:
-                answer = svc.chat_general(
-                    f"{last_user}\n\nNote: '{term}' was not found.", history=history
-                )
-                return {"answer": answer, "options": []}
-
-            if not rows:
-                return {"answer": f"No connected classes found for '{term}'.", "options": []}
-
-            evidence_lines = [
-                f"Target class IRI: {iri}",
-                "Connected classes (label | classIRI | direction | relationIRI):",
-            ]
-            for r in rows[:80]:
-                evidence_lines.append(
-                    f"{r['label']} | {r['class']} | {r['direction']} | {r['relation']}"
-                )
-
-            answer = svc.chat_grounded(
-                f"What classes are connected to {term}?",
-                evidence="\n".join(evidence_lines), history=history
-            )
+        if is_general:
+            answer = svc.chat_general(last_user, history=history)
             return {"answer": answer, "options": []}
 
-        # 3) Default routing using extracted entity_term
-        term = entity_term
-        print(f"[DEBUG] Default routing for term: '{term}', graph_name: '{graph_name}'")
-        evidence = build_evidence_for_term(term, graph_name)
-        print(f"[DEBUG] Generated evidence length: {len(evidence) if evidence else 0}")
-        
-        if not evidence:
-            # Disambiguate if possible
-            candidates = []
-            if graph_name:
-                matched_graphs = find_graphs_by_name(graph_name)
-                print(f"[DEBUG] Matched graphs for '{graph_name}': {matched_graphs}")
-                for g_iri in matched_graphs:
-                    found = search_terms_in_graph(term, g_iri, limit=5)
-                    print(f"[DEBUG] Search term '{term}' in {g_iri} returned {len(found)} candidates")
-                    candidates.extend(found)
-            else:
-                candidates = search_schema_terms_global(term, limit=10)
-                print(f"[DEBUG] Global search term '{term}' returned {len(candidates)} candidates")
-
-            if candidates:
-                options = list({c.get("label") or c["iri"].split("/")[-1] for c in candidates})[:10]
+        # --- Dynamic SPARQL Generation Pipeline ---
+        try:
+            print(f"[DEBUG] Starting dynamic SPARQL pipeline for graph: {graph_name}")
+            # 1. Fetch Schema Context
+            print(f"[DEBUG] Fetching schema context...")
+            schema_context, target_graphs = get_ontology_schema(graph_name if graph_name else None)
+            print(f"[DEBUG] Schema context fetched. Length: {len(schema_context)} characters")
+            
+            # 2. Generate SPARQL Query using LLM
+            print(f"[DEBUG] Requesting LLM to generate SPARQL...")
+            sparql_query = svc.generate_sparql(last_user, schema_context)
+            
+            # 2.5 Replace placeholders with actual Graph IRIs
+            for i, graph_iri in enumerate(target_graphs):
+                sparql_query = sparql_query.replace(f"<GRAPH_{i}>", f"<{graph_iri}>")
+                
+            print(f"[DEBUG] Generated SPARQL Query:\n{sparql_query}\n")
+            
+            # 3. Execute SPARQL safely
+            print(f"[DEBUG] Executing SPARQL query against GraphDB...")
+            raw_results = execute_safe_select(sparql_query)
+            print(f"[DEBUG] GraphDB Results returned: {len(raw_results)} rows")
+            
+            if not raw_results:
                 return {
-                    "answer": f"Multiple or fuzzy matches found for '{term}'. Did you mean:",
-                    "options": options
+                    "answer": "I could not find information regarding this in the available graph data.",
+                    "options": []
                 }
-            else:
-                # If even the extracted entity isn't in graphDB, try raw last_user
-                if not graph_name:
-                    candidates_raw = search_schema_terms_global(last_user.strip(), limit=10)
-                    if candidates_raw:
-                        options = list({c.get("label") or c["iri"].split("/")[-1] for c in candidates_raw})[:10]
-                        return {
-                            "answer": f"Multiple matches found. Did you mean:",
-                            "options": options
-                        }
+                
+            # 4. Generate final natural language answer
+            answer = svc.answer_from_sparql_results(last_user, str(raw_results), history=history)
+            return {"answer": answer, "options": []}
 
-
-        if not evidence:
-            # ── No graph evidence found ────────────────────────────────────────
-            # Decide whether this is a general question answerable from AI knowledge,
-            # or a graph-specific question that genuinely has no data.
-            is_general = (
-                not intent.get("requires_graphdb", True)  # LLM classified as general
-                or is_general_concept_question(entity_term, last_user)  # keyword safety net
-            )
-            if is_general:
-                # Answer from general AI knowledge — do NOT use chat_grounded with empty evidence
-                answer = svc.chat_general(last_user, history=history)
-            else:
-                # Truly graph-specific and nothing was found — keep the grounded response
-                answer = svc.chat_grounded(last_user, evidence="", history=history)
-        else:
-            answer = svc.chat_grounded(last_user, evidence=evidence, history=history)
-
-        return {"answer": answer, "options": []}
+        except Exception as query_err:
+            print(f"[ERROR] Dynamic SPARQL pipeline failed: {query_err}")
+            return {
+                "answer": f"I encountered an error trying to query the graph database: {str(query_err)}",
+                "options": []
+            }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
