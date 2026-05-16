@@ -115,7 +115,11 @@ class LocalLLMService:
             "If the query is clear, set is_clear to true, clarification_message to \"\", and options to []. "
             "Also, if the query is clear, extract the main entity, class, or instance name the user is asking about into 'entity_term' (e.g. 'Pressure', 'Sensor', etc). "
             "If the user specifies an ontology name or graph context (e.g., 'in CMP data ontology', 'for CMP data'), extract the name ('CMP data') into 'graph_name'. If not specified, set it to \"\". "
-            "Set 'requires_graphdb' to true if the user is asking about domain knowledge, ontology, classes, instances, or properties. Set it to false ONLY if it's a pure greeting or general chat."
+            "Set 'requires_graphdb' to TRUE only when the user asks about SPECIFIC classes, entities, instances, or properties inside their uploaded ontology data (e.g. 'What are the subclasses of Pressure in CMP data?', 'List the instances of Sensor'). "
+            "Set 'requires_graphdb' to FALSE for: "
+            "(1) General conceptual questions answerable from common knowledge: 'What is a KG?', 'What is an ontology?', 'What is RDF?', 'What is SPARQL?', 'What is OWL?', 'What is a triple?'. "
+            "(2) Greetings or casual conversation. "
+            "IMPORTANT: Questions that name a SPECIFIC entity or ontology (e.g. 'Pressure', 'Velocity', 'CMP data ontology') are ALWAYS requires_graphdb=true. "
             "IMPORTANT: ONLY output valid JSON. Nothing else."
         )
 

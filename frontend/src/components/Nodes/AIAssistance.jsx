@@ -13,14 +13,14 @@ const INITIAL_MESSAGE = {
 // Generate a unique numeric-ish ID (float so it round-trips through the DB float path_id)
 const genId = () => Date.now() + Math.random();
 
-// ── Axios helper (adds auth header) ──────────────────────────────────────────
+// ── Axios helper (adds auth header) 
 const authHeaders = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
 
 export default function AIAssistance({ onOpenAuth }) {
-  // ── Auth gate ──────────────────────────────────────────────────────────────
+  // ── Auth gate 
   const token = localStorage.getItem("token");
 
-  // ── State ──────────────────────────────────────────────────────────────────
+  // ── State 
   const [chats, setChats]                   = useState([]);
   const [currentChatId, setCurrentChatId]   = useState(null);
   const [chatsLoading, setChatsLoading]     = useState(true);   // initial fetch
@@ -28,11 +28,12 @@ export default function AIAssistance({ onOpenAuth }) {
   const [loading, setLoading]               = useState(false);
   const [sidebarOpen, setSidebarOpen]       = useState(false);
   const [renaming, setRenaming]             = useState(null);   // { id, value }
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null); // id of chat pending deletion
 
   const renameInputRef = useRef(null);
   const bottomRef      = useRef(null);
 
-  // ── Derived ────────────────────────────────────────────────────────────────
+  // ── Derived ──
   // Only saved conversations appear in the sidebar (unsaved = new empty chat)
   const savedChats  = chats.filter((c) => c.saved);
   const currentChat = chats.find((c) => c.id === currentChatId) ?? chats[0];
@@ -42,7 +43,7 @@ export default function AIAssistance({ onOpenAuth }) {
   const prevMsgCountRef = useRef(0);
   const prevLoadingRef  = useRef(false);
 
-  // ── Load conversations from MongoDB on mount ───────────────────────────────
+  // ── Load conversations from MongoDB on mount 
   const loadChats = useCallback(async () => {
     if (!token) return;
     setChatsLoading(true);
@@ -82,18 +83,18 @@ export default function AIAssistance({ onOpenAuth }) {
 
   useEffect(() => { loadChats(); }, [loadChats]);
 
-  // ── Persist active tab locally ─────────────────────────────────────────────
+  // ── Persist active tab locally 
   useEffect(() => {
     if (currentChatId !== null)
       localStorage.setItem("kg_current_chat", String(currentChatId));
   }, [currentChatId]);
 
-  // ── Rename input focus ─────────────────────────────────────────────────────
+  // ── Rename input focus 
   useEffect(() => {
     if (renaming) renameInputRef.current?.focus();
   }, [renaming]);
 
-  // ── Scroll — only on new content ──────────────────────────────────────────
+  // ── Scroll — only on new content 
   useEffect(() => {
     const msgAdded      = messages.length > prevMsgCountRef.current;
     const typingStarted = loading && !prevLoadingRef.current;
@@ -103,14 +104,14 @@ export default function AIAssistance({ onOpenAuth }) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, loading]);
 
-  // ── Auth gate useEffect ────────────────────────────────────────────────────
+  // ── Auth gate useEffect ──
   useEffect(() => {
     if (!token) onOpenAuth?.();
   }, [token, onOpenAuth]);
 
   if (!token) return null;
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  // ── Helpers ──
   const updateCurrentChat = (newMessages) => {
     setChats((prev) =>
       prev.map((chat) =>
@@ -140,7 +141,7 @@ export default function AIAssistance({ onOpenAuth }) {
     }
   };
 
-  // ── Send message ───────────────────────────────────────────────────────────
+  // ── Send message ─
   const sendMessage = async (text) => {
     const trimmed = (text || input).trim();
     if (!trimmed || loading) return;
@@ -185,7 +186,7 @@ export default function AIAssistance({ onOpenAuth }) {
 
   const send = () => sendMessage(input);
 
-  // ── New chat ───────────────────────────────────────────────────────────────
+  // ── New chat ─
   const handleNewChat = () => {
     const newId    = genId();
     const newIndex = savedChats.length + 1;
@@ -202,9 +203,20 @@ export default function AIAssistance({ onOpenAuth }) {
     setSidebarOpen(false);
   };
 
-  // ── Delete chat ────────────────────────────────────────────────────────────
-  const handleDeleteChat = async (e, chatId) => {
+  // ── Delete chat ──
+  const triggerDeleteChat = (e, chatId) => {
     e.stopPropagation();
+    setDeleteConfirmId(chatId);
+  };
+
+  const cancelDelete = (e) => {
+    e.stopPropagation();
+    setDeleteConfirmId(null);
+  };
+
+  const confirmDeleteChat = async (e, chatId) => {
+    e.stopPropagation();
+    setDeleteConfirmId(null);
 
     // Delete from MongoDB (fire-and-forget — don't block UI)
     const chatToDelete = chats.find((c) => c.id === chatId);
@@ -228,7 +240,7 @@ export default function AIAssistance({ onOpenAuth }) {
     }
   };
 
-  // ── Rename ─────────────────────────────────────────────────────────────────
+  // ── Rename 
   const startRename = (e, chatId, currentTitle) => {
     e.stopPropagation();
     setRenaming({ id: chatId, value: currentTitle });
@@ -252,7 +264,7 @@ export default function AIAssistance({ onOpenAuth }) {
 
   const cancelRename = () => setRenaming(null);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render 
   if (chatsLoading) {
     return (
       <div className="ai-workspace theme-light">
@@ -268,7 +280,7 @@ export default function AIAssistance({ onOpenAuth }) {
   return (
     <div className="ai-workspace theme-light">
 
-      {/* ── Conversations Sidebar ──────────────────────────────────── */}
+      {/* ── Conversations Sidebar  */}
       <div className={`ai-sidebar ${sidebarOpen ? "open" : "closed"}`}>
         <div className="sidebar-header">
           <button type="button" className="new-chat-btn" onClick={handleNewChat} title="Start new conversation">
@@ -315,7 +327,7 @@ export default function AIAssistance({ onOpenAuth }) {
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                   </button>
-                  <button type="button" className="chat-action-btn delete-btn" onClick={(e) => handleDeleteChat(e, chat.id)} title="Delete" aria-label="Delete conversation">
+                  <button type="button" className="chat-action-btn delete-btn" onClick={(e) => triggerDeleteChat(e, chat.id)} title="Delete" aria-label="Delete conversation">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />
                       <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
@@ -333,7 +345,7 @@ export default function AIAssistance({ onOpenAuth }) {
       {/* Overlay */}
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
 
-      {/* ── Main Chat Card ─────────────────────────────────────────── */}
+      {/* ── Main Chat Card ─ */}
       <div className="ai-main">
         <div className="ai-card">
 
@@ -397,6 +409,26 @@ export default function AIAssistance({ onOpenAuth }) {
 
         </div>
       </div>
+
+      {/* ── Delete Confirmation Modal ───────────────────────────────── */}
+      {deleteConfirmId && (
+        <div className="ai-modal-overlay" onClick={cancelDelete}>
+          <div className="ai-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ai-modal-title">Delete Conversation</h3>
+            <p className="ai-modal-desc">
+              Are you sure you want to delete this conversation? This action cannot be undone.
+            </p>
+            <div className="ai-modal-actions">
+              <button className="ai-modal-btn cancel" onClick={cancelDelete}>
+                Cancel
+              </button>
+              <button className="ai-modal-btn confirm" onClick={(e) => confirmDeleteChat(e, deleteConfirmId)}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

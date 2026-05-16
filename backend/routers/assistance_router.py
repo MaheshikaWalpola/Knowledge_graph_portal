@@ -36,6 +36,38 @@ SCHEMA_HINTS = {
     "type", "subclass", "domain", "range", "connected"
 }
 
+# General KG/semantic-web concepts that can be answered from common knowledge
+# without querying the user's graph database.
+GENERAL_KG_CONCEPTS = {
+    "knowledge graph", "kg", "ontology", "rdf", "sparql", "owl", "triple",
+    "turtle", "json-ld", "n-triples", "n3", "semantic web", "linked data",
+    "namespace", "prefix", "iri", "uri", "blank node", "literal",
+    "class", "subclass", "superclass", "instance", "individual", "property",
+    "data property", "object property", "annotation property", "axiom",
+    "inference", "reasoner", "shacl", "skos"
+}
+
+
+def is_general_concept_question(entity_term: str, question: str) -> bool:
+    """
+    Conservative keyword safety net: returns True ONLY for pure definitional
+    questions like 'What is a KG?' that have no specific entity/ontology context.
+    This fires ONLY when the LLM also sets requires_graphdb=False.
+    """
+    q = question.lower().strip().rstrip("?").rstrip(".")
+
+    # If the question contains any specific-context signals, it is NOT general
+    specific_signals = [" in ", " of ", " for ", " from ", " within ", " inside "]
+    if any(sig in q for sig in specific_signals):
+        return False
+
+    # Must match "what is [a/an] <concept>" exactly
+    for concept in GENERAL_KG_CONCEPTS:
+        if q in (f"what is {concept}", f"what is a {concept}", f"what is an {concept}"):
+            return True
+
+    return False
+
 
 def extract_connected_to_term(q: str) -> str:
     """
@@ -308,17 +340,23 @@ def chat(req: ChatReq):
 
         # 3) Default routing using extracted entity_term
         term = entity_term
+        print(f"[DEBUG] Default routing for term: '{term}', graph_name: '{graph_name}'")
         evidence = build_evidence_for_term(term, graph_name)
+        print(f"[DEBUG] Generated evidence length: {len(evidence) if evidence else 0}")
         
         if not evidence:
             # Disambiguate if possible
             candidates = []
             if graph_name:
                 matched_graphs = find_graphs_by_name(graph_name)
+                print(f"[DEBUG] Matched graphs for '{graph_name}': {matched_graphs}")
                 for g_iri in matched_graphs:
-                    candidates.extend(search_terms_in_graph(term, g_iri, limit=5))
+                    found = search_terms_in_graph(term, g_iri, limit=5)
+                    print(f"[DEBUG] Search term '{term}' in {g_iri} returned {len(found)} candidates")
+                    candidates.extend(found)
             else:
                 candidates = search_schema_terms_global(term, limit=10)
+                print(f"[DEBUG] Global search term '{term}' returned {len(candidates)} candidates")
 
             if candidates:
                 options = list({c.get("label") or c["iri"].split("/")[-1] for c in candidates})[:10]
@@ -339,10 +377,19 @@ def chat(req: ChatReq):
 
 
         if not evidence:
-            if intent.get("requires_graphdb", True):
-                answer = svc.chat_grounded(last_user, evidence="", history=history)
-            else:
+            # ── No graph evidence found ────────────────────────────────────────
+            # Decide whether this is a general question answerable from AI knowledge,
+            # or a graph-specific question that genuinely has no data.
+            is_general = (
+                not intent.get("requires_graphdb", True)  # LLM classified as general
+                or is_general_concept_question(entity_term, last_user)  # keyword safety net
+            )
+            if is_general:
+                # Answer from general AI knowledge — do NOT use chat_grounded with empty evidence
                 answer = svc.chat_general(last_user, history=history)
+            else:
+                # Truly graph-specific and nothing was found — keep the grounded response
+                answer = svc.chat_grounded(last_user, evidence="", history=history)
         else:
             answer = svc.chat_grounded(last_user, evidence=evidence, history=history)
 
