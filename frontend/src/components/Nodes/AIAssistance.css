@@ -1,30 +1,47 @@
-/* ========================================
-   🤖 AI ASSISTANCE - ChatGPT/Claude Style
-   Sidebar + Main Chat Layout
-   ======================================== */
-
-/* Root Container */
+/* Root Container — mirrors .workspace-container layout */
 .ai-workspace {
   display: flex;
-  height: calc(100vh - 160px);
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-xl) var(--space-lg);
+  min-height: calc(100vh - 160px);
   background: var(--bg-primary);
   position: relative;
 }
 
-/* Sidebar */
+/* Sidebar — aligns with the card top (workspace padding-top = var(--space-xl)) */
 .ai-sidebar {
-  width: 260px;
+  width: 280px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
-  transition: all var(--transition-normal);
-  position: relative;
-  z-index: 100;
+  position: absolute;
+  top: var(--space-xl);
+  left: 0;
+  height: calc(100% - var(--space-xl));
+  z-index: 200;
+  transform: translateX(0);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+  border-radius: 0 0 0 var(--radius-xl);
 }
 
 .ai-sidebar.closed {
-  margin-left: -260px;
+  transform: translateX(-100%);
+  box-shadow: none;
+}
+
+/* Overlay backdrop — covers only the card area */
+.sidebar-overlay {
+  position: absolute;
+  top: var(--space-xl);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 199;
+  animation: fadeIn 0.2s ease;
 }
 
 /* Sidebar Header with New Chat Button */
@@ -131,11 +148,31 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
-.delete-icon {
-  width: 28px;
-  height: 28px;
+.chat-item.active .chat-title {
+  color: var(--accent-primary);
+}
+
+/* Action buttons (rename + delete) — visible on hover */
+.chat-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.chat-item:hover .chat-item-actions,
+.chat-item.active .chat-item-actions {
+  opacity: 1;
+}
+
+.chat-action-btn {
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -143,30 +180,58 @@
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  opacity: 0;
-  font-size: 14px;
+  color: var(--text-tertiary);
   transition: all var(--transition-normal);
   flex-shrink: 0;
 }
 
-.chat-item:hover .delete-icon {
-  opacity: 1;
+.chat-action-btn:hover {
+  background: var(--bg-glass-strong);
+  color: var(--text-primary);
 }
 
-.delete-icon:hover {
-  background: rgba(239, 68, 68, 0.2);
+.rename-btn:hover {
+  color: var(--accent-primary);
+}
+
+.delete-btn:hover {
+  background: rgba(220, 38, 38, 0.12);
   color: #dc2626;
 }
 
-/* Sidebar Footer */
-.sidebar-footer {
-  padding: var(--space-lg);
-  border-top: 1px solid var(--border-light);
-  display: flex;
-  justify-content: center;
+/* Inline rename input */
+.chat-item.renaming {
+  padding: 6px var(--space-md);
+  cursor: default;
 }
 
-.settings-icon-btn {
+.rename-input {
+  flex: 1;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1.5px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Empty conversations message */
+.chats-empty {
+  margin: var(--space-xl) auto;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+  line-height: 1.5;
+  padding: 0 var(--space-md);
+}
+
+/* Header settings icon button */
+.header-settings-btn {
   width: 40px;
   height: 40px;
   display: flex;
@@ -176,31 +241,16 @@
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  font-size: 18px;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   transition: all var(--transition-normal);
+  flex-shrink: 0;
 }
 
-.settings-icon-btn:hover {
+.header-settings-btn:hover {
   background: var(--bg-glass-strong);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
-  transform: scale(1.05) rotate(15deg);
-}
-
-/* ========================================
-   ⚙️ Settings Panel
-   ======================================== */
-
-.settings-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 102;
-  animation: fadeIn 0.3s ease;
+  transform: rotate(20deg);
 }
 
 .settings-panel {
@@ -448,12 +498,12 @@
   color: var(--accent-primary);
 }
 
-/* Main Chat Area */
+/* Main Chat Area — mirrors .workspace-card width */
 .ai-main {
-  flex: 1;
+  max-width: calc(1400px - 48px);
+  width: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 /* Container */
@@ -486,7 +536,7 @@
 
 /* Main Card */
 .ai-card {
-  flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
   background: var(--bg-glass-strong);
@@ -497,7 +547,6 @@
   padding: var(--space-2xl);
   box-shadow: var(--shadow-card);
   animation: fadeIn 0.5s ease forwards;
-  overflow: hidden;
 }
 
 /* Header */
@@ -614,78 +663,6 @@
   border-color: #dc2626;
 }
 
-/* Dark theme action buttons */
-.theme-dark .action-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
-}
-
-.theme-dark .action-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.theme-dark .new-chat-btn {
-  background: rgba(37, 99, 235, 0.15);
-  border-color: rgba(37, 99, 235, 0.4);
-}
-
-.theme-dark .delete-chat-btn {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
-}
-
-/* ========================================
-   📑 Chat Tabs
-   ======================================== */
-.chat-tabs {
-  display: flex;
-  gap: var(--space-sm);
-  padding: var(--space-md) 0;
-  border-bottom: 1px solid var(--chat-border);
-  margin-bottom: var(--space-lg);
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.chat-tab {
-  padding: var(--space-md) var(--space-lg);
-  font-size: 14px;
-  font-weight: 500;
-  font-family: var(--font-sans);
-  color: var(--text-secondary);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.chat-tab:hover {
-  color: var(--text-primary);
-  border-bottom-color: rgba(37, 99, 235, 0.3);
-}
-
-.chat-tab.active {
-  color: var(--accent-primary);
-  border-bottom-color: var(--accent-primary);
-}
-
-/* Dark theme chat tabs */
-.theme-dark .chat-tab {
-  color: #64748b;
-}
-
-.theme-dark .chat-tab:hover {
-  color: #e2e8f0;
-}
-
-.theme-dark .chat-tab.active {
-  color: var(--accent-primary);
-}
-
 /* ========================================
    🎨 Theme Variables (Overriding old ones)
    ======================================== */
@@ -713,55 +690,6 @@
   --typing: var(--text-tertiary);
 }
 
-.theme-dark {
-  --chat-bg: rgba(10, 10, 15, 0.8);
-  --chat-border: rgba(255, 255, 255, 0.08);
-  --chat-panel: rgba(18, 18, 26, 0.6);
-
-  --bubble-assistant-bg: rgba(30, 30, 45, 0.8);
-  --bubble-assistant-border: rgba(255, 255, 255, 0.08);
-  --bubble-assistant-text: #f8fafc;
-
-  --bubble-user-bg: var(--gradient-primary);
-  --bubble-user-border: transparent;
-  --bubble-user-text: white;
-
-  --input-bg: rgba(18, 18, 26, 0.8);
-  --input-border: rgba(255, 255, 255, 0.1);
-  --input-text: #f8fafc;
-  --placeholder: #64748b;
-
-  --send-bg: var(--gradient-primary);
-  --send-text: white;
-
-  --typing: #64748b;
-}
-
-/* Dark theme card adjustments */
-.theme-dark .ai-card {
-  background: rgba(18, 18, 26, 0.9);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.theme-dark .ai-title {
-  color: #f8fafc;
-  -webkit-text-fill-color: unset;
-  background: none;
-}
-
-.theme-dark .ai-sub {
-  color: #94a3b8;
-}
-
-.theme-dark .theme-toggle {
-  background: rgba(255, 255, 255, 0.05);
-  color: #f8fafc;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-/* ========================================
-   💬 Chat Shell
-   ======================================== */
 .chat-shell {
   margin-top: var(--space-lg);
   border: 1px solid var(--chat-border);
@@ -838,9 +766,6 @@
   box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
 }
 
-/* ========================================
-   ⌨️ Chat Footer - Input Area
-   ======================================== */
 .chat-footer {
   display: flex;
   gap: var(--space-md);
@@ -939,9 +864,6 @@
   transform: none;
 }
 
-/* ========================================
-   ⏳ Typing Indicator
-   ======================================== */
 .typing {
   display: inline-flex;
   align-items: center;
@@ -982,9 +904,6 @@
   }
 }
 
-/* ========================================
-   📱 Mobile Sidebar Toggle
-   ======================================== */
 .mobile-sidebar-toggle {
   display: none;
   position: fixed;
@@ -1002,39 +921,13 @@
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
-/* ========================================
-   📱 Responsive Adjustments
-   ======================================== */
 @media (max-width: 768px) {
   .ai-workspace {
     height: calc(100vh - 120px);
   }
 
-  .ai-sidebar {
-    position: fixed;
-    height: 100%;
-    left: 0;
-    top: 0;
-    z-index: 101;
-    border-radius: 0;
-  }
-
-  .ai-sidebar.closed {
-    margin-left: -100%;
-  }
-
-  .ai-sidebar.open + .ai-main {
-    filter: brightness(0.5);
-  }
-
   .ai-main {
     width: 100%;
-  }
-
-  .mobile-sidebar-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
   .ai-card {
@@ -1116,9 +1009,6 @@
 }
 
 
-/* ========================================
-   ✨ Animation
-   ======================================== */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -1130,9 +1020,6 @@
   }
 }
 
-/* ========================================
-   🎨 Code Block Styling in Messages
-   ======================================== */
 .bubble pre,
 .bubble code {
   font-family: var(--font-mono);
@@ -1153,18 +1040,12 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* ========================================
-   📝 Subtitle
-   ======================================== */
 .ai-subtitle {
   font-size: 14px;
   color: var(--text-secondary);
   margin: var(--space-xs) 0 0 0;
 }
 
-/* ========================================
-   💬 Quick Replies
-   ======================================== */
 .quick-replies {
   display: flex;
   flex-wrap: wrap;
@@ -1200,21 +1081,6 @@
   transform: translateY(0);
 }
 
-/* Dark theme quick replies */
-.theme-dark .quick-reply-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #e2e8f0;
-}
-
-.theme-dark .quick-reply-btn:hover {
-  background: rgba(37, 99, 235, 0.15);
-  border-color: var(--accent-primary);
-}
-
-/* ========================================
-   ⏳ Typing Dots Animation
-   ======================================== */
 .typing {
   display: inline-flex;
   align-items: center;
@@ -1242,9 +1108,6 @@
   animation-delay: 0.4s;
 }
 
-/* ========================================
-    Additional Mobile Styles
-   ======================================== */
 @media (max-width: 600px) {
   .quick-replies {
     flex-wrap: nowrap;
