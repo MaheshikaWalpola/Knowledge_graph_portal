@@ -2,6 +2,7 @@ import json
 import urllib.request
 import re
 import os
+import ssl
 from typing import List, Dict, Any, Optional
 
 # Kiste API Configuration (OpenAI-compatible)
@@ -44,7 +45,12 @@ class LocalLLMService:
             headers=headers,
         )
         try:
-            with urllib.request.urlopen(req) as response:
+            # Create SSL context that doesn't verify certificates (for development)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            with urllib.request.urlopen(req, context=ssl_context) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 return result.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:
