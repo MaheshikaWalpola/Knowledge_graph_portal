@@ -1,10 +1,13 @@
 import json
 import urllib.request
 import re
+import os
 from typing import List, Dict, Any, Optional
 
-OLLAMA_API_URL = "http://localhost:11434/api/chat"
-MODEL_NAME = "llama3.2:latest"
+# Kiste API Configuration (OpenAI-compatible)
+KISTE_API_URL = os.getenv("KISTE_API_URL")
+KISTE_API_KEY = os.getenv("KISTE_API_KEY")
+MODEL_NAME = os.getenv("KISTE_MODEL")  # "gpt-oss-120b" or "qwen3.6"
 
 
 def strip_markdown(text: str) -> str:
@@ -17,27 +20,38 @@ def strip_markdown(text: str) -> str:
 
 
 class LocalLLMService:
-    def _call_ollama(self, messages: List[Dict[str, str]], json_mode: bool = False) -> str:
+    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False) -> str:
+        """Call Kiste API (OpenAI-compatible)"""
+        if not KISTE_API_KEY:
+            return "Error: KISTE_API_KEY environment variable not set."
+        
         data = {
             "model": MODEL_NAME,
             "messages": messages,
-            "stream": False
+            "temperature": 0.7,
         }
         if json_mode:
-            data["format"] = "json"
+            data["response_format"] = {"type": "json_object"}
 
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {KISTE_API_KEY}"
+        }
+        
         req = urllib.request.Request(
-            OLLAMA_API_URL,
+            KISTE_API_URL,
             data=json.dumps(data).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         try:
             with urllib.request.urlopen(req) as response:
                 result = json.loads(response.read().decode("utf-8"))
-                return result.get("message", {}).get("content", "")
+                return result.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:
-            print(f"Ollama API error: {e}")
-            return "Error: Could not reach local LLM."
+            print(f"Kiste API error: {e}")
+            return f"Error: Could not reach Kiste API. {str(e)}"
+
+
 
     def chat_general(self, user_text: str, history: List[Dict[str, str]] = None) -> str:
         """
@@ -53,7 +67,7 @@ class LocalLLMService:
         else:
             messages.append({"role": "user", "content": user_text})
 
-        ans = self._call_ollama(messages)
+        ans = self._call_kiste(messages)
         return strip_markdown(ans)
 
     def chat_grounded(self, user_text: str, evidence: str, history: List[Dict[str, str]] = None) -> str:
@@ -77,7 +91,7 @@ class LocalLLMService:
         else:
             messages.append({"role": "user", "content": user})
 
-        ans = self._call_ollama(messages)
+        ans = self._call_kiste(messages)
         return strip_markdown(ans)
 
     def analyze_intent_and_clarify(self, user_text: str, history: List[Dict[str, str]] = None) -> Dict[str, Any]:
@@ -105,7 +119,7 @@ class LocalLLMService:
         else:
             messages.append({"role": "user", "content": user_text})
 
-        ans = self._call_ollama(messages, json_mode=True)
+        ans = self._call_kiste(messages, json_mode=True)
         try:
             return json.loads(ans)
         except json.JSONDecodeError:
