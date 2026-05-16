@@ -7,16 +7,19 @@ const API = import.meta.env.VITE_API_URL;
 const INITIAL_MESSAGE = {
   role: "assistant",
   content:
-    "Hi! I'm your Knowledge Graph assistant.\n\nAsk me general questions, or mention an ontology name to explore its classes, properties, relationships, instances, and process variables using graph-grounded answers.",
+    "Hi! I'm your Knowledge Graph assistant.\n\nAsk me general questions, or ask about any ontology you have uploaded. For graph-specific answers, mention the ontology or graph name so I can explore its classes, properties, relationships, instances, and process variables using graph-grounded data.",
 };
 
 // Version key — bump to clear stale localStorage
-const CHAT_VERSION = "v3";
+const CHAT_VERSION = "v4";
 
 // Generate a unique ID
 const genId = () => Date.now() + Math.random();
 
-export default function AIAssistance() {
+export default function AIAssistance({ onOpenAuth }) {
+  // ── Auth gate (same pattern as Workspace) ─────────────────────────
+  const token = localStorage.getItem("token");
+
   // ── State ──
   const [chats, setChats] = useState(() => {
     try {
@@ -212,7 +215,14 @@ export default function AIAssistance() {
 
   const cancelRename = () => setRenaming(null);
 
-  // ── Render ─
+  // ── Auth gate — pop the login dialog for guests, same as CanvasEditor ──
+  useEffect(() => {
+    if (!token) onOpenAuth?.();
+  }, [token, onOpenAuth]);
+
+  if (!token) return null; // AuthDialog is already open; nothing else to render
+
+  // ── Render ──
   return (
     <div className="ai-workspace theme-light">
 

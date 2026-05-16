@@ -9,6 +9,71 @@
   position: relative;
 }
 
+/* Auth gate — shown to guests who aren't logged in */
+.ai-auth-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-3xl) var(--space-2xl);
+  gap: var(--space-lg);
+  min-height: 340px;
+}
+
+.auth-gate-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.auth-gate-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.auth-gate-message {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-secondary);
+  max-width: 420px;
+  line-height: 1.6;
+}
+
+.auth-gate-btn {
+  margin-top: var(--space-md);
+  height: 48px;
+  padding: 0 var(--space-2xl);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: white;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+  transition: all var(--transition-normal);
+}
+
+.auth-gate-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+
 /* Sidebar — aligns with the card top (workspace padding-top = var(--space-xl)) */
 .ai-sidebar {
   width: 280px;

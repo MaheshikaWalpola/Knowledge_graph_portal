@@ -156,7 +156,7 @@ function App() {
                 <VerifyEmail onLoginSuccess={handleVerifyLoginSuccess} />
               }
             />
-            <Route path="/assistant" element={<AIAssistance />} />
+            <Route path="/assistant" element={<AIAssistance onOpenAuth={handleOpenAuth} />} />
             <Route
               path="/profile"
               element={
