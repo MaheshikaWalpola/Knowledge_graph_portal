@@ -1,8 +1,7 @@
-# routers/assistant_router.py
 import re
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Any
 
 from services.local_llm_service import LocalLLMService
 from services.graphdb_service import (
@@ -15,9 +14,13 @@ from services.graphdb_service import (
     resolve_term_in_graph,
     neighbors_in_uploaded_two_graphs,
     search_terms_in_graph,
-    execute_safe_select
+    execute_safe_select,
+    build_safe_sparql_query,
+    graph_has_triples
 )
 from services.schema_service import get_ontology_schema
+from core.auth import get_current_user
+from services.user_schema_service import get_user_schema, list_user_schemas
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 svc = LocalLLMService()
@@ -30,6 +33,7 @@ class ChatMsg(BaseModel):
 
 class ChatReq(BaseModel):
     messages: List[ChatMsg]
+    selected_schema_id: Optional[str] = None
 
 
 SCHEMA_HINTS = {
@@ -170,7 +174,7 @@ def build_evidence_for_term(term: str, graph_name: str = "") -> str:
 
 
 @router.post("/chat")
-def chat(req: ChatReq):
+def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
     last_user = None
     for m in reversed(req.messages):
         if m.role == "user" and (m.content or "").strip():
@@ -191,32 +195,24 @@ def chat(req: ChatReq):
         # Always analyze intent to extract entity_term or clarify
         intent = svc.analyze_intent_and_clarify(last_user, history=history)
         
-        if not intent.get("is_clear", True):
-            raw_options = intent.get("options", [])
-            safe_options = []
-            for opt in raw_options:
-                if isinstance(opt, str):
-                    safe_options.append(opt)
-                elif isinstance(opt, dict) and "option" in opt:
-                    safe_options.append(str(opt["option"]))
-                elif isinstance(opt, dict) and len(opt) > 0:
-                    safe_options.append(str(list(opt.values())[0]))
-                else:
-                    safe_options.append(str(opt))
-            
+        needs_clarification = intent.get("needs_clarification", False)
+        if needs_clarification:
             return {
                 "answer": intent.get("clarification_message", "Please clarify your request."),
-                "options": safe_options
+                "options": []
             }
 
-        entity_term = intent.get("entity_term") or last_user.strip()
-        graph_name = intent.get("graph_name", "").strip()
-
-        graph_name = intent.get("graph_name", "").strip()
+        requires_graphdb = intent.get("requires_graphdb", True)
+        extracted_ontology_name = intent.get("ontology_name", "").strip()
+        data_scope = intent.get("data_scope", "schema")
+        stat = intent.get("stat", "")
+        intent_type = intent.get("intent", "complex_query")
+        entity_term = intent.get("entity", "").strip()
+        property_term = intent.get("property", "").strip()
 
         # Check if it's a general concept question not needing GraphDB
         is_general = (
-            not intent.get("requires_graphdb", True)
+            not requires_graphdb
             or is_general_concept_question(entity_term, last_user)
         )
 
@@ -224,38 +220,168 @@ def chat(req: ChatReq):
             answer = svc.chat_general(last_user, history=history)
             return {"answer": answer, "options": []}
 
+        # --- Resolve Ontology ---
+        target_graphs = []
+        schema_id = req.selected_schema_id
+        graph_name = extracted_ontology_name
+        
+        meta = None
+        if schema_id:
+            # Use frontend selection
+            meta = get_user_schema(current_user["email"], schema_id)
+            if meta:
+                graph_name = meta.get("name", "selected schema")
+        elif extracted_ontology_name:
+            # Try to match extracted name
+            schemas = list_user_schemas(current_user["email"])
+            matched = [s for s in schemas if extracted_ontology_name.lower() in s.get("name", "").lower()]
+            if len(matched) == 1:
+                meta = matched[0]
+                schema_id = meta.get("schema_id")
+                graph_name = meta.get("name")
+            elif len(matched) > 1:
+                return {
+                    "answer": f"I found multiple ontologies matching '{extracted_ontology_name}'. Please specify which one you mean (e.g., '{matched[0].get('name')}').",
+                    "options": [s.get("name") for s in matched[:3]]
+                }
+            else:
+                return {
+                    "answer": f"I could not find an ontology named '{extracted_ontology_name}'. Please specify a valid ontology.",
+                    "options": []
+                }
+        
+        if meta and meta.get("graph_iri"):
+            schema_graph_iri = meta["graph_iri"]
+            target_graphs.append(schema_graph_iri)
+            
+            instance_graph_iri = None
+            if meta.get("instance_graph_iri"):
+                instance_graph_iri = meta["instance_graph_iri"]
+            else:
+                candidate = schema_graph_iri.rstrip("/") + "/instances"
+                if graph_has_triples(candidate):
+                    instance_graph_iri = candidate
+                    
+            if instance_graph_iri:
+                target_graphs.append(instance_graph_iri)
+                
+            if data_scope == "instances" and not instance_graph_iri:
+                return {
+                    "answer": f"I found the ontology '{graph_name}', but I could not find an instance graph for it.",
+                    "options": []
+                }
+        
+        if not target_graphs:
+            return {
+                "answer": "Please select an ontology or specify which ontology you are asking about.",
+                "options": []
+            }
+
+        schema_graph_iri = target_graphs[0] if len(target_graphs) > 0 else "None"
+        instance_graph_iri_log = target_graphs[1] if len(target_graphs) > 1 else "None"
+
+        print(f"[DEBUG] === KG Chat Request ===")
+        print(f"[DEBUG] User Message: {last_user}")
+        print(f"[DEBUG] selected_schema_id: {schema_id}")
+        print(f"[DEBUG] extracted ontology_name: {extracted_ontology_name}")
+        print(f"[DEBUG] resolved schema_graph_iri: {schema_graph_iri}")
+        print(f"[DEBUG] resolved instance_graph_iri: {instance_graph_iri_log}")
+        print(f"[DEBUG] intent: {intent_type}")
+        print(f"[DEBUG] stat: {stat}")
+        print(f"[DEBUG] entity: {entity_term}")
+        
+        # --- Resolve Entity ---
+        entity_iri = None
+        if entity_term:
+            primary_graph = target_graphs[0]
+            entity_iri = resolve_term_in_graph(entity_term, primary_graph)
+            if not entity_iri:
+                entity_iri = resolve_schema_term_to_iri_global(entity_term)
+            
+        print(f"[DEBUG] resolved entity IRI: {entity_iri}")
+
         # --- Dynamic SPARQL Generation Pipeline ---
         try:
             print(f"[DEBUG] Starting dynamic SPARQL pipeline for graph: {graph_name}")
-            # 1. Fetch Schema Context
-            print(f"[DEBUG] Fetching schema context...")
-            schema_context, target_graphs = get_ontology_schema(graph_name if graph_name else None)
-            print(f"[DEBUG] Schema context fetched. Length: {len(schema_context)} characters")
             
-            # 2. Generate SPARQL Query using LLM
-            print(f"[DEBUG] Requesting LLM to generate SPARQL...")
-            sparql_query = svc.generate_sparql(last_user, schema_context)
+            sparql_query = build_safe_sparql_query(intent_type, target_graphs, entity_iri, entity_term, stat)
             
-            # 2.5 Replace placeholders with actual Graph IRIs
-            for i, graph_iri in enumerate(target_graphs):
-                sparql_query = sparql_query.replace(f"<GRAPH_{i}>", f"<{graph_iri}>")
+            if sparql_query:
+                print(f"[DEBUG] Using deterministic safe SPARQL builder for intent '{intent_type}'")
+            else:
+                print(f"[DEBUG] Fetching schema context for complex query...")
+                schema_context, _ = get_ontology_schema(graph_name, target_graphs)
                 
-            print(f"[DEBUG] Generated SPARQL Query:\n{sparql_query}\n")
+                print(f"[DEBUG] Requesting LLM to generate SPARQL...")
+                sparql_query = svc.generate_sparql(last_user, schema_context)
+                
+                for i, graph_iri in enumerate(target_graphs):
+                    sparql_query = sparql_query.replace(f"<GRAPH_{i}>", f"<{graph_iri}>")
+                    
+            print(f"[DEBUG] generated deterministic SPARQL:\n{sparql_query}\n")
             
-            # 3. Execute SPARQL safely
             print(f"[DEBUG] Executing SPARQL query against GraphDB...")
             raw_results = execute_safe_select(sparql_query)
-            print(f"[DEBUG] GraphDB Results returned: {len(raw_results)} rows")
+            print(f"[DEBUG] row count: {len(raw_results)}")
             
             if not raw_results:
                 return {
-                    "answer": "I could not find information regarding this in the available graph data.",
+                    "answer": "I could not find matching information in the selected ontology.",
                     "options": []
                 }
                 
-            # 4. Generate final natural language answer
-            answer = svc.answer_from_sparql_results(last_user, str(raw_results), history=history)
-            return {"answer": answer, "options": []}
+            if sparql_query and intent_type == "get_numeric_stat":
+                row = raw_results[0]
+                count = int(row.get("count", "0"))
+                print(f"[DEBUG] count of numeric values: {count}")
+                if count == 0:
+                    return {"answer": f"I found the '{entity_term}' class, but no numeric instance values were found for it in the selected instance graph.", "options": []}
+                
+                val = ""
+                stat_name = ""
+                if stat == "max":
+                    val = row.get("max")
+                    stat_name = "maximum"
+                elif stat == "min":
+                    val = row.get("min")
+                    stat_name = "minimum"
+                elif stat == "avg" or stat == "mean":
+                    val = row.get("avg")
+                    stat_name = "average"
+                    
+                if val:
+                    try:
+                        val = f"{float(val):.2f}"
+                    except:
+                        pass
+                    return {"answer": f"The {stat_name} value of {entity_term} in {graph_name} instances is {val}.", "options": []}
+                elif stat == "count":
+                    return {"answer": f"There are {count} numeric instance values for {entity_term} in {graph_name}.", "options": []}
+                else:
+                    ans = [f"Found {count} numeric values for {entity_term}."]
+                    if row.get("min"): ans.append(f"Min: {float(row.get('min')):.2f}")
+                    if row.get("max"): ans.append(f"Max: {float(row.get('max')):.2f}")
+                    if row.get("avg"): ans.append(f"Average: {float(row.get('avg')):.2f}")
+                    return {"answer": "\n".join(ans), "options": []}
+                    
+            # For simple list results from our builders, format them locally without LLM overhead
+            if sparql_query and intent_type != "complex_query" and len(raw_results) > 0 and len(raw_results) <= 100:
+                lines = []
+                for row in raw_results:
+                    # Try to find a label or the last part of an IRI
+                    label = row.get("label")
+                    if not label:
+                        for k, v in row.items():
+                            if k != "label" and isinstance(v, str):
+                                val = v.split("#")[-1].split("/")[-1]
+                                label = val
+                                break
+                    lines.append(f"- {label or 'Unknown'}")
+                answer = "Here are the results:\n" + "\n".join(lines)
+                return {"answer": answer, "options": []}
+            else:
+                answer = svc.answer_from_sparql_results(last_user, str(raw_results), history=history)
+                return {"answer": answer, "options": []}
 
         except Exception as query_err:
             print(f"[ERROR] Dynamic SPARQL pipeline failed: {query_err}")
@@ -265,4 +391,6 @@ def chat(req: ChatReq):
             }
 
     except Exception as e:
+        print(f"[ERROR] Chat failure: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+

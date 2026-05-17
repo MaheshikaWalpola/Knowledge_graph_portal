@@ -164,7 +164,7 @@ export default function AIAssistance({ onOpenAuth }) {
       const res = await axios.post(
         `${API}/assistant/chat`,
         { messages: nextMessages },
-        { headers: { "Content-Type": "application/json" } }
+        authHeaders(token)
       );
 
       const answer    = res.data?.answer ?? "No answer returned.";

@@ -1,15 +1,15 @@
 from typing import Optional, List, Dict, Tuple
 from services.graphdb_service import _exec_select, find_graphs_by_name, BASE_SCHEMA_GRAPH, PREFIXES
 
-def get_ontology_schema(graph_name: Optional[str] = None) -> Tuple[str, List[str]]:
+def get_ontology_schema(graph_name: Optional[str] = None, explicit_target_graphs: Optional[List[str]] = None) -> Tuple[str, List[str]]:
     """
     Fetches the schema (classes, properties, domains, ranges) from the specified graph,
     or the base schema graph if no graph is provided/matched.
     Returns a formatted string suitable for the LLM context.
     """
-    target_graphs = []
+    target_graphs = explicit_target_graphs or []
     
-    if graph_name:
+    if not target_graphs and graph_name:
         target_graphs = find_graphs_by_name(graph_name)
     
     if not target_graphs:
