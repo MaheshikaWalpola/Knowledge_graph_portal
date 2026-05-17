@@ -331,6 +331,25 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
                 }
                 
             if sparql_query and intent_type == "get_numeric_stat":
+                if stat == "plot":
+                    chart_data = []
+                    for i, r in enumerate(raw_results):
+                        if "value" in r:
+                            try:
+                                v = float(r["value"])
+                                lbl = r.get("label", f"Instance {i+1}")
+                                chart_data.append({"name": lbl, "value": v})
+                            except:
+                                pass
+                    if not chart_data:
+                        return {"answer": f"I found the '{entity_term}' class, but no numeric instance values were found to plot.", "options": []}
+                        
+                    return {
+                        "answer": f"Here is the chart of {entity_term} values from {graph_name} instances:",
+                        "options": [],
+                        "chart_data": chart_data
+                    }
+                    
                 row = raw_results[0]
                 count = int(row.get("count", "0"))
                 print(f"[DEBUG] count of numeric values: {count}")

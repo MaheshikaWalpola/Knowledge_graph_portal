@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import "./AIAssistance.css";
 
 const API = import.meta.env.VITE_API_URL;
@@ -168,7 +169,8 @@ export default function AIAssistance({ onOpenAuth }) {
       );
 
       const answer    = res.data?.answer ?? "No answer returned.";
-      const finalMsgs = [...nextMessages, { role: "assistant", content: answer }];
+      const chartData = res.data?.chart_data;
+      const finalMsgs = [...nextMessages, { role: "assistant", content: answer, chart_data: chartData }];
       updateCurrentChat(finalMsgs);
 
       // Persist to MongoDB after the full exchange
@@ -370,6 +372,19 @@ export default function AIAssistance({ onOpenAuth }) {
                 <div key={i} className={`chat-row ${m.role}`}>
                   <div className="bubble">
                     <div className="bubble-content">{m.content}</div>
+                    {m.chart_data && m.chart_data.length > 0 && (
+                      <div className="chart-container" style={{ width: "100%", height: 300, marginTop: 16 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={m.chart_data}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                            <XAxis dataKey="name" tick={{fill: '#888', fontSize: 12}} />
+                            <YAxis tick={{fill: '#888', fontSize: 12}} />
+                            <Tooltip contentStyle={{backgroundColor: '#2a2a35', border: 'none', borderRadius: '8px', color: '#fff'}} itemStyle={{color: '#fff'}} />
+                            <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

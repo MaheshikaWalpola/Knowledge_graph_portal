@@ -1537,6 +1537,21 @@ def build_safe_sparql_query(intent: str, target_graphs: List[str], entity_iri: O
         schema_graph = target_graphs[0] if target_graphs else ""
         instance_graph = target_graphs[1] if len(target_graphs) > 1 else schema_graph
         stat_lower = stat.lower() if stat else "all"
+        
+        if stat_lower == "plot":
+            return PREFIXES + f"""
+            SELECT ?label ?value WHERE {{
+              GRAPH <{schema_graph}> {{
+                ?class rdfs:subClassOf* <{entity_iri}> .
+              }}
+              GRAPH <{instance_graph}> {{
+                ?s rdf:type ?class .
+                ?s cmpo:hasNumericValue ?value .
+                OPTIONAL {{ ?s rdfs:label ?label }}
+              }}
+            }} LIMIT 100
+            """
+            
         stat_select = ""
         if stat_lower == "max":
             stat_select = "(MAX(xsd:float(?value)) AS ?max)"
