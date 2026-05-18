@@ -510,7 +510,7 @@ def ctrl_upload_schema(
         ctrl_delete_user_schema(user_email, update_schema_id)
         schema_id = update_schema_id
     else:
-        schema_id = "upload_" + name.replace(" ", "_")[:20] + "_" + str(hash(user_email))[:6]
+        schema_id = name.replace(" ", "_")[:20] + "_" + str(hash(user_email))[:6]
 
     graph_iri = user_schema_graph(user_email, schema_id)
     instance_graph_iri = user_schema_instance_graph(user_email, schema_id)

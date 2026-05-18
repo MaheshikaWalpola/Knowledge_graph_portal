@@ -21,7 +21,7 @@ def strip_markdown(text: str) -> str:
 
 
 class LocalLLMService:
-    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False) -> str:
+    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7) -> str:
         """Call Kiste API (OpenAI-compatible)"""
         if not KISTE_API_KEY:
             return "Error: KISTE_API_KEY environment variable not set."
@@ -29,7 +29,7 @@ class LocalLLMService:
         data = {
             "model": MODEL_NAME,
             "messages": messages,
-            "temperature": 0.7,
+            "temperature": temperature,
         }
         if json_mode:
             data["response_format"] = {"type": "json_object"}
@@ -50,7 +50,7 @@ class LocalLLMService:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
             
-            with urllib.request.urlopen(req, context=ssl_context) as response:
+            with urllib.request.urlopen(req, context=ssl_context, timeout=120) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 return result.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:
@@ -100,26 +100,89 @@ class LocalLLMService:
         ans = self._call_kiste(messages)
         return strip_markdown(ans)
 
+    def generate_sparql(self, user_text: str, schema_context: str) -> str:
+        """
+        Generates a valid SPARQL SELECT query based on the user's question and the provided schema.
+        """
+        system = (
+            "You are a SPARQL query generator for a Knowledge Graph Portal.\n"
+            "You must generate ONLY a valid SPARQL SELECT query. Do not include markdown code blocks, do not include any explanations.\n"
+            "WARNING: You are ONLY allowed to generate SELECT queries. DO NOT use INSERT, DELETE, DROP, CLEAR, LOAD, CREATE, MOVE, COPY, ADD.\n"
+            "IMPORTANT: The schema context includes the Graph IRI (e.g. '--- Schema Context for Graph: <IRI> ---'). You MUST wrap your WHERE patterns inside a GRAPH <IRI> { ... } block for the corresponding graph. Reject queries that use a different graph.\n"
+            "CRITICAL: Do NOT hardcode full IRIs (e.g. <https://...>) for classes or properties unless you are absolutely certain of them from the schema context. Instead, use variables and robust string matching. "
+            "For example, if the user asks for subclasses of 'Velocity', do THIS:\n"
+            "  ?subclass rdfs:subClassOf ?parent .\n"
+            "  FILTER(CONTAINS(LCASE(STR(?parent)), 'velocity'))\n"
+            "If the user asks for 'instances of X', do THIS:\n"
+            "  ?s rdf:type ?type .\n"
+            "  FILTER(CONTAINS(LCASE(STR(?type)), 'x'))\n"
+            "Ensure you use PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> and PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> if needed.\n"
+            "ALWAYS include a LIMIT (e.g. LIMIT 100).\n"
+            "\nSCHEMA CONTEXT:\n"
+            f"{schema_context}"
+        )
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_text}
+        ]
+        
+        ans = self._call_kiste(messages, temperature=0.1)
+        # Strip markdown if the LLM still wrapped it
+        ans = re.sub(r"^```[a-zA-Z]*\n", "", ans)
+        ans = re.sub(r"```$", "", ans.strip())
+        return ans.strip()
+
+    def answer_from_sparql_results(self, user_text: str, results: str, history: List[Dict[str, str]] = None) -> str:
+        """
+        Takes raw JSON/Dictionary results from GraphDB and formulates a natural language answer.
+        """
+        system = (
+            "You are a helpful Knowledge Graph assistant.\n"
+            "You are provided with the raw JSON-like results of a SPARQL query that was executed to answer the user's question.\n"
+            "Formulate a clear, concise, natural language response based ONLY on these results.\n"
+            "If the results are empty or say 'None found', explicitly state that the information was not found in the graph.\n"
+            "Return plain text only. Do NOT use Markdown formatting."
+        )
+        user = f"QUESTION:\n{user_text}\n\nQUERY RESULTS:\n{results}"
+        
+        messages = [{"role": "system", "content": system}]
+        if history:
+            messages.extend(history[:-1])
+        messages.append({"role": "user", "content": user})
+        
+        ans = self._call_kiste(messages, temperature=0.2)
+        return strip_markdown(ans)
+
     def analyze_intent_and_clarify(self, user_text: str, history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         """
-        Analyzes the user's intent to check if it's clear or requires clarification.
+        Analyzes the user's intent to extract structured semantic meaning.
         """
         system = (
             "You are an intent analyzer for a Knowledge Graph Portal. "
-            "The user asks questions about ontology schemas, classes, instances, and properties. "
             "Analyze the user's latest query along with any provided history. "
-            "IMPORTANT: If the user explicitly mentions a specific entity (e.g. 'Pressure', 'Sensor') or context (e.g. 'in CMP data ontology'), the query IS CLEAR and you MUST set is_clear to true. "
-            "ONLY if the query is extremely vague (e.g., 'what are the classes?' with no other context), you may ask a clarifying question and provide 2-4 reasonable 'options'. "
-            "Output EXACTLY a JSON object with this schema: "
-            "{\"is_clear\": bool, \"clarification_message\": string, \"options\": [string, string], \"entity_term\": string, \"graph_name\": string, \"requires_graphdb\": bool} "
-            "If the query is clear, set is_clear to true, clarification_message to \"\", and options to []. "
-            "Also, if the query is clear, extract the main entity, class, or instance name the user is asking about into 'entity_term' (e.g. 'Pressure', 'Sensor', etc). "
-            "If the user specifies an ontology name or graph context (e.g., 'in CMP data ontology', 'for CMP data'), extract the name ('CMP data') into 'graph_name'. If not specified, set it to \"\". "
-            "Set 'requires_graphdb' to TRUE only when the user asks about SPECIFIC classes, entities, instances, or properties inside their uploaded ontology data (e.g. 'What are the subclasses of Pressure in CMP data?', 'List the instances of Sensor'). "
-            "Set 'requires_graphdb' to FALSE for: "
-            "(1) General conceptual questions answerable from common knowledge: 'What is a KG?', 'What is an ontology?', 'What is RDF?', 'What is SPARQL?', 'What is OWL?', 'What is a triple?'. "
-            "(2) Greetings or casual conversation. "
-            "IMPORTANT: Questions that name a SPECIFIC entity or ontology (e.g. 'Pressure', 'Velocity', 'CMP data ontology') are ALWAYS requires_graphdb=true. "
+            "Output EXACTLY a JSON object with this schema:\n"
+            "{\n"
+            "  \"requires_graphdb\": boolean,\n"
+            "  \"ontology_name\": string,\n"
+            "  \"data_scope\": string,\n"
+            "  \"intent\": string,\n"
+            "  \"stat\": string,\n"
+            "  \"entity\": string,\n"
+            "  \"property\": string,\n"
+            "  \"needs_clarification\": boolean,\n"
+            "  \"clarification_message\": string\n"
+            "}\n\n"
+            "Guidelines:\n"
+            "- 'requires_graphdb' is TRUE unless the question is purely conceptual (e.g., 'What is a KG?').\n"
+            "- 'ontology_name' is extracted if the user mentions 'in CMP data', 'for XYZ ontology', etc.\n"
+            "- 'data_scope' MUST be 'instances' if asking for instance values, stats, or individuals. Otherwise 'schema'.\n"
+            "- 'intent' MUST be one of: 'get_all_classes', 'get_subclasses', 'get_superclasses', 'get_properties', 'get_object_properties', 'get_datatype_properties', 'get_instances', 'get_domain_range', 'get_numeric_stat', or 'complex_query'.\n"
+            "- If the query asks for 'maximum value of X', 'max value of X', 'minimum value of X', 'average value of X', 'mean value of X', 'count of X', 'numeric stats of X', or to 'plot', 'graph', 'chart', 'visualize' X, then intent MUST be 'get_numeric_stat'.\n"
+            "- 'stat' MUST be one of: 'max', 'min', 'avg', 'count', 'plot', 'all' if intent is 'get_numeric_stat'. Otherwise empty string. Use 'plot' if they ask for a graph/chart/visualization.\n"
+            "- 'entity' is the main class or instance asked about (e.g. 'Velocity', 'Head speed', 'Pressure').\n"
+            "- 'property' is a specific property if requested.\n"
+            "- 'needs_clarification' is TRUE only if the request is highly ambiguous.\n"
+            "- 'clarification_message' explains what is needed if needs_clarification is true.\n"
             "IMPORTANT: ONLY output valid JSON. Nothing else."
         )
 
@@ -129,9 +192,19 @@ class LocalLLMService:
         else:
             messages.append({"role": "user", "content": user_text})
 
-        ans = self._call_kiste(messages, json_mode=True)
+        ans = self._call_kiste(messages, json_mode=True, temperature=0.1)
         try:
             return json.loads(ans)
         except json.JSONDecodeError:
             # Fallback if the LLM didn't return valid JSON
-            return {"is_clear": True, "clarification_message": "", "options": [], "entity_term": user_text, "graph_name": "", "requires_graphdb": True}
+            return {
+                "requires_graphdb": True,
+                "ontology_name": "",
+                "data_scope": "schema",
+                "intent": "complex_query",
+                "stat": "",
+                "entity": user_text,
+                "property": "",
+                "needs_clarification": False,
+                "clarification_message": ""
+            }
