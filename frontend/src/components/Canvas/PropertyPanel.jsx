@@ -68,11 +68,141 @@ function buildTTL(model) {
 }
 
 //  Element Tab ─
-function ElementTab({ selected, model }) {
+function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAuth }) {
+  // Save-to-workspace state (lives here so it appears at bottom of Element tab)
+  const [saveName, setSaveName] = useState(originalName || "");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [showSaveTechnical, setShowSaveTechnical] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState("");
+
+  useEffect(() => {
+    if (originalName) setSaveName(originalName);
+  }, [originalName]);
+
+  const hasContent = model && ((model.nodes?.length || 0) > 0);
+
+  const isUpdate = !!(
+    originalSchemaId &&
+    originalName &&
+    saveName.trim().toLowerCase() === originalName.trim().toLowerCase()
+  );
+
+  const handleSaveToWorkspace = async () => {
+    setSaveError(null);
+    setShowSaveTechnical(false);
+    setSaveSuccess("");
+    if (!saveName.trim()) {
+      setSaveError({ summary: "Please provide a name for the ontology.", technical: "" });
+      return;
+    }
+    const token = localStorage.getItem("token");
+    if (!token) {
+      if (onOpenAuth) onOpenAuth();
+      else setSaveError({ summary: "You must be logged in to save.", technical: "" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const ttlContent = buildTTL(model);
+      const blob = new Blob([ttlContent], { type: "text/turtle" });
+      const file = new File([blob], `${saveName.trim().replace(/\s+/g, "_")}.ttl`, { type: "text/turtle" });
+      const form = new FormData();
+      form.append("name", saveName.trim());
+      form.append("mode", "combined");
+      form.append("schema_file", file);
+      if (isUpdate) form.append("update_schema_id", originalSchemaId);
+      const resp = await fetch(`${API}/workspace/schema/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      if (!resp.ok) {
+        const detail = await resp.json().catch(() => ({}));
+        const d = detail.detail;
+        if (d && typeof d === "object" && d.summary) throw { summary: d.summary, technical: d.technical || "" };
+        throw { summary: (typeof d === "string" ? d : null) || "Save failed", technical: "" };
+      }
+      setSaveSuccess(`"${saveName.trim()}" ${isUpdate ? "updated in" : "saved to"} your workspace!`);
+      if (!isUpdate) setSaveName("");
+      setTimeout(() => setSaveSuccess(""), 3000);
+    } catch (err) {
+      setSaveError(err.summary ? err : { summary: err.message || "Save failed", technical: "" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const SaveErrorBlock = () => saveError ? (
+    <div className="pp-error">
+      <div className="pp-error-summary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span>{saveError.summary}</span>
+      </div>
+      {saveError.technical && (
+        <>
+          <button type="button" className="pp-error-toggle" onClick={() => setShowSaveTechnical((v) => !v)}>
+            {showSaveTechnical ? "Hide" : "Show"} technical details
+          </button>
+          {showSaveTechnical && <pre className="pp-error-details">{saveError.technical}</pre>}
+        </>
+      )}
+    </div>
+  ) : null;
+
   if (!selected) {
     return (
-      <div className="pp-empty">
-        <p>Select a node or edge on the canvas to view its properties.</p>
+      <div>
+        <div className="pp-empty">
+          <p>Select a node or edge on the canvas to view its properties.</p>
+        </div>
+        {/* Save to Workspace — always visible at bottom */}
+        <div className="pp-io-section pp-save-section">
+          <h4>{isUpdate ? "Update Ontology" : "Save to Workspace"}</h4>
+          <p className="pp-io-desc">
+            {isUpdate
+              ? "Overwrite existing graph instances and update metadata."
+              : "Save the current canvas ontology to GraphDB & your workspace."}
+          </p>
+          <div className="pp-field">
+            <label>Ontology Name</label>
+            <input
+              type="text"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              placeholder="e.g., My Custom Ontology"
+            />
+          </div>
+          <button className="pp-btn primary" onClick={handleSaveToWorkspace} type="button" disabled={saving || !hasContent}>
+            {saving ? (
+              <><span className="pp-spinner" />Saving...</>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
+                </svg>
+                {isUpdate ? "Update" : "Save"}
+              </>
+            )}
+          </button>
+          {!hasContent && <p className="pp-io-hint">Add nodes to the canvas to enable saving.</p>}
+          <SaveErrorBlock />
+          {saveSuccess && (
+            <div className="pp-success">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              {saveSuccess}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -80,7 +210,7 @@ function ElementTab({ selected, model }) {
   if (selected.kind === "node") {
     const liveNode = model?.nodes?.find((n) => n.id === selected.id) || selected;
     const data = liveNode.data || {};
-    
+
     let nodeTypeDisplay = "Unknown Node";
     if (selected.type === "classNode") nodeTypeDisplay = "Class";
     if (selected.type === "instanceNode") nodeTypeDisplay = "Instance";
@@ -90,45 +220,91 @@ function ElementTab({ selected, model }) {
     }
 
     return (
-      <div className="pp-fields">
-        <div className="pp-field">
-          <label>Label</label>
-          <input
-            type="text"
-            value={data.label || ""}
-            onChange={(e) => selected.setLabel?.(e.target.value)}
-          />
+      <div>
+        <div className="pp-fields">
+          <div className="pp-field">
+            <label>Label</label>
+            <input
+              type="text"
+              value={data.label || ""}
+              onChange={(e) => selected.setLabel?.(e.target.value)}
+            />
+          </div>
+          <div className="pp-field">
+            <label>Element Type</label>
+            <input
+              type="text"
+              value={nodeTypeDisplay}
+              disabled
+              style={{ backgroundColor: "#f8fafc", color: "#64748b", cursor: "not-allowed" }}
+            />
+          </div>
+          <div className="pp-field">
+            <label>IRI</label>
+            <input
+              type="text"
+              value={data.iri || ""}
+              onChange={(e) => selected.setIri?.(e.target.value)}
+              placeholder="e.g. http://example.org/MyClass"
+            />
+          </div>
+          <div className="pp-field">
+            <label>Description</label>
+            <textarea
+              value={data.description || ""}
+              onChange={(e) => selected.setDescription?.(e.target.value)}
+              rows={3}
+              placeholder="Optional description..."
+            />
+          </div>
+          <div className="pp-info">
+            <span className="pp-badge">{selected.type}</span>
+            <span className="pp-id">ID: {selected.id}</span>
+          </div>
         </div>
-        <div className="pp-field">
-          <label>Element Type</label>
-          <input
-            type="text"
-            value={nodeTypeDisplay}
-            disabled
-            style={{ backgroundColor: "#f8fafc", color: "#64748b", cursor: "not-allowed" }}
-          />
-        </div>
-        <div className="pp-field">
-          <label>IRI</label>
-          <input
-            type="text"
-            value={data.iri || ""}
-            onChange={(e) => selected.setIri?.(e.target.value)}
-            placeholder="e.g. http://example.org/MyClass"
-          />
-        </div>
-        <div className="pp-field">
-          <label>Description</label>
-          <textarea
-            value={data.description || ""}
-            onChange={(e) => selected.setDescription?.(e.target.value)}
-            rows={3}
-            placeholder="Optional description..."
-          />
-        </div>
-        <div className="pp-info">
-          <span className="pp-badge">{selected.type}</span>
-          <span className="pp-id">ID: {selected.id}</span>
+
+        {/* Save to Workspace — always visible at bottom */}
+        <div className="pp-io-section pp-save-section">
+          <h4>{isUpdate ? "Update Ontology" : "Save to Workspace"}</h4>
+          <p className="pp-io-desc">
+            {isUpdate
+              ? "Overwrite existing graph instances and update metadata."
+              : "Save the current canvas ontology to GraphDB & your workspace."}
+          </p>
+          <div className="pp-field">
+            <label>Ontology Name</label>
+            <input
+              type="text"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              placeholder="e.g., My Custom Ontology"
+            />
+          </div>
+          <button className="pp-btn primary" onClick={handleSaveToWorkspace} type="button" disabled={saving || !hasContent}>
+            {saving ? (
+              <><span className="pp-spinner" />Saving...</>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
+                </svg>
+                {isUpdate ? "Update" : "Save"}
+              </>
+            )}
+          </button>
+          {!hasContent && <p className="pp-io-hint">Add nodes to the canvas to enable saving.</p>}
+          <SaveErrorBlock />
+          {saveSuccess && (
+            <div className="pp-success">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              {saveSuccess}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -136,25 +312,71 @@ function ElementTab({ selected, model }) {
 
   if (selected.kind === "edge") {
     const liveEdge = model?.edges?.find((e) => e.id === selected.id) || selected;
-    
+
     return (
-      <div className="pp-fields">
-        <div className="pp-field">
-          <label>Relationship Type</label>
-          <select
-            value={liveEdge.data?.edgeType || "subClassOf"}
-            onChange={(e) => selected.setEdgeType?.(e.target.value)}
-          >
-            {EDGE_TYPE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+      <div>
+        <div className="pp-fields">
+          <div className="pp-field">
+            <label>Relationship Type</label>
+            <select
+              value={liveEdge.data?.edgeType || "subClassOf"}
+              onChange={(e) => selected.setEdgeType?.(e.target.value)}
+            >
+              {EDGE_TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="pp-info">
+            <span className="pp-badge">Edge</span>
+            <span className="pp-id">ID: {selected.id}</span>
+          </div>
         </div>
-        <div className="pp-info">
-          <span className="pp-badge">Edge</span>
-          <span className="pp-id">ID: {selected.id}</span>
+
+        {/* Save to Workspace — always visible at bottom */}
+        <div className="pp-io-section pp-save-section">
+          <h4>{isUpdate ? "Update Ontology" : "Save to Workspace"}</h4>
+          <p className="pp-io-desc">
+            {isUpdate
+              ? "Overwrite existing graph instances and update metadata."
+              : "Save the current canvas ontology to GraphDB & your workspace."}
+          </p>
+          <div className="pp-field">
+            <label>Ontology Name</label>
+            <input
+              type="text"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              placeholder="e.g., My Custom Ontology"
+            />
+          </div>
+          <button className="pp-btn primary" onClick={handleSaveToWorkspace} type="button" disabled={saving || !hasContent}>
+            {saving ? (
+              <><span className="pp-spinner" />Saving...</>
+            ) : (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
+                </svg>
+                {isUpdate ? "Update" : "Save"}
+              </>
+            )}
+          </button>
+          {!hasContent && <p className="pp-io-hint">Add nodes to the canvas to enable saving.</p>}
+          <SaveErrorBlock />
+          {saveSuccess && (
+            <div className="pp-success">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              {saveSuccess}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -380,65 +602,6 @@ function ImportExportTab({ model, onImport, originalSchemaId, originalName, onOp
         )}
       </div>
 
-      {/*  Save to Workspace  */}
-      <div className="pp-io-section pp-save-section">
-        <h4>
-          {isUpdate ? "Update Ontology" : "Save to Workspace"}
-        </h4>
-        <p className="pp-io-desc">
-          {isUpdate 
-            ? "Overwrite existing graph instances and update metadata."
-            : "Save the current canvas ontology to GraphDB & your workspace."}
-        </p>
-        <div className="pp-field">
-          <label>Ontology Name</label>
-          <input
-            type="text"
-            value={saveName}
-            onChange={(e) => setSaveName(e.target.value)}
-            placeholder="e.g., My Custom Ontology"
-          />
-        </div>
-        
-        <button
-          className="pp-btn primary"
-          onClick={handleSaveToWorkspace}
-          type="button"
-          disabled={saving || !hasContent}
-        >
-          {saving ? (
-            <>
-              <span className="pp-spinner" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                <polyline points="17 21 17 13 7 13 7 21" />
-                <polyline points="7 3 7 8 15 8" />
-              </svg>
-              {isUpdate ? "Update" : "Save"}
-            </>
-          )}
-        </button>
-        {!hasContent && (
-          <p className="pp-io-hint">Add nodes to the canvas to enable saving.</p>
-        )}
-        {saveError && (
-          <ErrorBlock error={saveError} showDetails={showSaveTechnical} setShowDetails={setShowSaveTechnical} />
-        )}
-        {saveSuccess && (
-          <div className="pp-success">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            {saveSuccess}
-          </div>
-        )}
-      </div>
-
       {/*  Export  */}
       <div className="pp-io-section">
         <h4>Export as Turtle</h4>
@@ -464,6 +627,8 @@ function ImportExportTab({ model, onImport, originalSchemaId, originalName, onOp
           Export .ttl
         </button>
       </div>
+
+
     </div>
   );
 }
@@ -491,7 +656,15 @@ export default function PropertyPanel({ selected, model, onImport, originalSchem
       </div>
 
       <div className="pp-body">
-        {tab === "element" && <ElementTab selected={selected} model={model} />}
+        {tab === "element" && (
+          <ElementTab
+            selected={selected}
+            model={model}
+            originalSchemaId={originalSchemaId}
+            originalName={originalName}
+            onOpenAuth={onOpenAuth}
+          />
+        )}
         {tab === "io" && (
           <ImportExportTab
             model={model}
