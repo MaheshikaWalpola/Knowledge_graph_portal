@@ -189,16 +189,7 @@ export default function SimpleChart({
         ctx.fillText(title, padding.left, 18);
       }
 
-      // Stats in header
-      const avg = data.reduce((a, b) => a + b, 0) / data.length;
-      ctx.fillStyle = "#64748b";
-      ctx.font = "11px Inter, system-ui, sans-serif";
-      ctx.textAlign = "right";
-      ctx.fillText(
-        `Avg: ${avg.toFixed(2)} | Min: ${minVal.toFixed(2)} | Max: ${maxVal.toFixed(2)}`,
-        w - padding.right,
-        18,
-      );
+
 
       // Draw vertical line and value label for highlighted point
       if (highlightIndex >= 0 && highlightIndex < data.length) {
