@@ -156,6 +156,15 @@ html.ce-header-hidden .canvas-editor {
   cursor: not-allowed;
 }
 
+/* Ensure MUI icon SVGs inherit the button color correctly */
+.ce-dock-btn svg,
+.ce-dock-btn .MuiSvgIcon-root {
+  display: block;
+  color: inherit;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
 .ce-dock-divider {
   width: 1px;
   height: 20px;
