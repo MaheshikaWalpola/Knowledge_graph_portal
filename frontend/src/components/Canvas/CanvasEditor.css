@@ -1253,3 +1253,106 @@ html.ce-header-hidden .canvas-editor {
 .ce-modal-confirm:active {
   transform: translateY(0);
 }
+
+/* Search Toolbar Styles */
+.ce-dock-search-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  background: var(--ce-surface-soft, #f8fafc);
+  border: 1px solid var(--ce-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 0 8px;
+  height: 34px;
+  width: 160px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  animation: expandSearch 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes expandSearch {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 160px;
+    opacity: 1;
+  }
+}
+
+.ce-dock-search-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--ce-text, #0f172a);
+  font-size: 12px;
+  padding: 0;
+  outline: none;
+}
+
+.ce-dock-search-input::placeholder {
+  color: var(--ce-text-muted, #94a3b8);
+}
+
+.ce-dock-search-clear {
+  border: none;
+  background: transparent;
+  color: var(--ce-text-muted, #94a3b8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 50%;
+  margin-left: 4px;
+  transition: all 0.12s ease;
+}
+
+.ce-dock-search-clear:hover {
+  background: rgba(15, 23, 42, 0.08);
+  color: var(--ce-text, #0f172a);
+}
+
+/* Error Shake Animation */
+@keyframes shake-and-red {
+  0%, 100% {
+    transform: translateX(0);
+    border-color: var(--ce-border, #cbd5e1);
+  }
+  20%, 60% {
+    transform: translateX(-4px);
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+  }
+  40%, 80% {
+    transform: translateX(4px);
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+  }
+}
+
+.ce-dock-search-container.search-error {
+  animation: shake-and-red 0.4s ease-in-out;
+  border-color: #ef4444;
+}
+
+/* Pulse Highlight Animation for Searched Nodes */
+@keyframes pulse-highlight {
+  0% {
+    box-shadow: 0 0 0 0px rgba(37, 99, 235, 0.8), 0 8px 26px rgba(15, 23, 42, 0.16);
+    transform: scale(1);
+  }
+  30% {
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0.4), 0 12px 30px rgba(15, 23, 42, 0.24);
+    transform: scale(1.06);
+  }
+  100% {
+    box-shadow: 0 0 0 0px rgba(37, 99, 235, 0), 0 8px 26px rgba(15, 23, 42, 0.16);
+    transform: scale(1);
+  }
+}
+
+.onto-node.highlight-flash {
+  animation: pulse-highlight 1.5s ease-out 1;
+  z-index: 1000 !important;
+}

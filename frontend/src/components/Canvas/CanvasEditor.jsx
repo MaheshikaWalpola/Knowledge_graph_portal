@@ -18,6 +18,8 @@ import SpaceDashboardIcon from "@mui/icons-material/SpaceDashboard";
 import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import LayersClearIcon from "@mui/icons-material/LayersClear";
+import SearchIcon from "@mui/icons-material/Search";
+import ClearIcon from "@mui/icons-material/Clear";
 
 export default function CanvasEditor({ onOpenAuth }) {
   const [activeEdgeType, setActiveEdgeType] = useState("subClassOf");
@@ -28,6 +30,9 @@ export default function CanvasEditor({ onOpenAuth }) {
   const [headerHidden, setHeaderHidden] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [isLoadingSchema, setIsLoadingSchema] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchError, setSearchError] = useState(false);
 
   const canvasRef = useRef(null);
   const location = useLocation();
@@ -106,6 +111,15 @@ export default function CanvasEditor({ onOpenAuth }) {
     setShowClearConfirm(false);
     navigate("/canvas", { replace: true, state: null });
   }, [navigate]);
+
+  const handleSearch = useCallback(() => {
+    if (!searchQuery.trim()) return;
+    const found = canvasRef.current?.searchAndFocusNode?.(searchQuery.trim());
+    if (!found) {
+      setSearchError(true);
+      setTimeout(() => setSearchError(false), 400);
+    }
+  }, [searchQuery]);
 
   return (
     <div className={`canvas-editor ${!leftOpen ? "left-collapsed" : ""} ${!rightOpen ? "right-collapsed" : ""}`}>
@@ -202,6 +216,44 @@ export default function CanvasEditor({ onOpenAuth }) {
         >
           <LayersClearIcon sx={{ fontSize: 18 }} />
         </button>
+
+        {/* Action: Search */}
+        <button
+          className={`ce-dock-btn action-btn ${showSearch ? "active" : ""}`}
+          title="Search nodes"
+          onClick={() => {
+            setShowSearch((prev) => !prev);
+            setSearchQuery("");
+            setSearchError(false);
+          }}
+        >
+          <SearchIcon sx={{ fontSize: 18 }} />
+        </button>
+
+        {showSearch && (
+          <div className={`ce-dock-search-container ${searchError ? "search-error" : ""}`}>
+            <input
+              type="text"
+              placeholder=" Find element name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSearch();
+              }}
+              autoFocus
+              className="ce-dock-search-input"
+            />
+            {searchQuery && (
+              <button
+                className="ce-dock-search-clear"
+                onClick={() => setSearchQuery("")}
+                title="Clear query"
+              >
+                <ClearIcon sx={{ fontSize: 14 }} />
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="ce-dock-divider" />
 
