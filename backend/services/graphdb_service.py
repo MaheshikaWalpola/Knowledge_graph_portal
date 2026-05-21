@@ -1369,15 +1369,17 @@ def resolve_term_in_graph(term: str, graph_iri: str) -> Optional[str]:
     """
     Resolve a term to an IRI within a specific uploaded graph.
     Matches by local name or rdfs:label (case-insensitive) using fast string operations.
+    Supports exact match first, then fallback to word-order-independent containment match.
     """
+    import re
     t = (term or "").strip().lower()
     if not t:
         return None
         
     t_norm = re.sub(r'[\s_\-]', '', t)
 
-    # First, try to match by label or local name where ?s is a class or property
-    q = f"""
+    # Stage 1: Try exact match on any typed class or property first (to prioritize schema elements)
+    q1 = f"""
     SELECT DISTINCT ?s WHERE {{
       GRAPH <{graph_iri}> {{
         ?s a ?type .
@@ -1398,33 +1400,63 @@ def resolve_term_in_graph(term: str, graph_iri: str) -> Optional[str]:
     }}
     LIMIT 1
     """
-    rows = _exec_select(q)["results"]["bindings"]
-    if rows:
-        return rows[0]["s"]["value"]
+    try:
+        rows1 = _exec_select(q1)["results"]["bindings"]
+        if rows1:
+            return rows1[0]["s"]["value"]
+    except Exception:
+        pass
 
-    # Fallback: check ANY subject by label or local name
+    # Stage 2: Try exact match on ANY subject in the graph (implicit classes/properties/instances)
     q2 = f"""
     SELECT DISTINCT ?s WHERE {{
       GRAPH <{graph_iri}> {{
-        {{
-          ?s <http://www.w3.org/2000/01/rdf-schema#label> ?lbl .
-          FILTER(REPLACE(LCASE(STR(?lbl)), "[\\\\s_\\\\-]", "") = "{t_norm}")
-        }}
-        UNION
-        {{
-          ?s a ?type .
-          FILTER(
-            STRENDS(REPLACE(LCASE(STR(?s)), "[\\\\s_\\\\-]", ""), "/{t_norm}") || 
-            STRENDS(REPLACE(LCASE(STR(?s)), "[\\\\s_\\\\-]", ""), "#{t_norm}")
-          )
-        }}
+        ?s ?p ?o .
+        OPTIONAL {{ ?s <http://www.w3.org/2000/01/rdf-schema#label> ?lbl }}
+        FILTER(
+          (BOUND(?lbl) && REPLACE(LCASE(STR(?lbl)), "[\\\\s_\\\\-]", "") = "{t_norm}") ||
+          STRENDS(REPLACE(LCASE(STR(?s)), "[\\\\s_\\\\-]", ""), "/{t_norm}") || 
+          STRENDS(REPLACE(LCASE(STR(?s)), "[\\\\s_\\\\-]", ""), "#{t_norm}")
+        )
       }}
       FILTER(isIRI(?s))
     }}
     LIMIT 1
     """
-    rows2 = _exec_select(q2)["results"]["bindings"]
-    return rows2[0]["s"]["value"] if rows2 else None
+    try:
+        rows2 = _exec_select(q2)["results"]["bindings"]
+        if rows2:
+            return rows2[0]["s"]["value"]
+    except Exception:
+        pass
+
+    # Stage 3: Word-order-independent containment match
+    words = [w.strip().lower() for w in re.split(r'[\s_\-]+', term) if w.strip()]
+    if words:
+        lbl_filters = " && ".join(f'CONTAINS(LCASE(STR(?lbl)), "{w}")' for w in words)
+        iri_filters = " && ".join(f'CONTAINS(LCASE(STR(?s)), "{w}")' for w in words)
+        q3 = f"""
+        SELECT DISTINCT ?s WHERE {{
+          GRAPH <{graph_iri}> {{
+            ?s ?p ?o .
+            OPTIONAL {{ ?s <http://www.w3.org/2000/01/rdf-schema#label> ?lbl }}
+            FILTER(
+              (BOUND(?lbl) && {lbl_filters}) ||
+              ({iri_filters})
+            )
+          }}
+          FILTER(isIRI(?s))
+        }}
+        LIMIT 1
+        """
+        try:
+            rows3 = _exec_select(q3)["results"]["bindings"]
+            if rows3:
+                return rows3[0]["s"]["value"]
+        except Exception:
+            pass
+
+    return None
 
 def graph_has_triples(graph_iri: str) -> bool:
     """Check if a graph contains any triples."""
