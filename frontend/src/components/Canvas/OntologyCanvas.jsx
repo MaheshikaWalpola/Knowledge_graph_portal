@@ -326,6 +326,78 @@ const CanvasInner = forwardRef(({
           reactFlowInstance.fitView({ padding: 0.1, duration: 600 });
         }
       }, 100);
+    },
+    quickConnect: (sourceId, newNodeType, label, connectionType, propertyType) => {
+      console.log("OntologyCanvas: quickConnect execution started with:", { sourceId, newNodeType, label, connectionType, propertyType });
+      console.log("OntologyCanvas: current nodes in state:", nodes);
+      const sourceNode = nodes.find(n => n.id === sourceId);
+      if (!sourceNode) {
+        console.error(`OntologyCanvas error: sourceNode with ID "${sourceId}" was NOT found in nodes list!`);
+        return;
+      }
+      console.log("OntologyCanvas: found sourceNode:", sourceNode);
+
+      const newId = nextId();
+      const position = {
+        x: sourceNode.position.x + 300,
+        y: sourceNode.position.y
+      };
+
+      const colors = {
+        classNode: "#3b82f6",
+        propertyNode: propertyType === "datatype" ? "#e11d48" : "#f59e0b",
+        instanceNode: "#10b981",
+        literalNode: "#8b5cf6",
+      };
+      const color = colors[newNodeType] || "#3b82f6";
+
+      const newNode = {
+        id: newId,
+        type: newNodeType,
+        position,
+        data: {
+          label: label.trim(),
+          color,
+          propertyType: propertyType || "",
+          iri: "",
+          description: "",
+        },
+      };
+
+      const edgeColor = EDGE_COLORS[connectionType] || EDGE_COLORS.default;
+      const newEdge = {
+        id: `e_${sourceId}_${newId}_${Date.now()}`,
+        source: sourceId,
+        target: newId,
+        type: "default",
+        animated: false,
+        data: { edgeType: connectionType },
+        style: { stroke: edgeColor, strokeWidth: 1 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor },
+      };
+
+      takeSnapshot();
+      
+      setNodes((nds) => 
+        nds.map((n) => ({ ...n, selected: false })).concat({ ...newNode, selected: true })
+      );
+      setEdges((eds) => 
+        eds.map((e) => ({ ...e, selected: false })).concat(newEdge)
+      );
+
+      // Trigger selection change callback upstream
+      onSelectionChangeHandler({ nodes: [newNode], edges: [] });
+
+      // Focus and center on the new node
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          const nodeWidth = 220;
+          const nodeHeight = 100;
+          const centerX = position.x + nodeWidth / 2;
+          const centerY = position.y + nodeHeight / 2;
+          reactFlowInstance.setCenter(centerX, centerY, { zoom: 1.2, duration: 800 });
+        }
+      }, 50);
     }
   }), [nodes, edges, setNodes, setEdges, reactFlowInstance, takeSnapshot, onSelectionChangeHandler]);
 

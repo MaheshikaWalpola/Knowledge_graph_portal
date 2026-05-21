@@ -121,6 +121,19 @@ export default function CanvasEditor({ onOpenAuth }) {
     }
   }, [searchQuery]);
 
+  const handleQuickConnect = useCallback((sourceId, newNodeType, label, connectionType, propertyType) => {
+    console.log("CanvasEditor: handleQuickConnect called with:", { sourceId, newNodeType, label, connectionType, propertyType });
+    if (!canvasRef.current) {
+      console.error("CanvasEditor error: canvasRef.current is null!");
+      return;
+    }
+    if (!canvasRef.current.quickConnect) {
+      console.error("CanvasEditor error: quickConnect function is not defined on canvasRef.current!", canvasRef.current);
+      return;
+    }
+    canvasRef.current.quickConnect(sourceId, newNodeType, label, connectionType, propertyType);
+  }, []);
+
   return (
     <div className={`canvas-editor ${!leftOpen ? "left-collapsed" : ""} ${!rightOpen ? "right-collapsed" : ""}`}>
       {isLoadingSchema && (
@@ -316,6 +329,7 @@ export default function CanvasEditor({ onOpenAuth }) {
             originalSchemaId={new URLSearchParams(location.search).get("schema_id")}
             originalName={location.state?.originalName}
             onOpenAuth={onOpenAuth}
+            onQuickConnect={handleQuickConnect}
           />
         )}
       </aside>

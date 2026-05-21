@@ -7,6 +7,14 @@ const EDGE_TYPE_OPTIONS = [
   { value: "rdfType", label: "rdf:type" },
 ];
 
+const TYPE_LABELS = {
+  classNode: "Class",
+  propertyNode_object: "Object Property",
+  propertyNode_datatype: "Data Property",
+  instanceNode: "Instance",
+  literalNode: "Literal",
+};
+
 const API = import.meta.env.VITE_API_URL;
 
 //  Shared TTL builder 
@@ -68,7 +76,7 @@ function buildTTL(model) {
 }
 
 //  Element Tab ─
-function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAuth }) {
+function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAuth, onQuickConnect }) {
   // Save-to-workspace state (lives here so it appears at bottom of Element tab)
   const [saveName, setSaveName] = useState(originalName || "");
   const [saving, setSaving] = useState(false);
@@ -76,9 +84,49 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
   const [showSaveTechnical, setShowSaveTechnical] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState("");
 
+  // Quick Connect States
+  const [quickNodeType, setQuickNodeType] = useState("classNode");
+  const [quickLabel, setQuickLabel] = useState("Class");
+  const [quickEdgeType, setQuickEdgeType] = useState("subClassOf");
+  const [quickSuccess, setQuickSuccess] = useState("");
+
+  const handleQuickConnectClick = () => {
+    if (!quickLabel.trim()) return;
+
+    let actualType = quickNodeType;
+    let propType = "";
+
+    if (quickNodeType === "propertyNode_object") {
+      actualType = "propertyNode";
+      propType = "object";
+    } else if (quickNodeType === "propertyNode_datatype") {
+      actualType = "propertyNode";
+      propType = "datatype";
+    }
+
+    onQuickConnect?.(selected.id, actualType, quickLabel, quickEdgeType, propType);
+    
+    const friendlyTypeName = TYPE_LABELS[quickNodeType] || "element";
+    setQuickSuccess(`"${quickLabel}" added and connected as ${friendlyTypeName}!`);
+    setQuickLabel(TYPE_LABELS[quickNodeType] || "");
+
+    setTimeout(() => {
+      setQuickSuccess("");
+    }, 3000);
+  };
+
   useEffect(() => {
     setSaveName(originalName || "");
   }, [originalName]);
+
+  useEffect(() => {
+    if (selected?.id) {
+      setQuickNodeType("classNode");
+      setQuickLabel("Class");
+      setQuickEdgeType("subClassOf");
+      setQuickSuccess("");
+    }
+  }, [selected?.id]);
 
   const hasContent = model && ((model.nodes?.length || 0) > 0);
 
@@ -262,6 +310,85 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
             <span className="pp-badge">{selected.type}</span>
             <span className="pp-id">ID: {selected.id}</span>
           </div>
+        </div>
+
+        {/* Quick Add Connection Section */}
+        <div className="pp-io-section pp-quick-connect-section">
+          <h4>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Quick Add & Connect
+          </h4>
+          <p className="pp-io-desc">
+            Instantly create a new element and connect it to this node.
+          </p>
+          
+          <div className="pp-field">
+            <label>New Element Type</label>
+            <select
+              value={quickNodeType}
+              onChange={(e) => {
+                const newType = e.target.value;
+                setQuickNodeType(newType);
+                setQuickLabel(TYPE_LABELS[newType] || "");
+              }}
+            >
+              <option value="classNode">Class</option>
+              <option value="propertyNode_object">Object Property</option>
+              <option value="propertyNode_datatype">Data Property</option>
+              <option value="instanceNode">Instance</option>
+              <option value="literalNode">Literal</option>
+            </select>
+          </div>
+
+          <div className="pp-field">
+            <label>New Element Label</label>
+            <input
+              type="text"
+              value={quickLabel}
+              onChange={(e) => setQuickLabel(e.target.value)}
+              placeholder="e.g., PressureSensor"
+            />
+          </div>
+
+          <div className="pp-field">
+            <label>Connection Type (Relationship)</label>
+            <select
+              value={quickEdgeType}
+              onChange={(e) => setQuickEdgeType(e.target.value)}
+            >
+              <option value="subClassOf">rdfs:subClassOf</option>
+              <option value="domain">rdfs:domain</option>
+              <option value="range">rdfs:range</option>
+              <option value="rdfType">rdf:type</option>
+            </select>
+          </div>
+
+          <button
+            className="pp-btn primary"
+            onClick={handleQuickConnectClick}
+            type="button"
+            disabled={!quickLabel.trim()}
+            style={{ marginTop: "4px" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add & Connect
+          </button>
+
+          {quickSuccess && (
+            <div className="pp-success" style={{ marginTop: "12px" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              {quickSuccess}
+            </div>
+          )}
         </div>
 
         {/* Save to Workspace — always visible at bottom */}
@@ -633,7 +760,7 @@ function ImportExportTab({ model, onImport, originalSchemaId, originalName, onOp
   );
 }
 
-export default function PropertyPanel({ selected, model, onImport, originalSchemaId, originalName, onOpenAuth }) {
+export default function PropertyPanel({ selected, model, onImport, originalSchemaId, originalName, onOpenAuth, onQuickConnect }) {
   const [tab, setTab] = useState("element");
 
   return (
@@ -663,6 +790,7 @@ export default function PropertyPanel({ selected, model, onImport, originalSchem
             originalSchemaId={originalSchemaId}
             originalName={originalName}
             onOpenAuth={onOpenAuth}
+            onQuickConnect={onQuickConnect}
           />
         )}
         {tab === "io" && (

@@ -992,6 +992,24 @@ html.ce-header-hidden .canvas-editor {
   color: var(--ce-accent, #2563eb);
 }
 
+/* Quick Connect Section */
+.pp-quick-connect-section {
+  padding-top: 20px;
+  border-top: 1px solid rgba(229, 231, 235, 0.9);
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.pp-quick-connect-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pp-quick-connect-section h4 svg {
+  color: var(--ce-accent, #2563eb);
+}
+
 /* Filename input row */
 .pp-filename-row {
   display: flex;
