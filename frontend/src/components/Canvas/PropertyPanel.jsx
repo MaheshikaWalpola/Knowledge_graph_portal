@@ -77,12 +77,13 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
   const [saveSuccess, setSaveSuccess] = useState("");
 
   useEffect(() => {
-    if (originalName) setSaveName(originalName);
+    setSaveName(originalName || "");
   }, [originalName]);
 
   const hasContent = model && ((model.nodes?.length || 0) > 0);
 
   const isUpdate = !!(
+    hasContent &&
     originalSchemaId &&
     originalName &&
     saveName.trim().toLowerCase() === originalName.trim().toLowerCase()
@@ -168,6 +169,15 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
               ? "Overwrite existing graph instances and update metadata."
               : "Save the current canvas ontology to GraphDB & your workspace."}
           </p>
+          {saveSuccess && (
+            <div className="pp-success" style={{ marginBottom: "12px" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              {saveSuccess}
+            </div>
+          )}
           <div className="pp-field">
             <label>Ontology Name</label>
             <input
@@ -193,15 +203,6 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
           </button>
           {!hasContent && <p className="pp-io-hint">Add nodes to the canvas to enable saving.</p>}
           <SaveErrorBlock />
-          {saveSuccess && (
-            <div className="pp-success">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-              {saveSuccess}
-            </div>
-          )}
         </div>
       </div>
     );
@@ -271,6 +272,15 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
               ? "Overwrite existing graph instances and update metadata."
               : "Save the current canvas ontology to GraphDB & your workspace."}
           </p>
+          {saveSuccess && (
+            <div className="pp-success" style={{ marginBottom: "12px" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              {saveSuccess}
+            </div>
+          )}
           <div className="pp-field">
             <label>Ontology Name</label>
             <input
@@ -296,15 +306,6 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
           </button>
           {!hasContent && <p className="pp-io-hint">Add nodes to the canvas to enable saving.</p>}
           <SaveErrorBlock />
-          {saveSuccess && (
-            <div className="pp-success">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-              {saveSuccess}
-            </div>
-          )}
         </div>
       </div>
     );
@@ -343,6 +344,15 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
               ? "Overwrite existing graph instances and update metadata."
               : "Save the current canvas ontology to GraphDB & your workspace."}
           </p>
+          {saveSuccess && (
+            <div className="pp-success" style={{ marginBottom: "12px" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              {saveSuccess}
+            </div>
+          )}
           <div className="pp-field">
             <label>Ontology Name</label>
             <input
@@ -368,15 +378,6 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
           </button>
           {!hasContent && <p className="pp-io-hint">Add nodes to the canvas to enable saving.</p>}
           <SaveErrorBlock />
-          {saveSuccess && (
-            <div className="pp-success">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-              {saveSuccess}
-            </div>
-          )}
         </div>
       </div>
     );
@@ -402,15 +403,14 @@ function ImportExportTab({ model, onImport, originalSchemaId, originalName, onOp
   const [saveSuccess, setSaveSuccess] = useState("");
 
   useEffect(() => {
-    if (originalName) {
-      setSaveName(originalName);
-    }
+    setSaveName(originalName || "");
   }, [originalName]);
 
   const hasContent = model && ((model.nodes?.length || 0) > 0);
 
   // Determine if we're updating
   const isUpdate = !!(
+    hasContent &&
     originalSchemaId && 
     originalName && 
     saveName.trim().toLowerCase() === originalName.trim().toLowerCase()

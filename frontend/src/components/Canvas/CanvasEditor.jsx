@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import OntologyPalette from "./OntologyPalette";
 import OntologyCanvas from "./OntologyCanvas";
 import PropertyPanel from "./PropertyPanel";
@@ -31,6 +31,7 @@ export default function CanvasEditor({ onOpenAuth }) {
 
   const canvasRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const API = import.meta.env.VITE_API_URL;
 
@@ -103,7 +104,8 @@ export default function CanvasEditor({ onOpenAuth }) {
     canvasRef.current?.clearCanvas?.();
     setSelected(null);
     setShowClearConfirm(false);
-  }, []);
+    navigate("/canvas", { replace: true, state: null });
+  }, [navigate]);
 
   return (
     <div className={`canvas-editor ${!leftOpen ? "left-collapsed" : ""} ${!rightOpen ? "right-collapsed" : ""}`}>
