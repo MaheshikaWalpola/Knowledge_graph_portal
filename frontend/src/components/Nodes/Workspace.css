@@ -8,13 +8,13 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: var(--space-xl) var(--space-lg);
+  padding: var(--space-xl) var(--space-2xl);
   min-height: calc(100vh - 160px);
 }
 
 /* Main Card */
 .workspace-card {
-  max-width: calc(1400px - 48px);
+  max-width: 1920px;
   width: 100%;
   background: var(--bg-glass-strong);
   backdrop-filter: blur(var(--blur-xl)) saturate(180%);
@@ -1151,4 +1151,58 @@
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* ========================================
+   Graph Legend
+   ======================================== */
+.graph-legend {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-light, #e2e8f0);
+  border-radius: var(--radius-lg, 8px);
+  padding: 12px;
+  max-width: 250px;
+  z-index: 10;
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+}
+
+.legend-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.legend-label {
+  font-size: 11px;
+  color: var(--text-secondary, #475569);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

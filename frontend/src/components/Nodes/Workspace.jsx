@@ -51,6 +51,52 @@ const displayPredicate = (iri) => {
   return pred.symbol ? `${pred.symbol} ${pred.name}` : pred.readable;
 };
 
+const getRelationColor = (relation) => {
+  if (!relation) return "#94a3b8";
+
+  const relStr = String(relation).toLowerCase();
+  const pred = getPredicateDisplay(relation);
+  const orig = pred.original;
+  const key = orig ? orig.toLowerCase() : "";
+
+  if (
+    key === "subclassof" || 
+    key === "subclass" || 
+    relStr.includes("subclassof") || 
+    relStr.includes("subclass")
+  ) {
+    return "#3b82f6"; // Blue
+  }
+  if (
+    key === "type" || 
+    key === "rdf:type" || 
+    key === "typeof" || 
+    key === "typeOf" || 
+    relStr.includes("type") || 
+    relStr.includes("typeof")
+  ) {
+    return "#8b5cf6"; // Purple
+  }
+  if (key === "domain" || relStr.includes("domain")) {
+    return "#14b8a6"; // Teal
+  }
+  if (key === "range" || relStr.includes("range")) {
+    return "#f97316"; // Orange
+  }
+
+  const OTHER_PALETTE = [
+    "#10b981", // Emerald Green
+    "#ef4444", // Red
+    "#06b6d4", // Cyan
+    "#db2777", // Pink/Magenta
+    "#84cc16", // Lime
+    "#ec4899", // Pink
+  ];
+
+  const idx = hashToIndex(key || relation || "", OTHER_PALETTE.length);
+  return OTHER_PALETTE[idx];
+};
+
 const formatFileSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -420,21 +466,53 @@ const Workspace = () => {
   const cyElements = useMemo(() => {
     if (!data) return [];
 
+    // Build a map of node IRIs to their relationship with the center node
+    const nodeRelationMap = new Map();
+    const centerNodeIri = data.node ? getNodeIri(data.node) : "";
+
+    for (const e of data.edges || []) {
+      const source = e.source || e.s || e.from;
+      const target = e.target || e.t || e.to;
+      const relation = e.relation || e.p || e.pred || e.label;
+
+      if (source === centerNodeIri && target !== centerNodeIri) {
+        nodeRelationMap.set(target, relation);
+      } else if (target === centerNodeIri && source !== centerNodeIri) {
+        nodeRelationMap.set(source, relation);
+      } else {
+        if (!nodeRelationMap.has(source)) {
+          nodeRelationMap.set(source, relation);
+        }
+        if (!nodeRelationMap.has(target)) {
+          nodeRelationMap.set(target, relation);
+        }
+      }
+    }
+
     const nodes = new Map();
 
     const pushNode = (id, isCenter = false) => {
       if (!id || nodes.has(id)) return;
       const label = labelMap.get(id) || displayLabel(id);
-      const color = isCenter
-        ? "#2563eb"
-        : PALETTE[hashToIndex(id, PALETTE.length)];
+      
+      let color;
+      if (isCenter) {
+        color = "#eab308"; // Standout yellow for queried node
+      } else {
+        const rel = nodeRelationMap.get(id);
+        if (rel) {
+          color = getRelationColor(rel);
+        } else {
+          color = "#94a3b8"; // Fallback Slate
+        }
+      }
 
       nodes.set(id, {
         data: { id, label, color, isCenter: String(!!isCenter) },
       });
     };
 
-    if (data.node) pushNode(data.node, true);
+    if (centerNodeIri) pushNode(centerNodeIri, true);
 
     if (Array.isArray(data.nodes)) {
       for (const n of data.nodes) {
@@ -517,6 +595,44 @@ const Workspace = () => {
     const found = schemas.find((s) => s.schema_id === activeSchemaId);
     return found ? found.name : activeSchemaId;
   }, [activeSchemaId, schemas]);
+
+  const uniqueRelations = useMemo(() => {
+    if (!data) return [];
+    const list = [];
+
+    // Add center node entry to legend
+    if (data.node) {
+      list.push({
+        label: "Queried Element",
+        color: "#eab308", // Yellow
+      });
+    }
+
+    if (data.edges) {
+      const seen = new Set();
+      for (const e of data.edges) {
+        const relation = e.relation || e.p || e.pred || e.label;
+        if (!relation) continue;
+        const pred = getPredicateDisplay(relation);
+        const displayLabel = pred.symbol ? `${pred.symbol} ${pred.name}` : pred.readable;
+        if (!seen.has(displayLabel)) {
+          seen.add(displayLabel);
+          list.push({
+            label: displayLabel,
+            color: getRelationColor(relation),
+          });
+        }
+      }
+    }
+
+    // Always append fallback Slate to legend for clarity
+    list.push({
+      label: "Fallback (No relationship)",
+      color: "#94a3b8", // Slate
+    });
+
+    return list;
+  }, [data]);
 
   // ---------- render ----------
   if (initStatus === "loading") {
@@ -747,6 +863,7 @@ const Workspace = () => {
                       });
                     }}
                   />
+
                 </div>
               )}
 
@@ -909,7 +1026,7 @@ const Workspace = () => {
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
-                    Single File
+                    Combined File
                   </button>
                   <button
                     type="button"

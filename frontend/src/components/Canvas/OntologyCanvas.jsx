@@ -107,159 +107,6 @@ const CanvasInner = forwardRef(({
     setFuture([]);
   }, [nodes, edges]);
 
-  useImperativeHandle(ref, () => ({
-    importData: (data) => {
-      if (!data || !data.nodes || data.nodes.length === 0) {
-        setNodes([]);
-        setEdges([]);
-        setPast([]);
-        setFuture([]);
-        return;
-      }
-      
-      const strippedEdges = (data.edges || []).map(e => {
-        const { label, labelStyle, labelBgStyle, labelBgPadding, labelBgBorderRadius, ...rest } = e;
-        return rest;
-      });
-
-      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-        data.nodes,
-        strippedEdges,
-        "TB"
-      );
-
-      setNodes(layoutedNodes);
-      setEdges(layoutedEdges);
-      setPast([]);
-      setFuture([]);
-
-      // Auto-fit to view after layout
-      setTimeout(() => {
-        if (reactFlowInstance) {
-          reactFlowInstance.fitView({ padding: 0.1, duration: 600 });
-        }
-      }, 100);
-    },
-    clearCanvas: () => {
-      setNodes([]);
-      setEdges([]);
-      setPast([]);
-      setFuture([]);
-    },
-    selectAll: () => {
-      setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
-      setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));
-    },
-    undo: () => {
-      setPast((p) => {
-        if (p.length === 0) return p;
-        const prev = p[p.length - 1];
-        setFuture((f) => [{ nodes, edges }, ...f]);
-        setNodes(prev.nodes);
-        setEdges(prev.edges);
-        return p.slice(0, -1);
-      });
-    },
-    redo: () => {
-      setFuture((f) => {
-        if (f.length === 0) return f;
-        const next = f[0];
-        setPast((p) => [...p, { nodes, edges }]);
-        setNodes(next.nodes);
-        setEdges(next.edges);
-        return f.slice(1);
-      });
-    },
-    applyLayout: (type) => {
-      takeSnapshot();
-      if (type === "vertical" || type === "horizontal") {
-        const dir = type === "vertical" ? "BT" : "LR";
-        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, dir);
-        setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
-      } else if (type === "grid") {
-        const cols = Math.ceil(Math.sqrt(nodes.length));
-        const newNodes = nodes.map((n, i) => {
-          const x = (i % cols) * 300;
-          const y = Math.floor(i / cols) * 150;
-          return { ...n, position: { x, y } };
-        });
-        setNodes(newNodes);
-      }
-      setTimeout(() => {
-        if (reactFlowInstance) {
-          reactFlowInstance.fitView({ padding: 0.1, duration: 600 });
-        }
-      }, 100);
-    }
-  }), [nodes, edges, setNodes, setEdges, reactFlowInstance, takeSnapshot]);
-
-  // Report model changes upstream
-  React.useEffect(() => {
-    onModelChange?.({ nodes, edges });
-  }, [nodes, edges, onModelChange]);
-
-  const onConnect = useCallback(
-    (params) => {
-      takeSnapshot();
-      const color = EDGE_COLORS[activeEdgeType] || EDGE_COLORS.default;
-      const label = EDGE_LABELS[activeEdgeType] || activeEdgeType;
-
-      const newEdge = {
-        ...params,
-        id: `e_${params.source}_${params.target}_${Date.now()}`,
-        type: "default",
-        animated: false,
-        data: { edgeType: activeEdgeType },
-        style: { stroke: color, strokeWidth: 1 },
-        markerEnd: { type: MarkerType.ArrowClosed, color },
-      };
-
-      setEdges((eds) => addEdge(newEdge, eds));
-    },
-    [activeEdgeType, setEdges, takeSnapshot]
-  );
-
-  const onDragOver = useCallback((event) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const onDrop = useCallback(
-    (event) => {
-      event.preventDefault();
-      const type = event.dataTransfer.getData("application/reactflow");
-      if (!type || !reactFlowInstance) return;
-
-      takeSnapshot();
-
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      const label = event.dataTransfer.getData("node/label") || type;
-      const color = event.dataTransfer.getData("node/color") || "#3b82f6";
-      const propertyType = event.dataTransfer.getData("node/propertyType") || "";
-
-      const newNode = {
-        id: nextId(),
-        type,
-        position,
-        data: {
-          label,
-          color,
-          propertyType,
-          iri: "",
-          description: "",
-        },
-      };
-
-      setNodes((nds) => nds.concat(newNode));
-    },
-    [reactFlowInstance, setNodes, takeSnapshot]
-  );
-
   const onSelectionChangeHandler = useCallback(
     ({ nodes: selNodes, edges: selEdges }) => {
       if (selNodes.length === 1) {
@@ -334,6 +181,293 @@ const CanvasInner = forwardRef(({
     },
     [onSelectionChange, setNodes, setEdges, takeSnapshot]
   );
+
+  useImperativeHandle(ref, () => ({
+    importData: (data) => {
+      if (!data || !data.nodes || data.nodes.length === 0) {
+        setNodes([]);
+        setEdges([]);
+        setPast([]);
+        setFuture([]);
+        return;
+      }
+      
+      const strippedEdges = (data.edges || []).map(e => {
+        const { label, labelStyle, labelBgStyle, labelBgPadding, labelBgBorderRadius, ...rest } = e;
+        return rest;
+      });
+
+      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+        data.nodes,
+        strippedEdges,
+        "TB"
+      );
+
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
+      setPast([]);
+      setFuture([]);
+
+      // Auto-fit to view after layout
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView({ padding: 0.1, duration: 600 });
+        }
+      }, 100);
+    },
+    clearCanvas: () => {
+      setNodes([]);
+      setEdges([]);
+      setPast([]);
+      setFuture([]);
+    },
+    searchAndFocusNode: (label) => {
+      if (!label) return false;
+      const term = label.trim().toLowerCase();
+      // Try to find an exact match (case-insensitive)
+      let matchingNode = nodes.find(n => 
+        n.data?.label?.toLowerCase() === term
+      );
+      // Fallback to substring match if no exact match exists
+      if (!matchingNode) {
+        matchingNode = nodes.find(n => 
+          n.data?.label?.toLowerCase().includes(term)
+        );
+      }
+      if (matchingNode) {
+        // Set matching node as selected and others as unselected
+        setNodes(nds => nds.map(n => {
+          if (n.id === matchingNode.id) {
+            return {
+              ...n,
+              selected: true,
+              className: `${n.className || ""}`.includes("highlight-flash")
+                ? n.className
+                : `${n.className || ""} highlight-flash`.trim()
+            };
+          }
+          return {
+            ...n,
+            selected: false,
+            className: `${n.className || ""}`.replace("highlight-flash", "").trim()
+          };
+        }));
+
+        // Trigger selection change callback upstream
+        onSelectionChangeHandler({ nodes: [matchingNode], edges: [] });
+
+        // Remove highlight-flash class after 2 seconds
+        setTimeout(() => {
+          setNodes(nds => nds.map(n => {
+            if (n.id === matchingNode.id) {
+              return {
+                ...n,
+                className: `${n.className || ""}`.replace("highlight-flash", "").trim()
+              };
+            }
+            return n;
+          }));
+        }, 2000);
+
+        // Center canvas on matched node
+        if (reactFlowInstance) {
+          const nodeWidth = 220;
+          const nodeHeight = 100;
+          const centerX = matchingNode.position.x + nodeWidth / 2;
+          const centerY = matchingNode.position.y + nodeHeight / 2;
+          reactFlowInstance.setCenter(centerX, centerY, { zoom: 1.2, duration: 800 });
+        }
+        return true;
+      }
+      return false;
+    },
+    selectAll: () => {
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+      setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));
+    },
+    undo: () => {
+      setPast((p) => {
+        if (p.length === 0) return p;
+        const prev = p[p.length - 1];
+        setFuture((f) => [{ nodes, edges }, ...f]);
+        setNodes(prev.nodes);
+        setEdges(prev.edges);
+        return p.slice(0, -1);
+      });
+    },
+    redo: () => {
+      setFuture((f) => {
+        if (f.length === 0) return f;
+        const next = f[0];
+        setPast((p) => [...p, { nodes, edges }]);
+        setNodes(next.nodes);
+        setEdges(next.edges);
+        return f.slice(1);
+      });
+    },
+    applyLayout: (type) => {
+      takeSnapshot();
+      if (type === "vertical" || type === "horizontal") {
+        const dir = type === "vertical" ? "BT" : "LR";
+        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges, dir);
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
+      } else if (type === "grid") {
+        const cols = Math.ceil(Math.sqrt(nodes.length));
+        const newNodes = nodes.map((n, i) => {
+          const x = (i % cols) * 300;
+          const y = Math.floor(i / cols) * 150;
+          return { ...n, position: { x, y } };
+        });
+        setNodes(newNodes);
+      }
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView({ padding: 0.1, duration: 600 });
+        }
+      }, 100);
+    },
+    quickConnect: (sourceId, newNodeType, label, connectionType, propertyType) => {
+      console.log("OntologyCanvas: quickConnect execution started with:", { sourceId, newNodeType, label, connectionType, propertyType });
+      console.log("OntologyCanvas: current nodes in state:", nodes);
+      const sourceNode = nodes.find(n => n.id === sourceId);
+      if (!sourceNode) {
+        console.error(`OntologyCanvas error: sourceNode with ID "${sourceId}" was NOT found in nodes list!`);
+        return;
+      }
+      console.log("OntologyCanvas: found sourceNode:", sourceNode);
+
+      const newId = nextId();
+      const position = {
+        x: sourceNode.position.x + 300,
+        y: sourceNode.position.y
+      };
+
+      const colors = {
+        classNode: "#3b82f6",
+        propertyNode: propertyType === "datatype" ? "#e11d48" : "#f59e0b",
+        instanceNode: "#10b981",
+        literalNode: "#8b5cf6",
+      };
+      const color = colors[newNodeType] || "#3b82f6";
+
+      const newNode = {
+        id: newId,
+        type: newNodeType,
+        position,
+        data: {
+          label: label.trim(),
+          color,
+          propertyType: propertyType || "",
+          iri: "",
+          description: "",
+        },
+      };
+
+      const edgeColor = EDGE_COLORS[connectionType] || EDGE_COLORS.default;
+      const newEdge = {
+        id: `e_${sourceId}_${newId}_${Date.now()}`,
+        source: sourceId,
+        target: newId,
+        type: "default",
+        animated: false,
+        data: { edgeType: connectionType },
+        style: { stroke: edgeColor, strokeWidth: 1 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor },
+      };
+
+      takeSnapshot();
+      
+      setNodes((nds) => 
+        nds.map((n) => ({ ...n, selected: false })).concat({ ...newNode, selected: true })
+      );
+      setEdges((eds) => 
+        eds.map((e) => ({ ...e, selected: false })).concat(newEdge)
+      );
+
+      // Trigger selection change callback upstream
+      onSelectionChangeHandler({ nodes: [newNode], edges: [] });
+
+      // Focus and center on the new node
+      setTimeout(() => {
+        if (reactFlowInstance) {
+          const nodeWidth = 220;
+          const nodeHeight = 100;
+          const centerX = position.x + nodeWidth / 2;
+          const centerY = position.y + nodeHeight / 2;
+          reactFlowInstance.setCenter(centerX, centerY, { zoom: 1.2, duration: 800 });
+        }
+      }, 50);
+    }
+  }), [nodes, edges, setNodes, setEdges, reactFlowInstance, takeSnapshot, onSelectionChangeHandler]);
+
+  // Report model changes upstream
+  React.useEffect(() => {
+    onModelChange?.({ nodes, edges });
+  }, [nodes, edges, onModelChange]);
+
+  const onConnect = useCallback(
+    (params) => {
+      takeSnapshot();
+      const color = EDGE_COLORS[activeEdgeType] || EDGE_COLORS.default;
+      const label = EDGE_LABELS[activeEdgeType] || activeEdgeType;
+
+      const newEdge = {
+        ...params,
+        id: `e_${params.source}_${params.target}_${Date.now()}`,
+        type: "default",
+        animated: false,
+        data: { edgeType: activeEdgeType },
+        style: { stroke: color, strokeWidth: 1 },
+        markerEnd: { type: MarkerType.ArrowClosed, color },
+      };
+
+      setEdges((eds) => addEdge(newEdge, eds));
+    },
+    [activeEdgeType, setEdges, takeSnapshot]
+  );
+
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (event) => {
+      event.preventDefault();
+      const type = event.dataTransfer.getData("application/reactflow");
+      if (!type || !reactFlowInstance) return;
+
+      takeSnapshot();
+
+      const position = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      const label = event.dataTransfer.getData("node/label") || type;
+      const color = event.dataTransfer.getData("node/color") || "#3b82f6";
+      const propertyType = event.dataTransfer.getData("node/propertyType") || "";
+
+      const newNode = {
+        id: nextId(),
+        type,
+        position,
+        data: {
+          label,
+          color,
+          propertyType,
+          iri: "",
+          description: "",
+        },
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [reactFlowInstance, setNodes, takeSnapshot]
+  );
+
+
 
   const defaultEdgeOptions = useMemo(
     () => ({

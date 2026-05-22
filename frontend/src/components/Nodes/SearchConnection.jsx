@@ -132,7 +132,7 @@ export default function SearchConnection() {
 
       const label = displayLabel(id);
       const color = isCenter
-        ? "#2563eb"
+        ? "#eab308"
         : PALETTE[hashToIndex(id, PALETTE.length)];
 
       nodes.set(id, {
@@ -200,7 +200,8 @@ export default function SearchConnection() {
           height: 48,
           "font-size": 11,
           "font-weight": 700,
-          "background-color": "#60a5fa",
+          "background-color": "#eab308",
+          color: "#0f172a",
           "border-width": 3,
           "border-color": "#ffffff",
         },

@@ -13,10 +13,9 @@
   box-shadow:
     var(--shadow-lg),
     0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
-  max-width: calc(1400px - 48px);
+  max-width: 1920px;
+  width: calc(100% - (var(--space-2xl) * 2)) !important;
   margin: 0 auto;
-  margin-left: auto;
-  margin-right: auto;
   padding: 4px 8px !important;
   transition: all var(--transition-normal) !important;
 }
@@ -316,7 +315,8 @@
    ======================================== */
 @media screen and (max-width: 910px) {
   .navbar {
-    margin: 0 12px;
+    width: calc(100% - (var(--space-lg) * 2)) !important;
+    margin: 0 auto;
     top: 8px;
     border-radius: var(--radius-xl) !important;
   }

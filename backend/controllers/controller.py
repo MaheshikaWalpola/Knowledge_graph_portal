@@ -278,8 +278,13 @@ def _uploaded_workspace_neighbors(
         node_iri = q
     else:
         node_iri = resolve_term_in_graph(q, graph_iri)
+        if not node_iri and instance_graph_iri:
+            node_iri = resolve_term_in_graph(q, instance_graph_iri)
         if not node_iri:
-            raise HTTPException(404, detail=f"Could not resolve '{q}' in the uploaded schema")
+            raise HTTPException(
+                status_code=404,
+                detail=f"We couldn't find '{q}' in the uploaded ontology. Please check the spelling or try a different term."
+            )
 
     # Schema-only
     if level != "both" or not instance_graph_iri:
