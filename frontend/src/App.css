@@ -22,7 +22,7 @@
 
 /* Global layout container - used for consistent max-width */
 .layout-container {
-  max-width: 1400px;
+  max-width: 1920px;
   width: 100%;
   margin: 0 auto;
   padding: 0 var(--space-xl);
@@ -218,6 +218,12 @@ html {
 /* ========================================
    Responsive Breakpoints
    ======================================== */
+@media (max-width: 1600px) {
+  .layout-container {
+    padding: 0 var(--space-xl);
+  }
+}
+
 @media (max-width: 1200px) {
   .layout-container {
     padding: 0 var(--space-lg);

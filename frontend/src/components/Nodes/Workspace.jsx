@@ -863,24 +863,7 @@ const Workspace = () => {
                       });
                     }}
                   />
-                  {uniqueRelations.length > 0 && (
-                    <div className="graph-legend">
-                      <div className="legend-title">Node Colors</div>
-                      <div className="legend-items">
-                        {uniqueRelations.map((rel, i) => (
-                          <div key={i} className="legend-item-row">
-                            <span
-                              className="legend-color-dot"
-                              style={{ backgroundColor: rel.color }}
-                            />
-                            <span className="legend-label" title={rel.label}>
-                              {rel.label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               )}
 

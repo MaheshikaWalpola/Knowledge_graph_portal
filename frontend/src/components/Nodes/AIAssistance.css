@@ -3,7 +3,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: var(--space-xl) var(--space-lg);
+  padding: var(--space-xl) var(--space-2xl);
   min-height: calc(100vh - 160px);
   background: var(--bg-primary);
   position: relative;
@@ -565,7 +565,7 @@
 
 /* Main Chat Area — mirrors .workspace-card width */
 .ai-main {
-  max-width: calc(1400px - 48px);
+  max-width: 1920px;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -576,7 +576,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: var(--space-xl) var(--space-lg);
+  padding: var(--space-xl) var(--space-2xl);
   min-height: calc(100vh - 160px);
   position: relative;
 }
