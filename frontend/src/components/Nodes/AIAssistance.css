@@ -776,6 +776,24 @@
   gap: var(--space-md);
 }
 
+/* Custom Scrollbar for Chat Body */
+.chat-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-body::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: var(--radius-xl);
+}
+
+.chat-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
 /* Message Row */
 .chat-row {
   display: flex;

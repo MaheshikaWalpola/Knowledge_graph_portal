@@ -32,7 +32,8 @@ export default function AIAssistance({ onOpenAuth }) {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null); // id of chat pending deletion
 
   const renameInputRef = useRef(null);
-  const bottomRef      = useRef(null);
+  const chatBodyRef    = useRef(null);
+  const prevChatIdRef  = useRef(null);
 
   // ── Derived ──
   // Only saved conversations appear in the sidebar (unsaved = new empty chat)
@@ -95,15 +96,27 @@ export default function AIAssistance({ onOpenAuth }) {
     if (renaming) renameInputRef.current?.focus();
   }, [renaming]);
 
-  // ── Scroll — only on new content 
+  // ── Scroll — only on new content or chat changes
   useEffect(() => {
+    const chatBody = chatBodyRef.current;
+    if (!chatBody) return;
+
+    const chatChanged   = currentChatId !== prevChatIdRef.current;
     const msgAdded      = messages.length > prevMsgCountRef.current;
     const typingStarted = loading && !prevLoadingRef.current;
+
     prevMsgCountRef.current = messages.length;
     prevLoadingRef.current  = loading;
-    if (msgAdded || typingStarted)
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length, loading]);
+    prevChatIdRef.current   = currentChatId;
+
+    if (chatChanged) {
+      // Instant scroll to bottom when switching conversations
+      chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "auto" });
+    } else if (msgAdded || typingStarted) {
+      // Smooth scroll for typing indicator or new messages
+      chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: "smooth" });
+    }
+  }, [messages.length, loading, currentChatId]);
 
   // ── Auth gate useEffect ──
   useEffect(() => {
@@ -367,7 +380,7 @@ export default function AIAssistance({ onOpenAuth }) {
 
           {/* Chat shell */}
           <div className="chat-shell">
-            <div className="chat-body">
+            <div ref={chatBodyRef} className="chat-body">
               {messages.map((m, i) => (
                 <div key={i} className={`chat-row ${m.role}`}>
                   <div className="bubble">
@@ -400,8 +413,6 @@ export default function AIAssistance({ onOpenAuth }) {
                   </div>
                 </div>
               )}
-
-              <div ref={bottomRef} />
             </div>
 
             <div className="chat-footer">

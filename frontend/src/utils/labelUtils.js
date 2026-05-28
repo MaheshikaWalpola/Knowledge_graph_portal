@@ -1,5 +1,5 @@
 // ========================================
-// 🏷️ Label Utilities
+// Label Utilities
 // Convert CamelCase to readable format
 // ========================================
 
