@@ -222,6 +222,10 @@ def ctrl_workspace_neighbors(
                     "groupKey": details.get("groupKey"),
                     "summary": details.get("summary"),
                     "values": details.get("values"),
+                    # Forward semantic metadata so the frontend can decide whether
+                    # to render a chart (is_measurement) and label the predicate.
+                    "is_measurement": details.get("is_measurement", True),
+                    "predicate_iri": details.get("predicate_iri"),
                 }
             ],
             "edges": [],
@@ -267,6 +271,10 @@ def _uploaded_workspace_neighbors(
                     "groupKey": details.get("groupKey"),
                     "summary": details.get("summary"),
                     "values": details.get("values"),
+                    # Forward semantic metadata so the frontend can decide whether
+                    # to render a chart (is_measurement) and label the predicate.
+                    "is_measurement": details.get("is_measurement", True),
+                    "predicate_iri": details.get("predicate_iri"),
                 }
             ],
             "edges": [],

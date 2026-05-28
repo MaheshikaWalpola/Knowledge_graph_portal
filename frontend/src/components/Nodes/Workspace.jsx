@@ -6,6 +6,8 @@ import {
   camelToTitleCase,
   getPredicateDisplay,
   getLocalName,
+  getMeasurementValues,
+  strideSample,
 } from "../../utils/labelUtils";
 import SimpleChart from "../Common/SimpleChart";
 
@@ -985,42 +987,74 @@ const Workspace = () => {
                 <div className="workspace-details">
                   <h4>{labelMap.get(selectedNodeIri) || displayLabel(selectedNodeIri)}</h4>
 
-                  {details.values && details.values.length > 0 && (
-                    <>
-                      {(() => {
-                        const vals = details.values
-                          .map(Number)
-                          .filter(Number.isFinite);
+                  {details.values && details.values.length > 0 && (() => {
+                    // Semantic check: only chart values from confirmed measurement predicates.
+                    //
+                    // Priority order for the flag:
+                    //  1. details.is_measurement  — explicit backend flag (now forwarded by controller)
+                    //  2. details.kind === "workspace_group"  — all group nodes passed backend
+                    //     semantic classification before being created, so trust them implicitly
+                    //  3. Client-side heuristic on predicate_iri (NOT on groupKey which is a class IRI)
+                    const isWorkspaceGroup = details.kind === "workspace_group";
+                    const measVals = getMeasurementValues(
+                      details.values,
+                      {
+                        // If backend explicitly says it's a measurement, trust it.
+                        // Also accept workspace group nodes as implicit measurements
+                        // (they were already validated during group creation).
+                        backendFlag: details.is_measurement ?? (isWorkspaceGroup ? true : undefined),
+                        // Use the actual predicate IRI (hasNumericValue or the specific pred)
+                        // — NOT groupKey which is a class IRI and won't match keyword signals.
+                        predicateIri: details.predicate_iri,
+                        label: details.label || labelMap.get(selectedNodeIri),
+                      }
+                    );
 
-                        if (vals.length > 1) {
-                          return (
-                            <SimpleChart
-                              data={vals.slice(0, 100)}
-                              title="Value Distribution"
-                              height={160}
-                            />
-                          );
-                        }
-                        return null;
-                      })()}
+                    if (!measVals) return null;
 
-                      <div className="details-stats">
-                        <div>
-                          <strong>Count:</strong>{" "}
-                          {details.summary?.count || details.values.length}
+                    // Stride-sample so the chart represents the full data range,
+                    // not just the first 100 values (which may all be clustered).
+                    const CHART_POINTS = 150;
+                    const sampleData = strideSample(measVals, CHART_POINTS);
+
+                    // Use summary stats for Y-axis bounds so the scale always
+                    // reflects the true min/max even when showing a sample.
+                    const summaryMin = typeof details.summary?.min === "number"
+                      ? details.summary.min : undefined;
+                    const summaryMax = typeof details.summary?.max === "number"
+                      ? details.summary.max : undefined;
+
+                    return (
+                      <>
+                        {sampleData.length > 1 && (
+                          <SimpleChart
+                            data={sampleData}
+                            title="Value Distribution"
+                            height={160}
+                            yMin={summaryMin}
+                            yMax={summaryMax}
+                          />
+                        )}
+
+                        <div className="details-stats">
+                          <div>
+                            <strong>Count:</strong>{" "}
+                            {details.summary?.count || measVals.length}
+                          </div>
+                          <div>
+                            <strong>Min:</strong> {details.summary?.min ?? "N/A"}
+                          </div>
+                          <div>
+                            <strong>Max:</strong> {details.summary?.max ?? "N/A"}
+                          </div>
+                          <div>
+                            <strong>Avg:</strong> {details.summary?.avg ?? "N/A"}
+                          </div>
                         </div>
-                        <div>
-                          <strong>Min:</strong> {details.summary?.min ?? "N/A"}
-                        </div>
-                        <div>
-                          <strong>Max:</strong> {details.summary?.max ?? "N/A"}
-                        </div>
-                        <div>
-                          <strong>Avg:</strong> {details.summary?.avg ?? "N/A"}
-                        </div>
-                      </div>
-                    </>
-                  )}
+                      </>
+                    );
+                  })()}
+
 
                   {detailsErr && <div className="error-banner">{detailsErr}</div>}
                 </div>

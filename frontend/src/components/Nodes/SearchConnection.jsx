@@ -6,6 +6,8 @@ import {
   camelToTitleCase,
   getPredicateDisplay,
   getLocalName,
+  getMeasurementValues,
+  strideSample,
 } from "../../utils/labelUtils";
 import SimpleChart from "../Common/SimpleChart";
 
@@ -299,20 +301,29 @@ export default function SearchConnection() {
             selectedInstance.values.length > 0 ? (
               <>
                 {(() => {
-                  const vals = selectedInstance.values
-                    .map((x) => Number(x))
-                    .filter((x) => Number.isFinite(x));
+                  // Base instance values always come from cmpo:hasNumericValue
+                  // which is a guaranteed measurement predicate → backendFlag: true.
+                  // For future-proofing, also inspect the instance type label.
+                  const measVals = getMeasurementValues(
+                    selectedInstance.values,
+                    {
+                      backendFlag: selectedInstance.is_measurement ?? true,
+                      predicateIri: selectedInstance.predicate_iri,
+                      label: selectedInstance.type || "",
+                    }
+                  );
 
-                  if (vals.length === 0)
+                  if (!measVals) {
                     return (
                       <div className="empty-state small">
-                        No numeric data available
+                        No measurement data available for charting
                       </div>
                     );
+                  }
 
-                  const min = Math.min(...vals);
-                  const max = Math.max(...vals);
-                  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+                  const min = Math.min(...measVals);
+                  const max = Math.max(...measVals);
+                  const avg = measVals.reduce((a, b) => a + b, 0) / measVals.length;
 
                   return (
                     <>
@@ -332,23 +343,29 @@ export default function SearchConnection() {
                         </div>
                         <div className="stat-card">
                           <span className="stat-label">Count</span>
-                          <span className="stat-value">{vals.length}</span>
+                          <span className="stat-value">{measVals.length}</span>
                         </div>
                       </div>
 
                       {/* Interactive Chart */}
-                      {vals.length > 1 && (
-                        <div className="chart-container">
-                          <SimpleChart
-                            data={vals.slice(0, 150)}
-                            title="Time Series Visualization"
-                            height={220}
-                          />
-                          <p className="chart-hint">
-                            📈 Showing {Math.min(vals.length, 150)} data points
-                          </p>
-                        </div>
-                      )}
+                      {measVals.length > 1 && (() => {
+                        const CHART_POINTS = 150;
+                        const sampleData = strideSample(measVals, CHART_POINTS);
+                        return (
+                          <div className="chart-container">
+                            <SimpleChart
+                              data={sampleData}
+                              title="Time Series Visualization"
+                              height={220}
+                              yMin={min}
+                              yMax={max}
+                            />
+                            <p className="chart-hint">
+                              📈 Showing {Math.min(measVals.length, CHART_POINTS)} data points
+                            </p>
+                          </div>
+                        );
+                      })()}
                     </>
                   );
                 })()}
