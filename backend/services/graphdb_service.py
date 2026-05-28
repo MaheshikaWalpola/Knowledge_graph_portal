@@ -242,6 +242,35 @@ def _filters_for_level(level: Literal["schema", "both"]) -> Tuple[str, str]:
 # WORKSPACE INSTANCE DISPLAY (NEW)
 # ------------------------------
 
+# XSD numeric datatypes used in filter clauses
+_NUMERIC_XSD_TYPES = (
+    "http://www.w3.org/2001/XMLSchema#float",
+    "http://www.w3.org/2001/XMLSchema#double",
+    "http://www.w3.org/2001/XMLSchema#decimal",
+    "http://www.w3.org/2001/XMLSchema#integer",
+    "http://www.w3.org/2001/XMLSchema#int",
+    "http://www.w3.org/2001/XMLSchema#long",
+)
+
+# Local-name fragments that identify non-data / identifier predicates to skip
+_SKIP_PRED_FRAGMENTS = frozenset({
+    "id", "index", "indexvalue", "waferid", "usageid", "usagetype",
+    "usagecount", "number", "rowid", "syntheticrowid",
+})
+
+
+def _readable_local(iri: str) -> str:
+    """Return a human-readable label for an IRI using its local name."""
+    local = iri.rsplit("#", 1)[-1].rsplit("/", 1)[-1]
+    s = re.sub(r"([a-z])([A-Z])", r"\1 \2", local)
+    s = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", s)
+    return s.replace("_", " ").strip() or local
+
+
+def _numeric_types_in_clause(var: str = "?v") -> str:
+    """Return a SPARQL IN() list of numeric XSD datatypes for FILTER."""
+    return ", ".join(f"<{t}>" for t in _NUMERIC_XSD_TYPES)
+
 def _is_workspace_instances_graph(graph_iri: str) -> bool:
     return ("/workspace/" in graph_iri) and graph_iri.endswith("/instances")
 
@@ -266,20 +295,44 @@ def _decode_group_node_iri(group_node_iri: str) -> str:
 def workspace_instance_groups_for_class(
     class_iri: str,
     instance_graph_iri: str,
-    schema_graph_iri: str,   # <-- add this
+    schema_graph_iri: str,
     limit: int = 2000,
 ) -> Dict:
-    q = PREFIXES + f"""
-    SELECT
-      ?cls
-      (COUNT(?v) AS ?count)
-      (MIN(xsd:float(?v)) AS ?min)
-      (MAX(xsd:float(?v)) AS ?max)
-      (AVG(xsd:float(?v)) AS ?avg)
+    """
+    Find numeric data groups in an uploaded (or base) instance graph.
+
+    Strategy A – parameter nodes with <hasNumericValue>:
+        ?node rdf:type ?cls ; <hasNumericValue> ?v
+        where ?cls rdfs:subClassOf* <class_iri>  (in the schema graph)
+
+    Strategy B – direct numeric literal predicates on instances:
+        ?inst rdf:type ?cls ; ?pred ?v   (numeric literal)
+        where ?cls rdfs:subClassOf* <class_iri>  (in the schema graph)
+        Group key encodes both class and predicate: "<cls_iri>|<pred_iri>"
+
+    Full IRIs are used throughout to avoid SPARQL prefix resolution issues.
+    """
+    has_numeric_value = f"{settings.CMP_NS}hasNumericValue"
+    rdf_type = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    numeric_types = _numeric_types_in_clause()
+
+    result_nodes: List[Dict] = []
+    result_edges: List[Dict] = []
+
+    # ── Strategy A: typed parameter nodes with <hasNumericValue> ──────────
+    q_a = f"""
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+    SELECT ?cls
+           (COUNT(?v) AS ?count)
+           (MIN(xsd:float(?v)) AS ?min)
+           (MAX(xsd:float(?v)) AS ?max)
+           (AVG(xsd:float(?v)) AS ?avg)
     WHERE {{
       GRAPH <{instance_graph_iri}> {{
-        ?rowNode rdf:type ?cls .
-        ?rowNode cmpo:hasNumericValue ?v .
+        ?node rdf:type ?cls .
+        ?node <{has_numeric_value}> ?v .
       }}
       GRAPH <{schema_graph_iri}> {{
         ?cls rdfs:subClassOf* <{class_iri}> .
@@ -289,77 +342,165 @@ def workspace_instance_groups_for_class(
     ORDER BY ?cls
     LIMIT {limit}
     """
-    res = _exec_select(q)
 
-    nodes: List[Dict] = []
-    edges: List[Dict] = []
+    try:
+        res_a = _exec_select(q_a)
+        strategy_a_classes: set = set()
 
-    for b in res["results"]["bindings"]:
-        cls_iri = b["cls"]["value"]
+        for b in res_a["results"]["bindings"]:
+            cls = b["cls"]["value"]
+            strategy_a_classes.add(cls)
+            count = int(b["count"]["value"])
+            mn = float(b["min"]["value"])
+            mx = float(b["max"]["value"])
+            av = float(b["avg"]["value"])
 
-        # Extract clean local name (handle # and / separators)
-        if "#" in cls_iri:
-            cls_local = cls_iri.rsplit("#", 1)[-1]
-        else:
-            cls_local = cls_iri.rsplit("/", 1)[-1]
-
-        # Convert camelCase/PascalCase to readable"
-        import re
-        readable = re.sub(r'([a-z])([A-Z])', r'\1 \2', cls_local)
-        readable = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', readable)
-        readable = readable.replace("_", " ").strip()
-
-        group_node = _make_group_node_iri(cls_iri)
-
-        nodes.append(
-            {
-                "iri": group_node,
-                "label": readable,
+            group_iri = _make_group_node_iri(cls)  # group_key = cls_iri
+            result_nodes.append({
+                "iri": group_iri,
+                "label": _readable_local(cls),
                 "kind": "workspace_group",
-                "groupKey": cls_iri,
-                "type": cls_iri,
-                "summary": {
-                    "count": int(b["count"]["value"]),
-                    "min": float(b["min"]["value"]),
-                    "max": float(b["max"]["value"]),
-                    "avg": float(b["avg"]["value"]),
-                },
-            }
-        )
-
-        edges.append(
-            {
-                "source": group_node,
-                "relation": str("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                "groupKey": cls,
+                "type": cls,
+                "summary": {"count": count, "min": mn, "max": mx, "avg": av},
+            })
+            result_edges.append({
+                "source": group_iri,
+                "relation": rdf_type,
                 "target": class_iri,
-            }
-        )
+            })
 
-    return {"nodes": nodes, "edges": edges}
+    except Exception as exc:  # noqa: BLE001
+        print(f"[workspace_groups] Strategy A failed for <{class_iri}>: {exc}")
+
+    # ── Strategy B: direct numeric predicates on instances ────────────────
+    # Only run when Strategy A returned nothing (avoids double-counting).
+    if not result_nodes:
+        q_b = f"""
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+        SELECT ?pred
+               (COUNT(?v) AS ?count)
+               (MIN(xsd:float(?v)) AS ?min)
+               (MAX(xsd:float(?v)) AS ?max)
+               (AVG(xsd:float(?v)) AS ?avg)
+        WHERE {{
+          GRAPH <{instance_graph_iri}> {{
+            ?inst rdf:type ?cls .
+            ?inst ?pred ?v .
+            FILTER(isLiteral(?v))
+            FILTER(datatype(?v) IN ({numeric_types}))
+            FILTER(?pred != rdf:type)
+            FILTER(!STRSTARTS(STR(?pred), "http://www.w3.org/"))
+            FILTER(?pred != <{has_numeric_value}>)
+          }}
+          GRAPH <{schema_graph_iri}> {{
+            ?cls rdfs:subClassOf* <{class_iri}> .
+          }}
+        }}
+        GROUP BY ?pred
+        HAVING (COUNT(?v) > 1)
+        ORDER BY DESC(?count)
+        LIMIT {limit}
+        """
+
+        try:
+            res_b = _exec_select(q_b)
+
+            for b in res_b["results"]["bindings"]:
+                pred_iri = b["pred"]["value"]
+                local_pred = pred_iri.rsplit("/", 1)[-1].rsplit("#", 1)[-1].lower()
+
+                # Skip identifier / non-data predicates
+                if any(skip in local_pred for skip in _SKIP_PRED_FRAGMENTS):
+                    continue
+
+                count = int(b["count"]["value"])
+                mn = float(b["min"]["value"])
+                mx = float(b["max"]["value"])
+                av = float(b["avg"]["value"])
+
+                # Encode class + predicate together so workspace_group_values
+                # can issue the correct fetch query.
+                group_key = f"{class_iri}|{pred_iri}"
+                group_iri = _make_group_node_iri(group_key)
+
+                result_nodes.append({
+                    "iri": group_iri,
+                    "label": _readable_local(pred_iri),
+                    "kind": "workspace_group",
+                    "groupKey": group_key,
+                    "type": pred_iri,
+                    "summary": {"count": count, "min": mn, "max": mx, "avg": av},
+                })
+                result_edges.append({
+                    "source": group_iri,
+                    "relation": pred_iri,
+                    "target": class_iri,
+                })
+
+        except Exception as exc:  # noqa: BLE001
+            print(f"[workspace_groups] Strategy B failed for <{class_iri}>: {exc}")
+
+    return {"nodes": result_nodes, "edges": result_edges}
 
 def workspace_group_values(
     group_node_iri: str,
     instance_graph_iri: str,
     limit: int = 5000,
 ) -> Dict:
-    cls_iri = _decode_group_node_iri(group_node_iri)
-
-    q = PREFIXES + f"""
-    SELECT ?s ?v WHERE {{
-      GRAPH <{instance_graph_iri}> {{
-        ?s rdf:type <{cls_iri}> .
-        ?s cmpo:hasNumericValue ?v .
-      }}
-    }}
-    ORDER BY ?s
-    LIMIT {limit}
     """
+    Fetch individual numeric values for a workspace group node (for chart display).
+
+    The group_key encodes the query mode:
+      - Plain IRI  → Strategy A: ?node rdf:type <cls> ; <hasNumericValue> ?v
+      - "cls|pred" → Strategy B: ?inst rdf:type <cls> ; <pred> ?v (numeric literal)
+    """
+    group_key = _decode_group_node_iri(group_node_iri)
+    has_numeric_value = f"{settings.CMP_NS}hasNumericValue"
+    numeric_types = _numeric_types_in_clause()
+
+    if "|" in group_key:
+        # Strategy B: predicate-based group
+        cls_iri, pred_iri = group_key.split("|", 1)
+        q = f"""
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+        SELECT ?v WHERE {{
+          GRAPH <{instance_graph_iri}> {{
+            ?inst rdf:type <{cls_iri}> .
+            ?inst <{pred_iri}> ?v .
+            FILTER(isLiteral(?v))
+            FILTER(datatype(?v) IN ({numeric_types}))
+          }}
+        }}
+        ORDER BY ?inst
+        LIMIT {limit}
+        """
+    else:
+        # Strategy A: class-based group with <hasNumericValue>
+        cls_iri = group_key
+        q = f"""
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        SELECT ?v WHERE {{
+          GRAPH <{instance_graph_iri}> {{
+            ?s rdf:type <{cls_iri}> .
+            ?s <{has_numeric_value}> ?v .
+          }}
+        }}
+        ORDER BY ?s
+        LIMIT {limit}
+        """
 
     res = _exec_select(q)
 
     values: List[float] = []
     for b in res["results"]["bindings"]:
-        values.append(float(b["v"]["value"]))
+        try:
+            values.append(float(b["v"]["value"]))
+        except (ValueError, KeyError):
+            pass
 
     if values:
         vmin = min(values)
@@ -371,7 +512,7 @@ def workspace_group_values(
     return {
         "iri": group_node_iri,
         "kind": "workspace_group",
-        "groupKey": cls_iri,
+        "groupKey": group_key,
         "values": values,
         "summary": {"count": len(values), "min": vmin, "max": vmax, "avg": vavg},
     }

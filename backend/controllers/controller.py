@@ -295,6 +295,7 @@ def _uploaded_workspace_neighbors(
     schema_result = neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
 
     # Then get aggregated instance groups for this class
+    import traceback as _tb
     try:
         instance_groups = workspace_instance_groups_for_class(
             class_iri=node_iri,
@@ -302,11 +303,18 @@ def _uploaded_workspace_neighbors(
             schema_graph_iri=graph_iri,
             limit=limit,
         )
+        group_nodes = instance_groups.get("nodes", [])
+        group_edges = instance_groups.get("edges", [])
+        print(
+            f"[ctrl_workspace_neighbors] merged {len(group_nodes)} group nodes "
+            f"for <{node_iri}> from {instance_graph_iri}"
+        )
         # Merge instance group nodes and edges into schema result
-        schema_result["nodes"].extend(instance_groups.get("nodes", []))
-        schema_result["edges"].extend(instance_groups.get("edges", []))
+        schema_result["nodes"].extend(group_nodes)
+        schema_result["edges"].extend(group_edges)
     except Exception as e:
-        print(f"Warning: instance group query failed: {e}")
+        print(f"[ctrl_workspace_neighbors] instance group query FAILED: {e}")
+        _tb.print_exc()
 
     return schema_result
 

@@ -306,6 +306,13 @@ const Workspace = () => {
     return m;
   }, [data]);
 
+  const isOntologyMetaIri = (iri = "") =>
+    iri.startsWith("http://www.w3.org/2002/07/owl#") ||
+    iri.startsWith("http://www.w3.org/2000/01/rdf-schema#") ||
+    iri.startsWith("http://www.w3.org/1999/02/22-rdf-syntax-ns#") ||
+    iri.startsWith("http://www.w3.org/2001/XMLSchema#") ||
+    iri.startsWith("http://purl.obolibrary.org/");
+
   // ---------- details loader ----------
   const loadDetails = async (iri) => {
     if (!token || !iri) return;
@@ -314,6 +321,7 @@ const Workspace = () => {
 
     try {
       if (isWorkspaceGroupIri(iri)) {
+        // Fetch aggregated values and summary for chart display
         const res = await axios.get(`${API}/workspace/neighbors`, {
           params: { schema_id: activeSchemaId, q: iri, limit: 5000, level: "both" },
           headers: { Authorization: `Bearer ${token}` },
@@ -322,12 +330,24 @@ const Workspace = () => {
           (res.data?.nodes || []).find((n) => (n?.iri || n?.id) === iri) ||
           null;
         setDetails(node);
-      } else {
+      } else if (iri.startsWith(instanceNsPrefix) && !isWorkspaceGroupIri(iri)) {
+        // CMP base instance namespace → use the dedicated instance-details endpoint
         const res = await axios.get(`${API}/instance/details`, {
           params: { iri },
           headers: { Authorization: `Bearer ${token}` },
         });
         setDetails(res.data);
+      } else {
+        // Any other node (uploaded schema class, etc.) → navigate to its neighbors
+        const res = await axios.get(`${API}/workspace/neighbors`, {
+          params: { schema_id: activeSchemaId, q: iri, limit: 200, level },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data) {
+          setData(res.data);
+          setSelectedNodeIri("");
+          setDetails(null);
+        }
       }
     } catch (e) {
       const msg =
@@ -339,8 +359,9 @@ const Workspace = () => {
   };
 
   // ---------- search ----------
-  const doSearch = async (e) => {
+  const doSearch = useCallback(async (e, overrideLevel) => {
     e?.preventDefault();
+    const usedLevel = overrideLevel ?? level;
     if (!q.trim()) return;
     if (!token) {
       setErr("You must be logged in to query your workspace.");
@@ -360,7 +381,7 @@ const Workspace = () => {
 
     try {
       const res = await axios.get(`${API}/workspace/neighbors`, {
-        params: { schema_id: activeSchemaId, q, limit: 5000, level },
+        params: { schema_id: activeSchemaId, q, limit: 5000, level: usedLevel },
         headers: { Authorization: `Bearer ${token}` },
       });
       setData(res.data);
@@ -375,7 +396,20 @@ const Workspace = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [q, token, activeSchemaId, level]);
+
+  // Auto-re-search when level changes (only if there is already a result)
+  const prevLevelRef = useRef(level);
+  const dataRef = useRef(data);
+  useEffect(() => { dataRef.current = data; }, [data]);
+
+  useEffect(() => {
+    if (prevLevelRef.current !== level && q.trim() && dataRef.current !== null) {
+      doSearch(null, level);
+    }
+    prevLevelRef.current = level;
+  }, [level]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   // ---------- upload custom schema ----------
   const handleUploadSchema = async (e) => {
@@ -494,10 +528,13 @@ const Workspace = () => {
     const pushNode = (id, isCenter = false) => {
       if (!id || nodes.has(id)) return;
       const label = labelMap.get(id) || displayLabel(id);
-      
+      const isGroup = isWorkspaceGroupIri(id);
+
       let color;
       if (isCenter) {
         color = "#eab308"; // Standout yellow for queried node
+      } else if (isGroup) {
+        color = "#ec4899"; // Pink for data group nodes
       } else {
         const rel = nodeRelationMap.get(id);
         if (rel) {
@@ -508,7 +545,13 @@ const Workspace = () => {
       }
 
       nodes.set(id, {
-        data: { id, label, color, isCenter: String(!!isCenter) },
+        data: {
+          id,
+          label,
+          color,
+          isCenter: String(!!isCenter),
+          isGroup: String(isGroup),
+        },
       });
     };
 
@@ -547,24 +590,35 @@ const Workspace = () => {
           "background-color": "data(color)",
           label: "data(label)",
           color: "#111827",
-          "font-size": 8,           
+          "font-size": 8,
           "text-wrap": "wrap",
-          "text-max-width": 80,     
+          "text-max-width": 80,
           "text-valign": "center",
           "text-halign": "center",
           width: 36,
-          height: 36,               
+          height: 36,
           "border-width": 0,
         },
       },
       {
         selector: 'node[isCenter = "true"]',
         style: {
-          width: 48,                
-          height: 48,               
-          "font-size": 9,           
+          width: 48,
+          height: 48,
+          "font-size": 9,
           "font-weight": 700,
           color: "#0f172a",
+        },
+      },
+      {
+        selector: 'node[isGroup = "true"]',
+        style: {
+          width: 36,
+          height: 36,
+          "font-size": 8,
+          "font-weight": 600,
+          shape: "ellipse",
+          color: "#111827",
         },
       },
       {
@@ -820,6 +874,7 @@ const Workspace = () => {
 
           {err && <div className="error-banner">{err}</div>}
 
+
           {data && (
             <div className="workspace-results">
 
@@ -837,12 +892,27 @@ const Workspace = () => {
                     </button>
                   </div>
                   <CytoscapeComponent
+                    key={cyElements.length}
                     elements={cyElements}
                     layout={{
                       name: "cose",
-                      animate: "end",
+                      animate: true,
+                      animationDuration: 600,
+                      animationEasing: "ease-out",
                       fit: true,
-                      padding: 40,
+                      padding: 60,
+                      nodeRepulsion: () => 8000,
+                      idealEdgeLength: () => 120,
+                      gravity: 0.25,
+                      gravityRange: 3.8,
+                      numIter: 1000,
+                      initialTemp: 200,
+                      coolingFactor: 0.95,
+                      minTemp: 1.0,
+                      nodeOverlap: 20,
+                      componentSpacing: 80,
+                      refresh: 20,
+                      randomize: false,
                     }}
                     stylesheet={stylesheet}
                     style={{ width: "100%", height: "450px" }}
@@ -852,14 +922,10 @@ const Workspace = () => {
                       cy.off("tap");
                       cy.on("tap", "node", (evt) => {
                         const iri = evt.target.id();
-                        if (
-                          iri &&
-                          (isWorkspaceGroupIri(iri) ||
-                            iri.startsWith(instanceNsPrefix))
-                        ) {
-                          setSelectedNodeIri(iri);
-                          loadDetails(iri);
-                        }
+                        // Ignore clicks on OWL/RDF ontology meta-nodes
+                        if (!iri || isOntologyMetaIri(iri)) return;
+                        setSelectedNodeIri(iri);
+                        loadDetails(iri);
                       });
                     }}
                   />
@@ -875,15 +941,26 @@ const Workspace = () => {
                     const relation = e.relation || e.p || e.pred || e.label;
                     const sourceLabel = labelMap.get(source) || displayLabel(source);
                     const targetLabel = labelMap.get(target) || displayLabel(target);
-                    const isClickable = isWorkspaceGroupIri(source) || isWorkspaceGroupIri(target);
+                    const isGroupSrc = isWorkspaceGroupIri(source);
+                    const isGroupTgt = isWorkspaceGroupIri(target);
+                    // Every edge row is clickable: group-end shows chart, other shows neighbors
+                    const isClickable =
+                      !isOntologyMetaIri(source) || !isOntologyMetaIri(target);
 
                     return (
                       <div
                         className={`edge-item${isClickable ? " clickable" : ""}`}
                         key={i}
                         onClick={() => {
-                          const clickIri = isWorkspaceGroupIri(source) ? source : isWorkspaceGroupIri(target) ? target : null;
-                          if (clickIri) {
+                          // Prefer to click whichever end is a group node (shows chart)
+                          const clickIri = isGroupSrc
+                            ? source
+                            : isGroupTgt
+                            ? target
+                            : isOntologyMetaIri(source)
+                            ? target
+                            : source;
+                          if (clickIri && !isOntologyMetaIri(clickIri)) {
                             setSelectedNodeIri(clickIri);
                             loadDetails(clickIri);
                           }
