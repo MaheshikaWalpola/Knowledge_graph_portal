@@ -10,11 +10,12 @@
   align-items: flex-start;
   padding: var(--space-xl) var(--space-2xl);
   min-height: calc(100vh - 160px);
+  box-sizing: border-box;
 }
 
 /* Main Card */
 .workspace-card {
-  max-width: 1920px;
+  max-width: 1100px;
   width: 100%;
   background: var(--bg-glass-strong);
   backdrop-filter: blur(var(--blur-xl)) saturate(180%);
@@ -24,6 +25,7 @@
   padding: var(--space-2xl);
   box-shadow: var(--shadow-card);
   animation: fadeIn 0.5s ease forwards;
+  box-sizing: border-box;
 }
 
 /* ========================================
@@ -1038,10 +1040,14 @@
 @media (max-width: 768px) {
   .workspace-container {
     padding: var(--space-lg) var(--space-md);
+    height: auto;
+    min-height: calc(100vh - 120px);
+    align-items: flex-start;
   }
 
   .workspace-card {
     padding: var(--space-xl);
+    height: auto;
   }
 
   .workspace-header {
@@ -1205,4 +1211,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@media screen and (min-width: 1440px) {
+  .workspace-card {
+    max-width: 100%;
+  }
 }

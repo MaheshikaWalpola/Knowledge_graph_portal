@@ -32,7 +32,7 @@
 
 /* Main Card */
 .profile-card {
-  max-width: 1920px;
+  max-width: 900px;
   width: 100%;
   background: var(--bg-glass-strong);
   backdrop-filter: blur(var(--blur-xl)) saturate(180%);
@@ -477,4 +477,10 @@
 .profile-info p {
   color: var(--text-secondary);
   margin: 0;
+}
+
+@media screen and (min-width: 1440px) {
+  .profile-card {
+    max-width: 100%;
+  }
 }
