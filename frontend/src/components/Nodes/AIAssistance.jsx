@@ -30,10 +30,13 @@ export default function AIAssistance({ onOpenAuth }) {
   const [sidebarOpen, setSidebarOpen]       = useState(false);
   const [renaming, setRenaming]             = useState(null);   // { id, value }
   const [deleteConfirmId, setDeleteConfirmId] = useState(null); // id of chat pending deletion
+  const [thinkingLog, setThinkingLog]       = useState([]);     // real-time thinking lines from backend
+  const [thinkingExpanded, setThinkingExpanded] = useState(true);
 
   const renameInputRef = useRef(null);
   const chatBodyRef    = useRef(null);
   const prevChatIdRef  = useRef(null);
+  const esRef          = useRef(null);   // EventSource ref
 
   // ── Derived ──
   // Only saved conversations appear in the sidebar (unsaved = new empty chat)
@@ -118,6 +121,21 @@ export default function AIAssistance({ onOpenAuth }) {
     }
   }, [messages.length, loading, currentChatId]);
 
+  // ── Cleanup SSE on unmount ──
+  useEffect(() => () => esRef.current?.close(), []);
+
+  // ── Inline markdown renderer (**bold** and `code`) ──
+  const renderInline = (text) => {
+    const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**'))
+        return <strong key={i}>{part.slice(2, -2)}</strong>;
+      if (part.startsWith('`') && part.endsWith('`'))
+        return <code key={i}>{part.slice(1, -1)}</code>;
+      return part;
+    });
+  };
+
   // ── Auth gate useEffect ──
   useEffect(() => {
     if (!token) onOpenAuth?.();
@@ -155,48 +173,109 @@ export default function AIAssistance({ onOpenAuth }) {
     }
   };
 
-  // ── Send message ─
-  const sendMessage = async (text) => {
+  // ── Send message via SSE stream ─
+  const sendMessage = (text) => {
     const trimmed = (text || input).trim();
     if (!trimmed || loading) return;
 
     const nextMessages = [...messages, { role: "user", content: trimmed }];
     const chatTitle    = currentChat?.title ?? "Conversation 1";
+    const capturedChatId = currentChatId;
 
-    // Atomic state update: mark saved + add user message
+    // Add user message immediately
     setChats((prev) =>
       prev.map((chat) =>
-        chat.id === currentChatId
+        chat.id === capturedChatId
           ? { ...chat, saved: true, messages: nextMessages }
           : chat
       )
     );
     setInput("");
+    setThinkingLog([]);
+    setThinkingExpanded(true);
     setLoading(true);
 
-    try {
-      const res = await axios.post(
-        `${API}/assistant/chat`,
-        { messages: nextMessages },
-        authHeaders(token)
-      );
+    // Close any previous SSE connection
+    esRef.current?.close();
 
-      const answer    = res.data?.answer ?? "No answer returned.";
-      const chartData = res.data?.chart_data;
-      const finalMsgs = [...nextMessages, { role: "assistant", content: answer, chart_data: chartData }];
-      updateCurrentChat(finalMsgs);
+    // POST body as JSON, then open SSE via fetch + ReadableStream
+    const body = JSON.stringify({ messages: nextMessages });
 
-      // Persist to MongoDB after the full exchange
-      await persistChat(currentChatId, chatTitle, finalMsgs);
-    } catch (e) {
-      const errMsg =
-        e?.response?.data?.detail || e?.message || "Error calling the assistant API.";
-      const finalMsgs = [...nextMessages, { role: "assistant", content: errMsg }];
-      updateCurrentChat(finalMsgs);
-      await persistChat(currentChatId, chatTitle, finalMsgs);
-    } finally {
-      setLoading(false);
-    }
+    fetch(`${API}/assistant/chat/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const processChunk = ({ done, value }) => {
+          if (done) {
+            setLoading(false);
+            return;
+          }
+          buffer += decoder.decode(value, { stream: true });
+
+          // Parse SSE lines from buffer
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop(); // keep incomplete last part
+
+          for (const part of parts) {
+            const eventLine = part.match(/^event:\s*(.+)$/m)?.[1]?.trim();
+            const dataLine  = part.match(/^data:\s*(.+)$/ms)?.[1]?.trim();
+            if (!eventLine || !dataLine) continue;
+
+            let payload;
+            try { payload = JSON.parse(dataLine); } catch { continue; }
+
+            if (eventLine === "thinking") {
+              setThinkingLog((prev) => [...prev, payload]);
+            } else if (eventLine === "result") {
+              const answer    = payload.answer ?? "No answer returned.";
+              const chartData = payload.chart_data;
+              const finalMsgs = [...nextMessages, { role: "assistant", content: answer, chart_data: chartData }];
+              setChats((prev) =>
+                prev.map((chat) =>
+                  chat.id === capturedChatId ? { ...chat, messages: finalMsgs } : chat
+                )
+              );
+              persistChat(capturedChatId, chatTitle, finalMsgs);
+              setLoading(false);
+            } else if (eventLine === "error") {
+              const errMsg = payload.detail || "Error from assistant.";
+              const finalMsgs = [...nextMessages, { role: "assistant", content: errMsg }];
+              setChats((prev) =>
+                prev.map((chat) =>
+                  chat.id === capturedChatId ? { ...chat, messages: finalMsgs } : chat
+                )
+              );
+              persistChat(capturedChatId, chatTitle, finalMsgs);
+              setLoading(false);
+            }
+          }
+
+          reader.read().then(processChunk);
+        };
+
+        reader.read().then(processChunk);
+      })
+      .catch((e) => {
+        const errMsg = e?.message || "Error calling the assistant API.";
+        const finalMsgs = [...nextMessages, { role: "assistant", content: errMsg }];
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === capturedChatId ? { ...chat, messages: finalMsgs } : chat
+          )
+        );
+        persistChat(capturedChatId, chatTitle, finalMsgs);
+        setLoading(false);
+      });
   };
 
   const send = () => sendMessage(input);
@@ -404,12 +483,42 @@ export default function AIAssistance({ onOpenAuth }) {
 
               {loading && (
                 <div className="chat-row assistant">
-                  <div className="bubble">
-                    <span className="typing">
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                    </span>
+                  <div className="thinking-bubble">
+                    <div className="tb-header" onClick={() => setThinkingExpanded((v) => !v)}>
+                      <div className="tb-pulse-dot" />
+                      <span className="tb-title">Thinking</span>
+                      <svg className="tb-chevron" width="12" height="12" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" strokeWidth="2.5"
+                        style={{ transform: thinkingExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </div>
+                    <div className="tb-rail"><div className="tb-rail-inner" /></div>
+                    {thinkingExpanded && (
+                      <div className="tb-log">
+                        {thinkingLog.length === 0 && (
+                          <div className="tb-status">
+                            <div className="tb-status-spinner" />
+                            Establishing connection...
+                          </div>
+                        )}
+                        {thinkingLog.map((item, idx) => {
+                          if (item.type === 'para') return (
+                            <div key={idx} className="tb-para">
+                              <div className="tb-para-phase">{item.phase}</div>
+                              <div className="tb-para-text">{renderInline(item.text)}</div>
+                            </div>
+                          );
+                          if (item.type === 'status') return (
+                            <div key={idx} className="tb-status">
+                              <div className="tb-status-spinner" />
+                              {item.text}
+                            </div>
+                          );
+                          return null;
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

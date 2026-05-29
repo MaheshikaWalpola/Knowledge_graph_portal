@@ -1297,3 +1297,411 @@
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROFESSIONAL THINKING PANEL  —  tb-* namespace  (light theme)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Container */
+.thinking-bubble {
+  max-width: min(640px, 88%);
+  background: #ffffff;
+  border: 1px solid #e2e5ec;
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(99, 102, 241, 0.06);
+  font-family: var(--font-sans, 'Inter', sans-serif);
+  animation: tbSlideIn 0.25s ease forwards;
+}
+
+@keyframes tbSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Header row ── */
+.tb-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px 10px;
+  cursor: pointer;
+  user-select: none;
+  background: #f8f9fc;
+  border-bottom: 1px solid #eaecf2;
+}
+
+.tb-header:hover {
+  background: #f3f4f8;
+}
+
+/* Pulsing status dot */
+.tb-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4f46e5;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4);
+  animation: tbDotPulse 2s ease-in-out infinite;
+}
+
+@keyframes tbDotPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+  60%  { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+
+.tb-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #1e1f2e;
+  flex: 1;
+}
+
+.tb-chevron {
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, color 0.2s;
+}
+
+.tb-header:hover .tb-chevron { color: #4f46e5; }
+
+/* ── Indeterminate progress rail ── */
+.tb-rail {
+  height: 2px;
+  background: #eef0f6;
+  overflow: hidden;
+}
+
+.tb-rail-inner {
+  height: 100%;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, #6366f1, #818cf8, transparent);
+  animation: tbRailSlide 1.8s ease-in-out infinite;
+}
+
+@keyframes tbRailSlide {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(370%); }
+}
+
+/* ── Process log body ── */
+.tb-log {
+  padding: 8px 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Completed phase paragraph ── */
+.tb-para {
+  padding: 8px 16px 8px 14px;
+  margin: 2px 12px;
+  border-left: 2px solid #e0e4ef;
+  border-radius: 0 6px 6px 0;
+  transition: border-color 0.2s;
+}
+
+.tb-para:last-of-type {
+  border-left-color: #6366f1;
+}
+
+.tb-para-phase {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #6366f1;
+  margin-bottom: 4px;
+}
+
+.tb-para-text {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.tb-para-text strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+.tb-para-text code {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 11px;
+  color: #3730a3;
+  background: #ede9fe;
+  padding: 1px 5px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+
+/* ── Status line (italic, with spinner) ── */
+.tb-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px 5px 26px;
+  font-size: 11.5px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.tb-status-spinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid #ddd6fe;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: tbSpin 0.75s linear infinite;
+}
+
+@keyframes tbSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Old thinking-header / brain styles kept for any remaining legacy refs ── */
+
+/* ── Header ── */
+.thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Brain icon with pulsing ring */
+.thinking-brain {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brain-icon {
+  font-size: 18px;
+  animation: brainFloat 3s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+.brain-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%);
+  animation: brainPulse 2s ease-in-out infinite;
+}
+
+@keyframes brainFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+
+@keyframes brainPulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.6; }
+  50%       { transform: scale(1.4); opacity: 0.2; }
+}
+
+/* Title + animated dots */
+.thinking-title-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thinking-label {
+  font-size: 14px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6366f1, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.01em;
+}
+
+/* Animated three dots next to "Thinking" */
+.thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding-top: 2px;
+}
+
+.thinking-dots .td {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #6366f1;
+  animation: tdBounce 1.4s ease-in-out infinite;
+}
+
+.thinking-dots .td:nth-child(1) { animation-delay: 0s; }
+.thinking-dots .td:nth-child(2) { animation-delay: 0.18s; }
+.thinking-dots .td:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes tdBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+  40%           { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Collapse / expand chevron button */
+.thinking-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(99, 102, 241, 0.7);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.thinking-toggle-btn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}
+
+/* ── Progress Bar ── */
+.thinking-progress-track {
+  height: 3px;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 999px;
+  margin: 10px 0 0 0;
+  overflow: hidden;
+}
+
+.thinking-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #a78bfa, #6366f1);
+  background-size: 200% 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: progressShimmer 2s linear infinite;
+}
+
+/* Indeterminate bar — slides back and forth */
+.thinking-progress-indeterminate {
+  height: 100%;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, #6366f1, #a78bfa, #6366f1, transparent);
+  border-radius: 999px;
+  animation: indeterminate 1.6s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(320%); }
+}
+
+/* ── Step List ── */
+.thinking-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  animation: stepsReveal 0.3s ease forwards;
+}
+
+@keyframes stepsReveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Individual step row */
+.thinking-step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  transition: background 0.3s ease, opacity 0.4s ease;
+}
+
+.thinking-step.active {
+  background: rgba(99, 102, 241, 0.09);
+}
+
+.thinking-step.done {
+  opacity: 0.6;
+}
+
+.thinking-step.pending {
+  opacity: 0.35;
+}
+
+/* Step state indicator (check / spinner / dot) */
+.step-indicator {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Done: checkmark */
+.thinking-step.done .step-indicator {
+  color: #22c55e;
+}
+
+/* Active: spinning ring */
+.step-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(99, 102, 241, 0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Pending: small dot */
+.step-dot-pending {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary, #94a3b8);
+  opacity: 0.5;
+}
+
+/* Step emoji icon */
+.step-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Step label text */
+.step-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.thinking-step.active .step-text {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.thinking-step.done .step-text {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+  text-decoration-color: rgba(34,197,94,0.4);
+}
