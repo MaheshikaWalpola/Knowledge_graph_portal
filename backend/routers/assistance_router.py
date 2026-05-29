@@ -195,6 +195,9 @@ def _status(text: str) -> str:
 def _warn(text: str) -> str:
     return _sse("thinking", {"type": "warn", "text": text})
 
+def _log(tag: str, text: str) -> str:
+    return _sse("thinking", {"type": "log", "tag": tag, "text": text})
+
 
 #  Streaming chat endpoint
 
@@ -227,7 +230,8 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
 
         try:
             # ── Step 1: Intent analysis ──────────────────────────────────────
-            yield _status("Reading your question and determining intent...")
+            yield _log("SYS", "Initializing reasoning engine context")
+            yield _log("NLP", f"Analyzing query tokens; sequence payload: {len(last_user)} characters")
 
             intent = svc.analyze_intent_and_clarify(last_user, history=history)
 
@@ -246,17 +250,8 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
             intent_type = intent.get("intent", "complex_query")
             entity_term = intent.get("entity", "").strip()
 
-            # Build intent summary sentence
-            intent_label = intent_type.replace("_", " ")
-            parts = [f"Interpreted this as a **{intent_label}** request"]
-            if entity_term:
-                parts.append(f"targeting entity **{entity_term}**")
-            if stat:
-                parts.append(f"with statistic **{stat.upper()}**")
-            if extracted_ontology_name:
-                parts.append(f"from ontology **{extracted_ontology_name}**")
-            parts.append(f"querying **{data_scope}** data")
-            yield _para("Intent Analysis", ", ".join(parts) + ".")
+            yield _log("NLP", f"Intent classification complete: label='{intent_type}'")
+            yield _log("SYS", f"Pipeline route determined: scope='{data_scope}', stat='{stat or 'none'}'")
 
             # Check if general concept question
             is_general = (
@@ -265,13 +260,14 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
             )
 
             if is_general:
-                yield _status("General knowledge question — answering directly without graph query...")
+                yield _log("SYS", "Bypassing GraphDB execution route; direct reply matched")
+                yield _log("NLP", "Synthesizing natural language response from base models")
                 answer = svc.chat_general(last_user, history=history)
                 yield _sse("result", {"answer": answer, "options": []})
                 return
 
             # ── Step 2: Resolve ontology ─────────────────────────────────────
-            yield _status("Searching your ontology library for a match...")
+            yield _log("GRAPH", "Searching active ontology metadata mappings in repository")
 
             target_graphs = []
             schema_id = req.selected_schema_id
@@ -337,66 +333,44 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
 
             schema_graph_iri = target_graphs[0]
 
-            # Build ontology resolution paragraph
-            onto_text = f"Matched ontology **{graph_name}**"
-            if schema_id:
-                onto_text += " from your library"
-            onto_text += f". Schema graph loaded: `{short_schema}`"
-            if short_inst:
-                onto_text += f", instance graph: `{short_inst}`"
-            else:
-                onto_text += "; no instance graph found, using schema only"
-            onto_text += "."
-            yield _para("Ontology Resolution", onto_text)
+            yield _log("GRAPH", "Ontology definition loaded successfully")
+            yield _log("GRAPH", f"Workspace bound: schema_graph='{short_schema or 'default'}', instance_graph='{short_inst or 'none'}'")
 
             # ── Step 3: Resolve entity IRI ───────────────────────────────────
             entity_iri = None
             if entity_term:
-                yield _status(f"Resolving entity '{entity_term}' to a knowledge graph IRI...")
+                yield _log("NLP", f"Resolving entity token sequence against schema vocabulary")
                 entity_iri = resolve_term_in_graph(entity_term, schema_graph_iri)
                 if not entity_iri:
                     entity_iri = resolve_schema_term_to_iri_global(entity_term)
 
                 if entity_iri:
-                    short_iri = entity_iri.split("#")[-1].split("/")[-1]
-                    yield _para("Entity Resolution",
-                        f"Resolved **{entity_term}** to graph IRI `{short_iri}` — "
-                        f"will use this as the anchor for SPARQL pattern matching.")
+                    yield _log("GRAPH", "Matched term token to active schema IRI anchor")
                 else:
-                    yield _para("Entity Resolution",
-                        f"Could not find a direct IRI for **{entity_term}** — "
-                        f"will fall back to label-based matching in the query.")
+                    yield _log("GRAPH", "No direct IRI mapping found; enabling lexical fallback query")
 
             # ── Step 4: Build SPARQL query ────────────────────────────────────
-            yield _status("Constructing the SPARQL query...")
+            yield _log("SPARQL", "Compiling SPARQL query template constraints")
 
             try:
                 sparql_query = build_safe_sparql_query(intent_type, target_graphs, entity_iri, entity_term, stat)
 
                 if sparql_query:
-                    preview = next((l.strip() for l in sparql_query.split("\n") if l.strip()), "")[:65]
-                    yield _para("Query Construction",
-                        f"Built a deterministic **{intent_type.replace('_', ' ')}** query. "
-                        f"Query starts with: `{preview}…`")
+                    yield _log("SPARQL", "Deterministic query template compiled successfully")
                 else:
-                    yield _status("Query requires schema context — fetching ontology structure...")
+                    yield _log("GRAPH", "Query requires relational context; fetching schematic subgraph")
                     schema_context, _ = get_ontology_schema(graph_name, target_graphs)
-                    yield _status("Asking the language model to write a custom SPARQL query...")
+                    yield _log("SPARQL", "Invoking code generation transformer model for custom query")
                     sparql_query = svc.generate_sparql(last_user, schema_context)
                     for i, graph_iri in enumerate(target_graphs):
                         sparql_query = sparql_query.replace(f"<GRAPH_{i}>", f"<{graph_iri}>")
-                    preview = next((l.strip() for l in sparql_query.split("\n") if l.strip()), "")[:65]
-                    yield _para("Query Construction",
-                        f"The language model generated a custom SPARQL query for this request. "
-                        f"Query starts with: `{preview}…`")
+                    yield _log("SPARQL", "Synthesizing LLM-generated query structure")
 
                 # ── Step 5: Execute SPARQL ────────────────────────────────────
-                yield _status("Dispatching query to GraphDB and waiting for results...")
+                yield _log("DB", "Dispatching query payload to GraphDB server endpoint")
                 raw_results = execute_safe_select(sparql_query)
                 result_count = len(raw_results)
-                yield _para("GraphDB Execution",
-                    f"GraphDB returned **{result_count}** row{'s' if result_count != 1 else ''}. "
-                    + ("Proceeding to format the answer." if raw_results else "No matching data found."))
+                yield _log("DB", f"Query executed successfully; returned {result_count} record rows")
 
                 if not raw_results:
                     yield _sse("result", {
@@ -408,7 +382,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                 # ── Step 6: Format or explain results ────────────────────────
                 if sparql_query and intent_type == "get_numeric_stat":
                     if stat == "plot":
-                        yield _status("Building chart data from numeric values...")
+                        yield _log("SYS", "Generating plot coordinate arrays and value sequences")
                         chart_data = []
                         for i, r in enumerate(raw_results):
                             if "value" in r:
@@ -461,6 +435,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
 
                 # Simple list results — format locally
                 if sparql_query and intent_type != "complex_query" and 0 < result_count <= 100:
+                    yield _log("SYS", "Applying schematic result list parsing templates")
                     lines = []
                     for row in raw_results:
                         label = row.get("label")
@@ -474,7 +449,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                     yield _sse("result", {"answer": answer, "options": []})
                     return
                 else:
-                    yield _status("Asking the language model to interpret and summarise the results...")
+                    yield _log("NLP", "Formatting relational tuples into final natural language response")
                     answer = svc.answer_from_sparql_results(last_user, str(raw_results), history=history)
                     yield _sse("result", {"answer": answer, "options": []})
                     return

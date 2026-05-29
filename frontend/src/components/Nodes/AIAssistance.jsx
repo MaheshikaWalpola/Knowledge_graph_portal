@@ -235,7 +235,9 @@ export default function AIAssistance({ onOpenAuth }) {
             try { payload = JSON.parse(dataLine); } catch { continue; }
 
             if (eventLine === "thinking") {
-              setThinkingLog((prev) => [...prev, payload]);
+              const now = new Date();
+              const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`;
+              setThinkingLog((prev) => [...prev, { ...payload, timestamp: timeStr }]);
             } else if (eventLine === "result") {
               const answer    = payload.answer ?? "No answer returned.";
               const chartData = payload.chart_data;
@@ -483,40 +485,54 @@ export default function AIAssistance({ onOpenAuth }) {
 
               {loading && (
                 <div className="chat-row assistant">
-                  <div className="thinking-bubble">
-                    <div className="tb-header" onClick={() => setThinkingExpanded((v) => !v)}>
-                      <div className="tb-pulse-dot" />
-                      <span className="tb-title">Thinking</span>
+                  <div className="thinking-bubble terminal-panel">
+                    <div className="terminal-header" onClick={() => setThinkingExpanded((v) => !v)}>
+                      <div className="terminal-dots">
+                        <span className="terminal-dot close"></span>
+                        <span className="terminal-dot minimize"></span>
+                        <span className="terminal-dot expand"></span>
+                      </div>
+                      <span className="terminal-title">Thinking</span>
                       <svg className="tb-chevron" width="12" height="12" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" strokeWidth="2.5"
                         style={{ transform: thinkingExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </div>
-                    <div className="tb-rail"><div className="tb-rail-inner" /></div>
                     {thinkingExpanded && (
-                      <div className="tb-log">
-                        {thinkingLog.length === 0 && (
-                          <div className="tb-status">
-                            <div className="tb-status-spinner" />
-                            Establishing connection...
+                      <div className="terminal-body">
+                        {thinkingLog.length === 0 ? (
+                          <div className="terminal-line init-line">
+                            <span className="term-prompt">&gt;</span> Initializing pipeline context
+                            <span className="terminal-cursor">█</span>
                           </div>
+                        ) : (
+                          <>
+                            {thinkingLog.map((item, idx) => {
+                              if (item.type === 'log') {
+                                return (
+                                  <div key={idx} className="terminal-line">
+                                    <span className="term-time">[{item.timestamp}]</span>{" "}
+                                    <span className="term-tag">[{item.tag}]</span>{" "}
+                                    <span className="term-text">{item.text}</span>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div key={idx} className="terminal-line">
+                                  <span className="term-time">[{item.timestamp || "00:00:00.000"}]</span>{" "}
+                                  <span className="term-text">{item.text || item.phase || "Processing..."}</span>
+                                </div>
+                              );
+                            })}
+                            {loading && (
+                              <div className="terminal-line active-line">
+                                <span className="term-prompt">&gt;</span> Processing active thread...
+                                <span className="terminal-cursor">█</span>
+                              </div>
+                            )}
+                          </>
                         )}
-                        {thinkingLog.map((item, idx) => {
-                          if (item.type === 'para') return (
-                            <div key={idx} className="tb-para">
-                              <div className="tb-para-phase">{item.phase}</div>
-                              <div className="tb-para-text">{renderInline(item.text)}</div>
-                            </div>
-                          );
-                          if (item.type === 'status') return (
-                            <div key={idx} className="tb-status">
-                              <div className="tb-status-spinner" />
-                              {item.text}
-                            </div>
-                          );
-                          return null;
-                        })}
                       </div>
                     )}
                   </div>

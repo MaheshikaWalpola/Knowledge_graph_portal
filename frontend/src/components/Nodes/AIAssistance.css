@@ -1299,19 +1299,18 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   PROFESSIONAL THINKING PANEL  —  tb-* namespace  (light theme)
+   TERMINAL CONSOLE LOGS (Light theme, black text only)
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* Container */
-.thinking-bubble {
+.thinking-bubble.terminal-panel {
   max-width: min(640px, 88%);
   background: #ffffff;
-  border: 1px solid #e2e5ec;
-  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
   padding: 0;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07), 0 0 0 1px rgba(99, 102, 241, 0.06);
-  font-family: var(--font-sans, 'Inter', sans-serif);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
   animation: tbSlideIn 0.25s ease forwards;
 }
 
@@ -1320,149 +1319,126 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Header row ── */
-.tb-header {
+/* Header row styling */
+.terminal-header {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 11px 14px 10px;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
   cursor: pointer;
   user-select: none;
-  background: #f8f9fc;
-  border-bottom: 1px solid #eaecf2;
 }
 
-.tb-header:hover {
-  background: #f3f4f8;
+.terminal-header:hover {
+  background: #e5e7eb;
 }
 
-/* Pulsing status dot */
-.tb-pulse-dot {
-  width: 7px;
-  height: 7px;
+/* Dots simulating window controls */
+.terminal-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.terminal-dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #4f46e5;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4);
-  animation: tbDotPulse 2s ease-in-out infinite;
+  background: #9ca3af;
 }
 
-@keyframes tbDotPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
-  60%  { box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
-}
-
-.tb-title {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: #1e1f2e;
+.terminal-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #000000;
   flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 }
 
 .tb-chevron {
-  color: #9ca3af;
+  color: #000000;
   flex-shrink: 0;
-  transition: transform 0.25s ease, color 0.2s;
+  transition: transform 0.25s ease;
 }
 
-.tb-header:hover .tb-chevron { color: #4f46e5; }
-
-/* ── Indeterminate progress rail ── */
-.tb-rail {
-  height: 2px;
-  background: #eef0f6;
-  overflow: hidden;
+.terminal-header:hover .tb-chevron {
+  color: #374151;
 }
 
-.tb-rail-inner {
-  height: 100%;
-  width: 38%;
-  background: linear-gradient(90deg, transparent, #6366f1, #818cf8, transparent);
-  animation: tbRailSlide 1.8s ease-in-out infinite;
-}
-
-@keyframes tbRailSlide {
-  0%   { transform: translateX(-150%); }
-  100% { transform: translateX(370%); }
-}
-
-/* ── Process log body ── */
-.tb-log {
-  padding: 8px 0 14px;
+/* Console Body Output */
+.terminal-body {
+  padding: 10px 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  background: #fafafa;
+  max-height: 280px;
+  overflow-y: auto;
 }
 
-/* ── Completed phase paragraph ── */
-.tb-para {
-  padding: 8px 16px 8px 14px;
-  margin: 2px 12px;
-  border-left: 2px solid #e0e4ef;
-  border-radius: 0 6px 6px 0;
-  transition: border-color 0.2s;
+/* Custom Scrollbar for Terminal Body */
+.terminal-body::-webkit-scrollbar {
+  width: 6px;
 }
 
-.tb-para:last-of-type {
-  border-left-color: #6366f1;
+.terminal-body::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.tb-para-phase {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: #6366f1;
-  margin-bottom: 4px;
+.terminal-body::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
 }
 
-.tb-para-text {
-  font-size: 13px;
-  color: #374151;
-  line-height: 1.6;
+.terminal-body::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
 }
 
-.tb-para-text strong {
-  color: #111827;
-  font-weight: 600;
-}
-
-.tb-para-text code {
-  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
-  font-size: 11px;
-  color: #3730a3;
-  background: #ede9fe;
-  padding: 1px 5px;
-  border-radius: 4px;
+/* Line structure */
+.terminal-line {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #000000;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  white-space: pre-wrap;
   word-break: break-all;
 }
 
-
-/* ── Status line (italic, with spinner) ── */
-.tb-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 14px 5px 26px;
-  font-size: 11.5px;
-  color: #9ca3af;
-  font-style: italic;
+.term-time {
+  color: #6b7280;
+  font-weight: 500;
 }
 
-.tb-status-spinner {
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid #ddd6fe;
-  border-top-color: #6366f1;
-  border-radius: 50%;
-  flex-shrink: 0;
-  animation: tbSpin 0.75s linear infinite;
+.term-tag {
+  color: #000000;
+  font-weight: 700;
 }
 
-@keyframes tbSpin {
-  to { transform: rotate(360deg); }
+.term-text {
+  color: #000000;
+}
+
+.term-prompt {
+  color: #000000;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+/* Blinking black block cursor */
+.terminal-cursor {
+  color: #000000;
+  display: inline-block;
+  margin-left: 2px;
+  animation: terminal-blink 1.2s step-start infinite;
+  font-weight: bold;
+}
+
+@keyframes terminal-blink {
+  50% { opacity: 0; }
 }
 
 /* ── Old thinking-header / brain styles kept for any remaining legacy refs ── */
