@@ -776,6 +776,24 @@
   gap: var(--space-md);
 }
 
+/* Custom Scrollbar for Chat Body */
+.chat-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-body::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: var(--radius-xl);
+}
+
+.chat-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
 /* Message Row */
 .chat-row {
   display: flex;
@@ -1278,4 +1296,388 @@
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TERMINAL CONSOLE LOGS (Light theme, black text only)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.thinking-bubble.terminal-panel {
+  max-width: min(640px, 88%);
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  animation: tbSlideIn 0.25s ease forwards;
+}
+
+@keyframes tbSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Header row styling */
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+  user-select: none;
+}
+
+.terminal-header:hover {
+  background: #e5e7eb;
+}
+
+/* Dots simulating window controls */
+.terminal-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.terminal-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9ca3af;
+}
+
+.terminal-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #000000;
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+}
+
+.tb-chevron {
+  color: #000000;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.terminal-header:hover .tb-chevron {
+  color: #374151;
+}
+
+/* Console Body Output */
+.terminal-body {
+  padding: 10px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fafafa;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar for Terminal Body */
+.terminal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-body::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+.terminal-body::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+/* Line structure */
+.terminal-line {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #000000;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.term-time {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.term-tag {
+  color: #000000;
+  font-weight: 700;
+}
+
+.term-text {
+  color: #000000;
+}
+
+.term-prompt {
+  color: #000000;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+/* Blinking black block cursor */
+.terminal-cursor {
+  color: #000000;
+  display: inline-block;
+  margin-left: 2px;
+  animation: terminal-blink 1.2s step-start infinite;
+  font-weight: bold;
+}
+
+@keyframes terminal-blink {
+  50% { opacity: 0; }
+}
+
+/* ── Old thinking-header / brain styles kept for any remaining legacy refs ── */
+
+/* ── Header ── */
+.thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Brain icon with pulsing ring */
+.thinking-brain {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brain-icon {
+  font-size: 18px;
+  animation: brainFloat 3s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+.brain-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%);
+  animation: brainPulse 2s ease-in-out infinite;
+}
+
+@keyframes brainFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+
+@keyframes brainPulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.6; }
+  50%       { transform: scale(1.4); opacity: 0.2; }
+}
+
+/* Title + animated dots */
+.thinking-title-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thinking-label {
+  font-size: 14px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6366f1, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.01em;
+}
+
+/* Animated three dots next to "Thinking" */
+.thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding-top: 2px;
+}
+
+.thinking-dots .td {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #6366f1;
+  animation: tdBounce 1.4s ease-in-out infinite;
+}
+
+.thinking-dots .td:nth-child(1) { animation-delay: 0s; }
+.thinking-dots .td:nth-child(2) { animation-delay: 0.18s; }
+.thinking-dots .td:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes tdBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+  40%           { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Collapse / expand chevron button */
+.thinking-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(99, 102, 241, 0.7);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.thinking-toggle-btn:hover {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}
+
+/* ── Progress Bar ── */
+.thinking-progress-track {
+  height: 3px;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 999px;
+  margin: 10px 0 0 0;
+  overflow: hidden;
+}
+
+.thinking-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #a78bfa, #6366f1);
+  background-size: 200% 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: progressShimmer 2s linear infinite;
+}
+
+/* Indeterminate bar — slides back and forth */
+.thinking-progress-indeterminate {
+  height: 100%;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, #6366f1, #a78bfa, #6366f1, transparent);
+  border-radius: 999px;
+  animation: indeterminate 1.6s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(320%); }
+}
+
+/* ── Step List ── */
+.thinking-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  animation: stepsReveal 0.3s ease forwards;
+}
+
+@keyframes stepsReveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Individual step row */
+.thinking-step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  transition: background 0.3s ease, opacity 0.4s ease;
+}
+
+.thinking-step.active {
+  background: rgba(99, 102, 241, 0.09);
+}
+
+.thinking-step.done {
+  opacity: 0.6;
+}
+
+.thinking-step.pending {
+  opacity: 0.35;
+}
+
+/* Step state indicator (check / spinner / dot) */
+.step-indicator {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Done: checkmark */
+.thinking-step.done .step-indicator {
+  color: #22c55e;
+}
+
+/* Active: spinning ring */
+.step-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(99, 102, 241, 0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Pending: small dot */
+.step-dot-pending {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary, #94a3b8);
+  opacity: 0.5;
+}
+
+/* Step emoji icon */
+.step-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Step label text */
+.step-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.thinking-step.active .step-text {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.thinking-step.done .step-text {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+  text-decoration-color: rgba(34,197,94,0.4);
 }

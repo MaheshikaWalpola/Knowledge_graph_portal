@@ -7,6 +7,8 @@
   padding: 32px 24px;
   gap: 40px;
   min-height: calc(100vh - 140px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Sidebar Navigation */
@@ -294,5 +296,14 @@
 
   .guidance-section-title {
     font-size: 1.25rem;
+  }
+}
+
+@media screen and (min-width: 1440px) {
+  .guidance-container {
+    max-width: 100%;
+  }
+  .guidance-content {
+    max-width: 100%;
   }
 }

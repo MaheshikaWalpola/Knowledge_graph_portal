@@ -1,5 +1,7 @@
 import re
-from fastapi import APIRouter, HTTPException, Depends
+import json
+from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Literal, Optional, Any
 
@@ -172,6 +174,309 @@ def build_evidence_for_term(term: str, graph_name: str = "") -> str:
 
     return "\n".join(out)
 
+
+#  SSE helpers
+
+def _sse(event: str, data: dict) -> str:
+    """Format a single SSE message."""
+    payload = json.dumps(data, ensure_ascii=False)
+    return f"event: {event}\ndata: {payload}\n\n"
+
+# Structured thinking event helpers
+def _phase(label: str) -> str:
+    return _sse("thinking", {"type": "phase", "label": label})
+
+def _detail(key: str, value: str, mono: bool = False) -> str:
+    return _sse("thinking", {"type": "detail", "key": key, "value": value, "mono": mono})
+
+def _status(text: str) -> str:
+    return _sse("thinking", {"type": "status", "text": text})
+
+def _warn(text: str) -> str:
+    return _sse("thinking", {"type": "warn", "text": text})
+
+def _log(tag: str, text: str) -> str:
+    return _sse("thinking", {"type": "log", "tag": tag, "text": text})
+
+
+#  Streaming chat endpoint
+
+@router.post("/chat/stream")
+async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user)):
+    """
+    Streaming version of /chat.
+    Sends SSE events:
+      - event: thinking  →  { type, label|key|value|text, mono? }
+      - event: result    →  { answer, chart_data }
+      - event: error     →  { detail }
+    """
+
+    async def generate():
+        last_user = None
+        for m in reversed(req.messages):
+            if m.role == "user" and (m.content or "").strip():
+                last_user = m.content.strip()
+                break
+
+        if not last_user:
+            yield _sse("error", {"detail": "No user message provided."})
+            return
+
+        history = [{"role": m.role, "content": m.content} for m in req.messages]
+
+        def _para(phase: str, text: str) -> str:
+            """Emit a completed-phase paragraph."""
+            return _sse("thinking", {"type": "para", "phase": phase, "text": text})
+
+        try:
+            # ── Step 1: Intent analysis ──────────────────────────────────────
+            yield _log("SYS", "Initializing reasoning engine context")
+            yield _log("NLP", f"Analyzing query tokens; sequence payload: {len(last_user)} characters")
+
+            intent = svc.analyze_intent_and_clarify(last_user, history=history)
+
+            needs_clarification = intent.get("needs_clarification", False)
+            if needs_clarification:
+                yield _sse("result", {
+                    "answer": intent.get("clarification_message", "Please clarify your request."),
+                    "options": []
+                })
+                return
+
+            requires_graphdb = intent.get("requires_graphdb", True)
+            extracted_ontology_name = intent.get("ontology_name", "").strip()
+            data_scope = intent.get("data_scope", "schema")
+            stat = intent.get("stat", "")
+            intent_type = intent.get("intent", "complex_query")
+            entity_term = intent.get("entity", "").strip()
+
+            yield _log("NLP", f"Intent classification complete: label='{intent_type}'")
+            yield _log("SYS", f"Pipeline route determined: scope='{data_scope}', stat='{stat or 'none'}'")
+
+            # Check if general concept question
+            is_general = (
+                not requires_graphdb
+                or is_general_concept_question(entity_term, last_user)
+            )
+
+            if is_general:
+                yield _log("SYS", "Bypassing GraphDB execution route; direct reply matched")
+                yield _log("NLP", "Synthesizing natural language response from base models")
+                answer = svc.chat_general(last_user, history=history)
+                yield _sse("result", {"answer": answer, "options": []})
+                return
+
+            # ── Step 2: Resolve ontology ─────────────────────────────────────
+            yield _log("GRAPH", "Searching active ontology metadata mappings in repository")
+
+            target_graphs = []
+            schema_id = req.selected_schema_id
+            graph_name = extracted_ontology_name
+            short_schema = ""
+            short_inst = ""
+
+            meta = None
+            if schema_id:
+                meta = get_user_schema(current_user["email"], schema_id)
+                if meta:
+                    graph_name = meta.get("name", "selected schema")
+            elif extracted_ontology_name:
+                schemas = list_user_schemas(current_user["email"])
+                matched = [s for s in schemas if extracted_ontology_name.lower() in s.get("name", "").lower()]
+                if len(matched) == 1:
+                    meta = matched[0]
+                    schema_id = meta.get("schema_id")
+                    graph_name = meta.get("name")
+                elif len(matched) > 1:
+                    yield _sse("result", {
+                        "answer": f"I found multiple ontologies matching '{extracted_ontology_name}'. Please specify which one you mean (e.g., '{matched[0].get('name')}').",
+                        "options": [s.get("name") for s in matched[:3]]
+                    })
+                    return
+                else:
+                    yield _sse("result", {
+                        "answer": f"I could not find an ontology named '{extracted_ontology_name}'. Please specify a valid ontology.",
+                        "options": []
+                    })
+                    return
+
+            instance_graph_iri = None
+            if meta and meta.get("graph_iri"):
+                schema_graph_iri = meta["graph_iri"]
+                target_graphs.append(schema_graph_iri)
+                short_schema = schema_graph_iri.split("/")[-1]
+
+                if meta.get("instance_graph_iri"):
+                    instance_graph_iri = meta["instance_graph_iri"]
+                else:
+                    candidate = schema_graph_iri.rstrip("/") + "/instances"
+                    if graph_has_triples(candidate):
+                        instance_graph_iri = candidate
+
+                if instance_graph_iri:
+                    target_graphs.append(instance_graph_iri)
+                    short_inst = instance_graph_iri.split("/")[-1]
+
+                if data_scope == "instances" and not instance_graph_iri:
+                    yield _sse("result", {
+                        "answer": f"I found the ontology '{graph_name}', but I could not find an instance graph for it.",
+                        "options": []
+                    })
+                    return
+
+            if not target_graphs:
+                yield _sse("result", {
+                    "answer": "Please select an ontology or specify which ontology you are asking about.",
+                    "options": []
+                })
+                return
+
+            schema_graph_iri = target_graphs[0]
+
+            yield _log("GRAPH", "Ontology definition loaded successfully")
+            yield _log("GRAPH", f"Workspace bound: schema_graph='{short_schema or 'default'}', instance_graph='{short_inst or 'none'}'")
+
+            # ── Step 3: Resolve entity IRI ───────────────────────────────────
+            entity_iri = None
+            if entity_term:
+                yield _log("NLP", f"Resolving entity token sequence against schema vocabulary")
+                entity_iri = resolve_term_in_graph(entity_term, schema_graph_iri)
+                if not entity_iri:
+                    entity_iri = resolve_schema_term_to_iri_global(entity_term)
+
+                if entity_iri:
+                    yield _log("GRAPH", "Matched term token to active schema IRI anchor")
+                else:
+                    yield _log("GRAPH", "No direct IRI mapping found; enabling lexical fallback query")
+
+            # ── Step 4: Build SPARQL query ────────────────────────────────────
+            yield _log("SPARQL", "Compiling SPARQL query template constraints")
+
+            try:
+                sparql_query = build_safe_sparql_query(intent_type, target_graphs, entity_iri, entity_term, stat)
+
+                if sparql_query:
+                    yield _log("SPARQL", "Deterministic query template compiled successfully")
+                else:
+                    yield _log("GRAPH", "Query requires relational context; fetching schematic subgraph")
+                    schema_context, _ = get_ontology_schema(graph_name, target_graphs)
+                    yield _log("SPARQL", "Invoking code generation transformer model for custom query")
+                    sparql_query = svc.generate_sparql(last_user, schema_context)
+                    for i, graph_iri in enumerate(target_graphs):
+                        sparql_query = sparql_query.replace(f"<GRAPH_{i}>", f"<{graph_iri}>")
+                    yield _log("SPARQL", "Synthesizing LLM-generated query structure")
+
+                # ── Step 5: Execute SPARQL ────────────────────────────────────
+                yield _log("DB", "Dispatching query payload to GraphDB server endpoint")
+                raw_results = execute_safe_select(sparql_query)
+                result_count = len(raw_results)
+                yield _log("DB", f"Query executed successfully; returned {result_count} record rows")
+
+                if not raw_results:
+                    yield _sse("result", {
+                        "answer": "I could not find matching information in the selected ontology.",
+                        "options": []
+                    })
+                    return
+
+                # ── Step 6: Format or explain results ────────────────────────
+                if sparql_query and intent_type == "get_numeric_stat":
+                    if stat == "plot":
+                        yield _log("SYS", "Generating plot coordinate arrays and value sequences")
+                        chart_data = []
+                        for i, r in enumerate(raw_results):
+                            if "value" in r:
+                                try:
+                                    v = float(r["value"])
+                                    lbl = r.get("label", f"Instance {i+1}")
+                                    chart_data.append({"name": lbl, "value": v})
+                                except:
+                                    pass
+                        if not chart_data:
+                            yield _sse("result", {"answer": f"I found the '{entity_term}' class, but no numeric instance values were found to plot.", "options": []})
+                            return
+                        yield _sse("result", {
+                            "answer": f"Here is the chart of {entity_term} values from {graph_name} instances:",
+                            "options": [],
+                            "chart_data": chart_data
+                        })
+                        return
+
+                    row = raw_results[0]
+                    count = int(row.get("count", "0"))
+                    if count == 0:
+                        yield _sse("result", {"answer": f"I found the '{entity_term}' class, but no numeric instance values were found for it in the selected instance graph.", "options": []})
+                        return
+
+                    val = ""
+                    stat_name = ""
+                    if stat == "max":
+                        val = row.get("max"); stat_name = "maximum"
+                    elif stat == "min":
+                        val = row.get("min"); stat_name = "minimum"
+                    elif stat in ("avg", "mean"):
+                        val = row.get("avg"); stat_name = "average"
+
+                    if val:
+                        try: val = f"{float(val):.2f}"
+                        except: pass
+                        yield _sse("result", {"answer": f"The {stat_name} value of {entity_term} in {graph_name} instances is {val}.", "options": []})
+                        return
+                    elif stat == "count":
+                        yield _sse("result", {"answer": f"There are {count} numeric instance values for {entity_term} in {graph_name}.", "options": []})
+                        return
+                    else:
+                        ans = [f"Found {count} numeric values for {entity_term}."]
+                        if row.get("min"): ans.append(f"Min: {float(row.get('min')):.2f}")
+                        if row.get("max"): ans.append(f"Max: {float(row.get('max')):.2f}")
+                        if row.get("avg"): ans.append(f"Average: {float(row.get('avg')):.2f}")
+                        yield _sse("result", {"answer": "\n".join(ans), "options": []})
+                        return
+
+                # Simple list results — format locally
+                if sparql_query and intent_type != "complex_query" and 0 < result_count <= 100:
+                    yield _log("SYS", "Applying schematic result list parsing templates")
+                    lines = []
+                    for row in raw_results:
+                        label = row.get("label")
+                        if not label:
+                            for k, v in row.items():
+                                if k != "label" and isinstance(v, str):
+                                    label = v.split("#")[-1].split("/")[-1]
+                                    break
+                        lines.append(f"- {label or 'Unknown'}")
+                    answer = "Here are the results:\n" + "\n".join(lines)
+                    yield _sse("result", {"answer": answer, "options": []})
+                    return
+                else:
+                    yield _log("NLP", "Formatting relational tuples into final natural language response")
+                    answer = svc.answer_from_sparql_results(last_user, str(raw_results), history=history)
+                    yield _sse("result", {"answer": answer, "options": []})
+                    return
+
+            except Exception as query_err:
+                print(f"[ERROR] Dynamic SPARQL pipeline failed: {query_err}")
+                yield _sse("result", {
+                    "answer": f"I encountered an error trying to query the graph database: {str(query_err)}",
+                    "options": []
+                })
+                return
+
+        except Exception as e:
+            print(f"[ERROR] Chat stream failure: {e}")
+            yield _sse("error", {"detail": str(e)})
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+#  Original (non-streaming) chat endpoint — kept unchanged
 
 @router.post("/chat")
 def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
@@ -412,4 +717,3 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
     except Exception as e:
         print(f"[ERROR] Chat failure: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-

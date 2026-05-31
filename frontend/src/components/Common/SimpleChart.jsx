@@ -8,12 +8,14 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 /**
  * An interactive line chart component using canvas
  * @param {Object} props
- * @param {number[]} props.data - Array of numeric values to plot
- * @param {string} props.title - Chart title
- * @param {number} props.width - Chart width (default: 100%)
- * @param {number} props.height - Chart height (default: 200px)
- * @param {string} props.lineColor - Line color (default: gradient purple)
- * @param {string} props.fillColor - Area fill color
+ * @param {number[]} props.data        - Array of numeric values to plot
+ * @param {string}  props.title        - Chart title
+ * @param {number}  props.width        - Chart width (default: 100%)
+ * @param {number}  props.height       - Chart height (default: 200px)
+ * @param {string}  props.lineColor    - Line color (default: gradient purple)
+ * @param {string}  props.fillColor    - Area fill color
+ * @param {number}  [props.yMin]       - Override Y-axis minimum (true dataset min)
+ * @param {number}  [props.yMax]       - Override Y-axis maximum (true dataset max)
  */
 export default function SimpleChart({
   data = [],
@@ -22,6 +24,8 @@ export default function SimpleChart({
   height = 200,
   lineColor = "#7c3aed",
   fillColor = "rgba(37, 99, 235, 0.1)",
+  yMin = undefined,
+  yMax = undefined,
 }) {
   const canvasRef = useRef(null);
   const [tooltip, setTooltip] = useState(null);
@@ -58,16 +62,23 @@ export default function SimpleChart({
       const chartW = w - padding.left - padding.right;
       const chartH = h - padding.top - padding.bottom;
 
-      // Store for mouse events
+      // Store for mouse events — use override min/max when provided so the
+      // Y-axis reflects the TRUE full-dataset range, not just the visible sample.
+      const dataMin = Math.min(...data);
+      const dataMax = Math.max(...data);
+      const effectiveMin = yMin !== undefined ? Math.min(yMin, dataMin) : dataMin;
+      const effectiveMax = yMax !== undefined ? Math.max(yMax, dataMax) : dataMax;
+      const effectiveRange = effectiveMax - effectiveMin || 1;
+
       chartRef.current = {
         padding,
         chartW,
         chartH,
         w,
         h,
-        minVal: Math.min(...data),
-        maxVal: Math.max(...data),
-        range: Math.max(...data) - Math.min(...data) || 1,
+        minVal: effectiveMin,
+        maxVal: effectiveMax,
+        range: effectiveRange,
       };
 
       const { minVal, maxVal, range } = chartRef.current;
@@ -207,7 +218,7 @@ export default function SimpleChart({
         ctx.setLineDash([]);
       }
     },
-    [data, title, lineColor, fillColor],
+    [data, title, lineColor, fillColor, yMin, yMax],
   );
 
   useEffect(() => {
