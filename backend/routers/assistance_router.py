@@ -237,9 +237,16 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
 
             needs_clarification = intent.get("needs_clarification", False)
             if needs_clarification:
+                # Fetch the 3 most recently accessed ontologies as quick suggestions
+                recent_ontologies = [
+                    s.get("name") for s in
+                    list_user_schemas(current_user["email"])[:3]
+                    if s.get("name")
+                ]
                 yield _sse("result", {
                     "answer": intent.get("clarification_message", "Please clarify your request."),
-                    "options": []
+                    "options": [],
+                    "recent_ontologies": recent_ontologies
                 })
                 return
 
@@ -325,9 +332,16 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                     return
 
             if not target_graphs:
+                # No ontology context — show the 3 most recent ones as quick suggestions
+                recent_ontologies = [
+                    s.get("name") for s in
+                    list_user_schemas(current_user["email"])[:3]
+                    if s.get("name")
+                ]
                 yield _sse("result", {
                     "answer": "Please select an ontology or specify which ontology you are asking about.",
-                    "options": []
+                    "options": [],
+                    "recent_ontologies": recent_ontologies
                 })
                 return
 

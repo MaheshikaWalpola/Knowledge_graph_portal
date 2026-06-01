@@ -241,7 +241,8 @@ export default function AIAssistance({ onOpenAuth }) {
             } else if (eventLine === "result") {
               const answer    = payload.answer ?? "No answer returned.";
               const chartData = payload.chart_data;
-              const finalMsgs = [...nextMessages, { role: "assistant", content: answer, chart_data: chartData }];
+              const recentOntologies = payload.recent_ontologies ?? [];
+              const finalMsgs = [...nextMessages, { role: "assistant", content: answer, chart_data: chartData, recent_ontologies: recentOntologies }];
               setChats((prev) =>
                 prev.map((chat) =>
                   chat.id === capturedChatId ? { ...chat, messages: finalMsgs } : chat
@@ -477,6 +478,35 @@ export default function AIAssistance({ onOpenAuth }) {
                             <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
+                      </div>
+                    )}
+                    {m.role === "assistant" && m.recent_ontologies && m.recent_ontologies.length > 0 && (
+                      <div className="recent-ontologies-tray">
+                        <span className="recent-ontologies-label">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                          </svg>
+                          Recent ontologies
+                        </span>
+                        <div className="recent-ontologies-chips">
+                          {m.recent_ontologies.map((name, idx) => (
+                            <button
+                              key={idx}
+                              className="ontology-chip"
+                              onClick={() => !loading && sendMessage(name)}
+                              disabled={loading}
+                              title={`Use ontology: ${name}`}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                                <path d="M21 12c0 1.66-4 3-9 3S3 13.66 3 12"/>
+                                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                              </svg>
+                              {name}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
