@@ -1,3 +1,9 @@
+/* ============================================================
+   MY ONTOLOGIES PAGE
+   Uses .kg-container and .kg-card from SchemaOntology.css
+   — those are already updated with the global layout system.
+   This file adds only the ontology-card component styles.
+   ============================================================ */
 
 .ontology-card {
   border: 1px solid var(--border-light);
@@ -6,7 +12,7 @@
   backdrop-filter: blur(var(--blur-md));
   transition: all 0.3s ease;
   height: 180px;
-  min-width: 250px;
+  min-width: 0; /* allow grid to control width */
   display: flex;
   flex-direction: column;
   cursor: pointer;
@@ -24,32 +30,28 @@
   background: var(--bg-glass);
   border: 1px dashed var(--border-medium);
   border-radius: var(--radius-xl);
-  margin-top: 2rem;
+  margin-top: var(--app-gap-lg);
 }
 
 .kg-title {
-  font-size: 2rem;
+  font-size: clamp(1.4rem, 2.2vw, 2.4rem);
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   margin: 0;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  line-height: 1.2;
 }
 
 .kg-subtitle {
-  font-size: 14px;
+  font-size: clamp(0.85rem, 0.95vw, 1rem);
   color: var(--text-secondary);
-  margin: var(--space-xs) 0 0 0;
+  margin: var(--app-gap-sm) 0 0;
 }
+
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

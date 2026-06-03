@@ -1,12 +1,18 @@
 /* Root Container — mirrors .workspace-container layout */
 .ai-workspace {
+  width: 100%;
+  max-width: calc(var(--app-max-w) + var(--app-pad-x) * 2);
+  margin-inline: auto;
+  padding-inline: var(--app-pad-x);
+  padding-top: var(--app-pad-top);
+  padding-bottom: clamp(32px, 4vh, 64px);
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: var(--space-xl) var(--space-2xl);
-  min-height: calc(100vh - 160px);
+  min-height: calc(100vh - 80px);
   background: var(--bg-primary);
   position: relative;
+  box-sizing: border-box;
 }
 
 /* Auth gate — shown to guests who aren't logged in */
@@ -565,7 +571,7 @@
 
 /* Main Chat Area — mirrors .workspace-card width */
 .ai-main {
-  max-width: 1920px;
+  max-width: var(--app-max-w);
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -573,12 +579,18 @@
 
 /* Container */
 .ai-container {
+  width: 100%;
+  max-width: calc(var(--app-max-w) + var(--app-pad-x) * 2);
+  margin-inline: auto;
+  padding-inline: var(--app-pad-x);
+  padding-top: var(--app-pad-top);
+  padding-bottom: clamp(32px, 4vh, 64px);
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: var(--space-xl) var(--space-2xl);
-  min-height: calc(100vh - 160px);
+  min-height: calc(100vh - 80px);
   position: relative;
+  box-sizing: border-box;
 }
 
 /* Decorative elements */
@@ -608,10 +620,10 @@
   backdrop-filter: blur(var(--blur-xl)) saturate(180%);
   -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(180%);
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-2xl);
-  padding: var(--space-2xl);
+  border-radius: var(--app-radius);
+  padding: var(--app-card-pad);
   box-shadow: var(--shadow-card);
-  animation: fadeIn 0.5s ease forwards;
+  animation: fadeIn 0.45s ease forwards;
 }
 
 /* Header */
@@ -637,7 +649,7 @@
 }
 
 .ai-title {
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 2.5vw, 2.8rem);
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -768,7 +780,7 @@
 
 /* Chat Body - Messages Area */
 .chat-body {
-  height: 520px;
+  height: clamp(380px, 55vh, 700px);
   overflow-y: auto;
   padding: var(--space-lg);
   display: flex;

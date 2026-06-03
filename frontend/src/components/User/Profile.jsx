@@ -44,6 +44,13 @@ export default function Profile({ user, onUserUpdated }) {
     return name || user?.email || "";
   }, [user]);
 
+  const initials = useMemo(() => {
+    const f = (user?.firstName || "").trim().charAt(0).toUpperCase();
+    const l = (user?.lastName || "").trim().charAt(0).toUpperCase();
+    if (f || l) return `${f}${l}`;
+    return (user?.email || "U").substring(0, 2).toUpperCase();
+  }, [user]);
+
   const validateName = () => {
     if (!firstName.trim()) return "First name is required.";
     if (!lastName.trim()) return "Last name is required.";
@@ -154,7 +161,7 @@ export default function Profile({ user, onUserUpdated }) {
 
   if (!user) {
     return (
-      <div className="profile-container">
+      <div className="profile-container animate-fadeIn">
         <div className="profile-card">
           <div className="profile-header">
             <h2 className="profile-title">Profile</h2>
@@ -166,46 +173,64 @@ export default function Profile({ user, onUserUpdated }) {
   }
 
   return (
-    <div className="profile-container">
+    <div className="profile-container animate-fadeIn">
       <div className="profile-card">
         <div className="profile-header">
           <h2 className="profile-title">Profile</h2>
           <p className="profile-sub">Manage your account information.</p>
         </div>
 
+        {/* Dynamic Avatar Banner Section */}
+        <div className="profile-banner-card">
+          <div className="profile-avatar-glow">
+            <span className="profile-avatar-initials">{initials}</span>
+          </div>
+          <div className="profile-banner-info">
+            <h3 className="profile-banner-name">{fullName}</h3>
+            <span className="profile-banner-email">{user.email}</span>
+          </div>
+        </div>
+
         {(error || ok) && (
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 12 }}>
             {error && <div className="error-banner">{error}</div>}
             {ok && <div className="ok-banner">{ok}</div>}
           </div>
         )}
 
-        {/* Account */}
+        {/* Account Details */}
         <div className="section">
-          <div className="section-title">Account</div>
+          <div className="section-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Account
+          </div>
 
           <div className="grid">
-            {/* Name (editable) */}
+            {/* Name field */}
             <div className="field">
-              <label className="label">Name</label>
+              <div className="field-header">
+                <svg className="field-header-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                <label className="label">Name</label>
+              </div>
 
               {!editingName ? (
                 <div className="row-between">
                   <div className="value">{fullName}</div>
                   <button
                     type="button"
-                    className="btn-outline"
+                    className="btn-outline-small"
                     onClick={() => {
                       setError("");
                       setOk("");
                       setEditingName(true);
                     }}
                   >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "5px" }}><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     Edit
                   </button>
                 </div>
               ) : (
-                <>
+                <div className="edit-mode-container">
                   <div className="name-grid">
                     <input
                       className="input"
@@ -224,29 +249,46 @@ export default function Profile({ user, onUserUpdated }) {
                   <div className="actions">
                     <button
                       type="button"
-                      className="btn-outline"
+                      className="btn-outline-small cancel"
                       onClick={cancelNameEdit}
                       disabled={savingName}
                     >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                       Cancel
                     </button>
                     <button
                       type="button"
-                      className="btn"
+                      className="btn-small"
                       onClick={saveName}
                       disabled={savingName}
                     >
-                      {savingName ? "Saving..." : "Save"}
+                      {savingName ? (
+                        "Saving..."
+                      ) : (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}><polyline points="20 6 9 17 4 12"></polyline></svg>
+                          Save
+                        </>
+                      )}
                     </button>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
-            {/* Email (read-only) */}
-            <div className="field">
-              <label className="label">Email</label>
-              <div className="value">{user.email}</div>
+            {/* Email field */}
+            <div className="field read-only">
+              <div className="field-header">
+                <svg className="field-header-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                <label className="label">Email</label>
+              </div>
+              <div className="row-between">
+                <div className="value email-value">{user.email}</div>
+                <div className="lock-badge">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  Locked
+                </div>
+              </div>
               <div className="hint">Email cannot be changed.</div>
             </div>
           </div>
@@ -254,13 +296,18 @@ export default function Profile({ user, onUserUpdated }) {
 
         {/* Change password */}
         <div className="section">
-          <div className="section-title">Change password</div>
+          <div className="section-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Change password
+          </div>
 
           <form className="form" onSubmit={submitChangePassword}>
             <div className="password-input-wrapper">
+              <span className="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              </span>
               <input
-                className="input"
-                style={{ width: "100%", paddingRight: "40px" }}
+                className="input input-with-icon"
                 type={showPasswords ? "text" : "password"}
                 placeholder="Current password"
                 value={currentPassword}
@@ -286,9 +333,11 @@ export default function Profile({ user, onUserUpdated }) {
             </div>
             
             <div className="password-input-wrapper">
+              <span className="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><key x="0" y="0"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></key></svg>
+              </span>
               <input
-                className="input"
-                style={{ width: "100%", paddingRight: "40px" }}
+                className="input input-with-icon"
                 type={showPasswords ? "text" : "password"}
                 placeholder="New password"
                 value={newPassword}
@@ -314,9 +363,11 @@ export default function Profile({ user, onUserUpdated }) {
             </div>
 
             <div className="password-input-wrapper">
+              <span className="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              </span>
               <input
-                className="input"
-                style={{ width: "100%", paddingRight: "40px" }}
+                className="input input-with-icon"
                 type={showPasswords ? "text" : "password"}
                 placeholder="Confirm new password"
                 value={confirmNewPassword}
@@ -343,7 +394,14 @@ export default function Profile({ user, onUserUpdated }) {
 
             <div className="actions">
               <button className="btn" type="submit" disabled={savingPwd}>
-                {savingPwd ? "Saving..." : "Update password"}
+                {savingPwd ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    Update password
+                  </>
+                )}
               </button>
             </div>
           </form>
