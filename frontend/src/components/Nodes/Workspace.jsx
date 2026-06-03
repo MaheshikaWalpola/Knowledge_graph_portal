@@ -190,6 +190,13 @@ const FileDropZone = ({ label, accept, file, onFileSelect, onClear, id }) => {
 const Workspace = () => {
   const [initStatus, setInitStatus] = useState("idle");
   const [initError, setInitError] = useState("");
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // search
   const [q, setQ] = useState("");
@@ -584,30 +591,42 @@ const Workspace = () => {
     return [...nodes.values(), ...edges];
   }, [data, labelMap]);
 
-  const stylesheet = useMemo(
-    () => [
+  const stylesheet = useMemo(() => {
+    // 1366px is baseline, scale factor scales linearly but bounds to reasonable levels
+    const scale = Math.max(1.0, Math.min(2.0, window.innerWidth / 1366));
+    
+    // Scale node metrics
+    const nodeSize = Math.round(44 * scale);
+    const centerNodeSize = Math.round(62 * scale);
+    const fontSize = Math.round(10 * scale);
+    const centerFontSize = Math.round(12 * scale);
+    const edgeFontSize = Math.round(8 * scale);
+    const edgeWidth = Math.round(2 * scale);
+    const textMaxWidth = Math.round(90 * scale);
+
+    return [
       {
         selector: "node",
         style: {
           "background-color": "data(color)",
           label: "data(label)",
           color: "#111827",
-          "font-size": 8,
+          "font-size": fontSize,
           "text-wrap": "wrap",
-          "text-max-width": 80,
+          "text-max-width": textMaxWidth,
           "text-valign": "center",
           "text-halign": "center",
-          width: 36,
-          height: 36,
+          width: nodeSize,
+          height: nodeSize,
           "border-width": 0,
         },
       },
       {
         selector: 'node[isCenter = "true"]',
         style: {
-          width: 48,
-          height: 48,
-          "font-size": 9,
+          width: centerNodeSize,
+          height: centerNodeSize,
+          "font-size": centerFontSize,
           "font-weight": 700,
           color: "#0f172a",
         },
@@ -615,9 +634,9 @@ const Workspace = () => {
       {
         selector: 'node[isGroup = "true"]',
         style: {
-          width: 36,
-          height: 36,
-          "font-size": 8,
+          width: nodeSize,
+          height: nodeSize,
+          "font-size": fontSize,
           "font-weight": 600,
           shape: "ellipse",
           color: "#111827",
@@ -626,12 +645,12 @@ const Workspace = () => {
       {
         selector: "edge",
         style: {
-          width: 2,
+          width: edgeWidth,
           "line-color": "#cbd5e1",
           "target-arrow-color": "#cbd5e1", 
           "target-arrow-shape": "triangle",
           label: "data(label)",
-          "font-size": 6,          
+          "font-size": edgeFontSize,          
           color: "#0f172a",        
           "text-background-opacity": 1,
           "text-background-color": "#ffffff",
@@ -640,10 +659,8 @@ const Workspace = () => {
           "curve-style": "bezier",
         },
       },
-
-    ],
-    []
-  );
+    ];
+  }, [windowWidth]);
 
   // active schema label for display
   const activeSchemaLabel = useMemo(() => {
@@ -902,22 +919,21 @@ const Workspace = () => {
                       animationDuration: 600,
                       animationEasing: "ease-out",
                       fit: true,
-                      padding: 60,
-                      nodeRepulsion: () => 8000,
-                      idealEdgeLength: () => 120,
-                      gravity: 0.25,
-                      gravityRange: 3.8,
-                      numIter: 1000,
+                      padding: 80,
+                      nodeRepulsion: 8000,
+                      idealEdgeLength: 100,
+                      gravity: 0.15,
+                      numIter: 1500,
                       initialTemp: 200,
                       coolingFactor: 0.95,
                       minTemp: 1.0,
-                      nodeOverlap: 20,
-                      componentSpacing: 80,
+                      nodeOverlap: 40,
+                      componentSpacing: 160,
                       refresh: 20,
                       randomize: false,
                     }}
                     stylesheet={stylesheet}
-                    style={{ width: "100%", height: "450px" }}
+                    style={{ width: "100%", height: "100%" }}
                     wheelSensitivity={0.2}
                     cy={(cy) => {
                       cyRef.current = cy;

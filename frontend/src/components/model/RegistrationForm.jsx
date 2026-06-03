@@ -138,7 +138,7 @@ axios.post(`${API}/auth/register`, requestBody)
   };
 
   return (
-    <div className="login__form">
+    <form className="login__form" onSubmit={(e) => { e.preventDefault(); handleRegistration(); }}>
       <FormControl
         className="formControl"
         style={{ marginBottom: "10px" }}
@@ -321,6 +321,7 @@ axios.post(`${API}/auth/register`, requestBody)
       )}
 
       <Button
+        type="submit"
         variant="contained"
         size="large"
         style={{
@@ -330,7 +331,6 @@ axios.post(`${API}/auth/register`, requestBody)
           backgroundColor: "#1d4ed8",
           color: "white",
         }}
-        onClick={handleRegistration}
       >
         Submit
       </Button>
@@ -346,6 +346,6 @@ axios.post(`${API}/auth/register`, requestBody)
           Please check your email inbox and verify your account.
         </Alert>
       </Snackbar>
-    </div>
+    </form>
   );
 }

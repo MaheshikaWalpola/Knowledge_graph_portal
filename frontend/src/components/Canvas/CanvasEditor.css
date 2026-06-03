@@ -17,7 +17,8 @@
   --ce-radius-sm: 10px;
   --ce-gap: 16px;
   --ce-panel-pad: 16px;
-  --ce-top-offset: 90px;
+  /* Updated to match actual navbar height: 8px body-pad + ~60px nav + 8px gap */
+  --ce-top-offset: clamp(72px, 7vh, 84px);
 }
 
 /* ═══════════════════════════════════════════════════════
