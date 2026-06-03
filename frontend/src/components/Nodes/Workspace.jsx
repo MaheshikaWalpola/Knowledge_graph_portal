@@ -902,22 +902,21 @@ const Workspace = () => {
                       animationDuration: 600,
                       animationEasing: "ease-out",
                       fit: true,
-                      padding: 60,
-                      nodeRepulsion: () => 8000,
-                      idealEdgeLength: () => 120,
-                      gravity: 0.25,
-                      gravityRange: 3.8,
-                      numIter: 1000,
+                      padding: 80,
+                      nodeRepulsion: 150000000,
+                      idealEdgeLength: 100,
+                      gravity: 0.1,
+                      numIter: 1500,
                       initialTemp: 200,
                       coolingFactor: 0.95,
                       minTemp: 1.0,
-                      nodeOverlap: 20,
-                      componentSpacing: 80,
+                      nodeOverlap: 40,
+                      componentSpacing: 160,
                       refresh: 20,
                       randomize: false,
                     }}
                     stylesheet={stylesheet}
-                    style={{ width: "100%", height: "450px" }}
+                    style={{ width: "100%", height: "100%" }}
                     wheelSensitivity={0.2}
                     cy={(cy) => {
                       cyRef.current = cy;
