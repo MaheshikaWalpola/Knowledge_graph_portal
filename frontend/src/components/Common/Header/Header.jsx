@@ -22,35 +22,8 @@ import MenuIcon from "@mui/icons-material/Menu";
 import ClearIcon from "@mui/icons-material/Clear";
 import "./Header.css";
 import logo from "../../../assets/Logo.png";
-import logo1 from "../../../assets/KG_Portal.png"
-
-// helper for initials
-const getInitials = (firstName, lastName, email) => {
-  const f = firstName?.trim()?.[0] || "";
-  const l = lastName?.trim()?.[0] || "";
-  if (f || l) return (f + l).toUpperCase();
-  if (email) return email[0].toUpperCase();
-  return "?";
-};
-
-// helper for avatar color (based on email or name)
-const getAvatarColor = (seed) => {
-  const colors = [
-    "#3498db",
-    "#9b59b6",
-    "#e67e22",
-    "#e74c3c",
-    "#2ecc71",
-    "#f1c40f",
-    "#16a085",
-  ];
-  if (!seed) return colors[0];
-  let sum = 0;
-  for (let i = 0; i < seed.length; i++) {
-    sum += seed.charCodeAt(i);
-  }
-  return colors[sum % colors.length];
-};
+import logo1 from "../../../assets/KG_Portal.png";
+import { getInitials, getAvatarColorPair } from "../../../utils/avatarUtils";
 
 export default function Header({ user, onOpenAuth, onLogout }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -80,7 +53,7 @@ export default function Header({ user, onOpenAuth, onLogout }) {
     ? getInitials(user.firstName, user.lastName, user.email)
     : "";
   const avatarColor = user
-    ? getAvatarColor(user.email || `${user.firstName}${user.lastName}`)
+    ? getAvatarColorPair(user.email || `${user.firstName}${user.lastName}`).light
     : "#000";
 
   // only allow workspace for logged-in users

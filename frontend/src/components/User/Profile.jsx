@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import "./Profile.css";
+import { getAvatarColorPair } from "../../utils/avatarUtils";
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -49,6 +50,11 @@ export default function Profile({ user, onUserUpdated }) {
     const l = (user?.lastName || "").trim().charAt(0).toUpperCase();
     if (f || l) return `${f}${l}`;
     return (user?.email || "U").substring(0, 2).toUpperCase();
+  }, [user]);
+
+  const avatarColors = useMemo(() => {
+    if (!user) return { light: "#3498db", dark: "#2980b9" };
+    return getAvatarColorPair(user.email || `${user.firstName}${user.lastName}`);
   }, [user]);
 
   const validateName = () => {
@@ -182,7 +188,15 @@ export default function Profile({ user, onUserUpdated }) {
 
         {/* Dynamic Avatar Banner Section */}
         <div className="profile-banner-card">
-          <div className="profile-avatar-glow">
+          <div
+            className="profile-avatar-glow"
+            style={{
+              "--avatar-color-light": avatarColors.light,
+              "--avatar-color-dark": avatarColors.dark,
+              "--avatar-shadow-25": `${avatarColors.light}40`,
+              "--avatar-shadow-45": `${avatarColors.light}73`,
+            }}
+          >
             <span className="profile-avatar-initials">{initials}</span>
           </div>
           <div className="profile-banner-info">
