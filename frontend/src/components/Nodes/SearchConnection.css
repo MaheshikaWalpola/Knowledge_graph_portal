@@ -1,6 +1,4 @@
-/* ============================================================
-   SEARCH CONNECTION PAGE — Unified layout
-   ============================================================ */
+/* SEARCH CONNECTION PAGE — Unified layout */
 
 .search-container {
   width: 100%;
@@ -190,7 +188,7 @@
 /* Instance panel */
 .instance-panel { margin-top: var(--app-gap-lg); padding-top: var(--app-gap-lg); border-top: 1px solid var(--border-light); }
 .instance-panel-title { font-size: 17px; font-weight: 700; margin: 0 0 var(--app-gap-md); color: var(--text-primary); display: flex; align-items: center; gap: var(--app-gap-sm); }
-.instance-panel-title::before { content: "📈"; font-size: 19px; }
+.instance-panel-title::before { content: ""; }
 .empty-state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: var(--space-2xl); text-align: center; color: var(--text-tertiary);
