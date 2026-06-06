@@ -740,9 +740,7 @@
   border-color: #dc2626;
 }
 
-/* ========================================
-   🎨 Theme Variables (Overriding old ones)
-   ======================================== */
+/* Theme Variables (Overriding old ones) */
 .theme-light {
   --chat-bg: var(--bg-secondary);
   --chat-border: var(--border-light);

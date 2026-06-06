@@ -82,19 +82,19 @@
   width: clamp(64px, 6vw, 84px);
   height: clamp(64px, 6vw, 84px);
   border-radius: 50%;
-  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  background: linear-gradient(135deg, var(--avatar-color-light, #eab308) 0%, var(--avatar-color-dark, #ca8a04) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 20px rgba(234, 179, 8, 0.25);
+  box-shadow: 0 0 20px var(--avatar-shadow-25, rgba(234, 179, 8, 0.25));
   animation: avatarPulse 3s ease-in-out infinite;
   flex-shrink: 0;
   border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 @keyframes avatarPulse {
-  0%, 100% { box-shadow: 0 0 15px rgba(234, 179, 8, 0.25); transform: scale(1); }
-  50%       { box-shadow: 0 0 25px rgba(234, 179, 8, 0.45); transform: scale(1.02); }
+  0%, 100% { box-shadow: 0 0 15px var(--avatar-shadow-25, rgba(234, 179, 8, 0.25)); transform: scale(1); }
+  50%       { box-shadow: 0 0 25px var(--avatar-shadow-45, rgba(234, 179, 8, 0.45)); transform: scale(1.02); }
 }
 
 .profile-avatar-initials {

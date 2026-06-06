@@ -1,8 +1,3 @@
-/* ========================================
-   🦶 FOOTER
-   MacBook-Inspired Premium Design
-   ======================================== */
-
 /* Footer Container */
 .footer {
   padding: var(--space-2xl) var(--space-lg);
@@ -85,9 +80,7 @@ footer.MuiBox-root::before {
   opacity: 0.4;
 }
 
-/* ========================================
-   📱 Responsive Adjustments
-   ======================================== */
+/* Responsive */
 @media (max-width: 600px) {
   .footer,
   footer.MuiBox-root {

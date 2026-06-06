@@ -1,7 +1,5 @@
-// ========================================
 // Label Utilities
 // Convert CamelCase to readable format
-// ========================================
 
 /**
  * Converts CamelCase or PascalCase to human-readable format
@@ -104,11 +102,9 @@ export const getLocalName = (iri = "") => {
   return (iri || "").split("#").pop().split("/").pop();
 };
 
-// ============================================================
-// 📊 Semantic Chart Detection
+// Semantic Chart Detection
 // Mirrors the backend _classify_predicate_semantics logic.
 // Used to guard whether numeric values are real measurements.
-// ============================================================
 
 /**
  * Keywords whose presence in a predicate local-name (lowercase)

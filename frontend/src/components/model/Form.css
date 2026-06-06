@@ -1,7 +1,4 @@
-/* ========================================
-   🔐 AUTH FORMS - Login & Registration
-   MacBook-Inspired Premium Design
-   ======================================== */
+/* Auth Forms - Login & Registration */
 
 /* Form Container */
 .login__form {
@@ -49,9 +46,7 @@
   margin-bottom: var(--space-md) !important;
 }
 
-/* ========================================
-   📝 MUI TextField Overrides
-   ======================================== */
+/* MUI TextField Overrides */
 .formControl .MuiOutlinedInput-root {
   border-radius: var(--radius-lg) !important;
   background: var(--bg-glass) !important;
@@ -111,9 +106,7 @@
   background: rgba(37, 99, 235, 0.08) !important;
 }
 
-/* ========================================
-   🔘 Submit Button
-   ======================================== */
+/* Submit Button */
 .login__form .MuiButton-contained {
   width: 100% !important;
   height: 52px !important;
@@ -161,9 +154,7 @@
   transform: translateY(0) !important;
 }
 
-/* ========================================
-   🔗 Links
-   ======================================== */
+/* Links */
 .login__form a {
   color: var(--accent-primary);
   text-decoration: none;
@@ -178,9 +169,7 @@
   text-decoration: underline;
 }
 
-/* ========================================
-   ❌ Error Message
-   ======================================== */
+/* Error Message */
 .error__message {
   font-size: 14px !important;
   text-align: center;
@@ -204,9 +193,7 @@
   margin-top: var(--space-sm) !important;
 }
 
-/* ========================================
-   ✅ Success State
-   ======================================== */
+/* Success State */
 .success__message {
   font-size: 14px;
   text-align: center;
@@ -222,9 +209,7 @@
   color: #059669;
 }
 
-/* ========================================
-   📱 Responsive Adjustments
-   ======================================== */
+/* Responsive */
 @media (max-width: 600px) {
   .login__form {
     margin: var(--space-lg);
@@ -238,9 +223,7 @@
   }
 }
 
-/* ========================================
-   🌙 Dark Mode Adjustments
-   ======================================== */
+/* Dark Mode */
 @media (prefers-color-scheme: dark) {
   .formControl .MuiOutlinedInput-root {
     background: rgba(255, 255, 255, 0.03) !important;
@@ -270,9 +253,7 @@
   }
 }
 
-/* ========================================
-   ✨ Animation
-   ======================================== */
+/* Animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -284,9 +265,7 @@
   }
 }
 
-/* ========================================
-   📋 Registration Form Specific
-   ======================================== */
+/* Registration Form Specific */
 .registration-form {
   max-width: 500px;
 }
