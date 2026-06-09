@@ -1,18 +1,8 @@
 /* Google Fonts - Premium Typography */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
-/* ============================================================
-   GLOBAL LAYOUT SYSTEM — single source of truth
-   All pages + navbar reference these variables.
-   Changing one value here keeps everything aligned.
-   ============================================================ */
+/* GLOBAL LAYOUT SYSTEM — single source of truth */
 :root {
-  /* ------------------------------------------------------------------
-     APP LAYOUT
-     --app-pad-x  : horizontal padding used by BOTH the navbar margins
-                    AND every page container — guarantees edge alignment.
-     --app-pad-top: vertical gap between navbar bottom and page content.
-     ------------------------------------------------------------------ */
   --app-max-w:    1800px;
   --app-pad-x:    clamp(20px, 3.5vw, 64px);
   --app-pad-top:  clamp(20px, 2.8vh, 40px);
@@ -31,9 +21,7 @@
   /* Shared card corner radius */
   --app-radius:   clamp(16px, 1.5vw, 28px);
 
-  /* ----------------------------------------------------------------
-     Aurora Gradient Colors
-     ---------------------------------------------------------------- */
+  /*      Aurora Gradient Colors    */
   --aurora-1: #2563eb;
   --aurora-2: #3b82f6;
   --aurora-3: #06b6d4;
@@ -151,9 +139,7 @@
   }
 }
 
-/* ============================================================
-   BASE RESET
-   ============================================================ */
+/*    BASE RESET   */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -192,9 +178,7 @@ a {
 }
 a:hover { color: var(--accent-secondary); }
 
-/* ============================================================
-   SCROLLBAR
-   ============================================================ */
+/*    SCROLLBAR   */
 ::-webkit-scrollbar       { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
@@ -203,9 +187,7 @@ a:hover { color: var(--accent-secondary); }
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(37, 99, 235, 0.48); }
 
-/* ============================================================
-   GLASS CARD
-   ============================================================ */
+/*    GLASS CARD   */
 .glass-card {
   background: var(--bg-glass);
   backdrop-filter: blur(var(--blur-lg)) saturate(180%);
@@ -221,9 +203,7 @@ a:hover { color: var(--accent-secondary); }
   border-color: var(--border-medium);
 }
 
-/* ============================================================
-   BUTTONS
-   ============================================================ */
+/*    BUTTONS   */
 .btn-aurora {
   position: relative;
   padding: clamp(10px, 0.9vw, 14px) clamp(20px, 1.8vw, 28px);
@@ -268,9 +248,7 @@ a:hover { color: var(--accent-secondary); }
   transform: translateY(-1px);
 }
 
-/* ============================================================
-   INPUT
-   ============================================================ */
+/*    INPUT   */
 .input-aurora {
   width: 100%;
   padding: clamp(12px, 1vw, 16px) clamp(14px, 1.2vw, 20px);
@@ -289,9 +267,7 @@ a:hover { color: var(--accent-secondary); }
 }
 .input-aurora::placeholder { color: var(--text-tertiary); }
 
-/* ============================================================
-   BADGES
-   ============================================================ */
+/*    BADGES   */
 .badge-aurora {
   display: inline-flex;
   align-items: center;
@@ -315,9 +291,7 @@ a:hover { color: var(--accent-secondary); }
   border-radius: var(--radius-full);
 }
 
-/* ============================================================
-   ANIMATIONS
-   ============================================================ */
+/*    ANIMATIONS   */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-10px); }
@@ -360,9 +334,7 @@ a:hover { color: var(--accent-secondary); }
 .animate-fadeIn    { animation: fadeIn 0.5s ease forwards; }
 .animate-slideIn   { animation: slideIn 0.4s ease forwards; }
 
-/* ============================================================
-   UTILITY
-   ============================================================ */
+/*    UTILITY   */
 .text-gradient {
   background: var(--gradient-primary);
   -webkit-background-clip: text;
@@ -381,18 +353,14 @@ a:hover { color: var(--accent-secondary); }
 .glow-on-hover { transition: all var(--transition-normal); }
 .glow-on-hover:hover { box-shadow: var(--shadow-glow); }
 
-/* ============================================================
-   FOCUS RING (accessibility)
-   ============================================================ */
+/*    FOCUS RING (accessibility)   */
 *:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* ============================================================
-   LOADING SKELETON
-   ============================================================ */
+/*    LOADING SKELETON   */
 .skeleton, .loading-shimmer {
   background: linear-gradient(
     90deg,
