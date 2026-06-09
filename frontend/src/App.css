@@ -1,9 +1,7 @@
 /* Import the design system */
 @import "./index.css";
 
-/* ============================================================
-   APP SHELL
-   ============================================================ */
+/*    APP SHELL   */
 .app-wrapper {
   min-height: 100vh;
   display: flex;
@@ -46,12 +44,6 @@
   width: 100%;
 }
 
-/* ============================================================
-   PAGE SHELL — THE UNIFIED PAGE CONTAINER
-   Every normal page uses this class on its outermost wrapper.
-   Padding-x matches --app-pad-x which is also used by the navbar,
-   so content always aligns with navbar edges.
-   ============================================================ */
 .page-shell {
   width: 100%;
   max-width: calc(var(--app-max-w) + var(--app-pad-x) * 2);
@@ -65,9 +57,7 @@
   box-sizing: border-box;
 }
 
-/* ============================================================
-   PAGE CARD — Glass card used by inner page panels
-   ============================================================ */
+/*    PAGE CARD — Glass card used by inner page panels   */
 .page-card {
   background: var(--bg-glass-strong);
   backdrop-filter: blur(var(--blur-xl)) saturate(180%);
@@ -80,9 +70,7 @@
   flex: 1;
 }
 
-/* ============================================================
-   PAGE HEADER — title + subtitle block
-   ============================================================ */
+/*    PAGE HEADER — title + subtitle block   */
 .page-header {
   display: flex;
   align-items: flex-start;
@@ -113,9 +101,7 @@
   line-height: 1.55;
 }
 
-/* ============================================================
-   GRAPH PANEL — responsive graph wrapper
-   ============================================================ */
+/*    GRAPH PANEL — responsive graph wrapper   */
 .graph-panel {
   position: relative;
   border: 1px solid var(--border-light);
@@ -133,18 +119,14 @@
   height: 100%;
 }
 
-/* ============================================================
-   RESPONSIVE GRID — shared by Profile, MyOntologies, etc.
-   ============================================================ */
+/*    RESPONSIVE GRID — shared by Profile, MyOntologies, etc.   */
 .responsive-grid {
   display: grid;
   gap: var(--app-gap-md);
   grid-template-columns: repeat(auto-fill, minmax(clamp(240px, 22vw, 320px), 1fr));
 }
 
-/* ============================================================
-   LEGACY LAYOUT CONTAINER (kept for backward compat)
-   ============================================================ */
+/*    LEGACY LAYOUT CONTAINER (kept for backward compat)   */
 .layout-container {
   max-width: var(--app-max-w);
   width: 100%;
@@ -152,17 +134,13 @@
   padding-inline: var(--app-pad-x);
 }
 
-/* ============================================================
-   SECTION SPACING
-   ============================================================ */
+/*    SECTION SPACING   */
 .section-header  { margin-bottom: var(--app-gap-md); }
 .section-gap-sm  { margin-top: var(--app-gap-sm); }
 .section-gap-md  { margin-top: var(--app-gap-md); }
 .section-gap-lg  { margin-top: var(--app-gap-lg); }
 
-/* ============================================================
-   CONTENT CARD (alternate to page-card for smaller panels)
-   ============================================================ */
+/*    CONTENT CARD (alternate to page-card for smaller panels)   */
 .content-card {
   background: var(--bg-glass-strong);
   backdrop-filter: blur(var(--blur-xl)) saturate(180%);
@@ -177,18 +155,14 @@
   border-color: var(--border-medium);
 }
 
-/* ============================================================
-   FOCUS RING
-   ============================================================ */
+/*    FOCUS RING   */
 *:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* ============================================================
-   PAGE TRANSITIONS
-   ============================================================ */
+/*    PAGE TRANSITIONS   */
 .page-wrapper {
   flex: 1;
   animation: fadeIn 0.35s ease;
@@ -199,9 +173,7 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ============================================================
-   GRADIENT DECORATORS
-   ============================================================ */
+/*    GRADIENT DECORATORS   */
 .gradient-border {
   position: relative;
   border-radius: var(--radius-xl);

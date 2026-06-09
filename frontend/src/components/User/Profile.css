@@ -1,8 +1,5 @@
-/* ============================================================
-   👤 PROFILE PAGE
-   Glassmorphic MacBook-Inspired Premium Design
-   ============================================================ */
-
+/* PROFILE PAGE STYLES */
+   
 /* Container */
 .profile-container {
   width: 100%;
@@ -58,9 +55,7 @@
   font-size: 0.95rem;
 }
 
-/* ============================================================
-   Dynamic Avatar Banner Section
-   ============================================================ */
+/* USER INFO BANNER */
 .profile-banner-card {
   display: flex;
   align-items: center;
@@ -147,9 +142,8 @@
   border-radius: var(--radius-full);
 }
 
-/* ============================================================
-   Sections
-   ============================================================ */
+/* Sections */
+  
 .section {
   padding: var(--app-card-pad);
   background: var(--bg-glass);
@@ -182,9 +176,7 @@
   color: var(--accent-primary);
 }
 
-/* ============================================================
-   Grid & Fields
-   ============================================================ */
+/* Grid & Fields */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -293,9 +285,7 @@
   min-height: 36px;
 }
 
-/* ============================================================
-   Forms & Inputs
-   ============================================================ */
+/* Forms & Inputs */
 .form {
   display: flex;
   flex-direction: column;
@@ -395,9 +385,7 @@
   background: rgba(37, 99, 235, 0.08);
 }
 
-/* ============================================================
-   Buttons
-   ============================================================ */
+/* Buttons */
 .actions {
   display: flex;
   justify-content: flex-end;
@@ -482,9 +470,7 @@
   background: rgba(239, 68, 68, 0.05);
 }
 
-/* ============================================================
-   Banners
-   ============================================================ */
+/* Banners */
 .error-banner,
 .ok-banner {
   padding: 10px 14px;
@@ -509,9 +495,7 @@
   color: #16a34a;
 }
 
-/* ============================================================
-   Responsive Adjustments
-   ============================================================ */
+/* Responsive Adjustments */
 @media (max-width: 768px) {
   .profile-card {
     padding: clamp(14px, 4vw, 22px);
@@ -533,9 +517,7 @@
   }
 }
 
-/* ============================================================
-   ANIMATIONS
-   ============================================================ */
+/* ANIMATIONS */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }

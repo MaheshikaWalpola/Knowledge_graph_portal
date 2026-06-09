@@ -1,9 +1,3 @@
-/* ============================================================
-   HEADER / NAVBAR — Floating glass pill
-   Uses --app-pad-x for side margins so it aligns perfectly
-   with every page container that also uses --app-pad-x.
-   ============================================================ */
-
 /* ---- Navbar container ---- */
 .navbar {
   position: sticky;
@@ -37,9 +31,7 @@
   gap: clamp(4px, 0.5vw, 10px);
 }
 
-/* ============================================================
-   LOGO / BRAND TITLE
-   ============================================================ */
+/* LOGO / BRAND TITLE */
 .navbar .title {
   font-size: clamp(15px, 1.3vw, 20px) !important;
   font-weight: 800 !important;
@@ -56,9 +48,7 @@
 }
 .navbar .title:hover { transform: scale(1.02); }
 
-/* ============================================================
-   NAV LINKS
-   ============================================================ */
+/*    NAV LINKS   */
 .navbar__link { text-decoration: none; color: inherit; }
 
 .header__links_sub {
@@ -89,9 +79,7 @@
   box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 
-/* ============================================================
-   RIGHT-SIDE CONTROLS
-   ============================================================ */
+/*    RIGHT-SIDE CONTROLS   */
 .header__Rightlinks {
   margin-left: auto;
   display: flex;
@@ -99,9 +87,7 @@
   gap: clamp(6px, 0.7vw, 14px);
 }
 
-/* ============================================================
-   SIGN IN BUTTON
-   ============================================================ */
+/*    SIGN IN BUTTON   */
 .navbar .MuiButton-contained {
   background: var(--gradient-primary) !important;
   border: none !important;
@@ -132,9 +118,7 @@
 .navbar .MuiButton-contained:hover::before { left: 100%; }
 .navbar .MuiButton-contained:active { transform: translateY(0) !important; }
 
-/* ============================================================
-   AVATAR
-   ============================================================ */
+/*    AVATAR   */
 .navbar .MuiIconButton-root {
   padding: 3px !important;
   transition: all var(--transition-normal) !important;
@@ -156,9 +140,7 @@
   border-color: rgba(37, 99, 235, 0.6) !important;
 }
 
-/* ============================================================
-   MOBILE DRAWER
-   ============================================================ */
+/*    MOBILE DRAWER   */
 .MuiDrawer-paper {
   background: var(--bg-glass-strong) !important;
   backdrop-filter: blur(var(--blur-xl)) saturate(180%) !important;
@@ -218,9 +200,7 @@
   font-weight: 700 !important;
 }
 
-/* ============================================================
-   MOBILE BREAKPOINTS
-   ============================================================ */
+/*    MOBILE BREAKPOINTS   */
 @media screen and (max-width: 600px) {
   .navbar .title { font-size: 14px !important; }
   .navbar { top: 6px; border-radius: var(--radius-xl) !important; }

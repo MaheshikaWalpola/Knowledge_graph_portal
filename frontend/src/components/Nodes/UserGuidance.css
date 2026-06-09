@@ -1,8 +1,3 @@
-/* ============================================================
-   USER GUIDANCE PAGE — Documentation Layout
-   Unified layout: --app-pad-x / --app-pad-top
-   ============================================================ */
-
 .guidance-container {
   width: 100%;
   max-width: calc(var(--app-max-w) + var(--app-pad-x) * 2);
@@ -16,9 +11,7 @@
   box-sizing: border-box;
 }
 
-/* ============================================================
-   SIDEBAR NAV
-   ============================================================ */
+/*    SIDEBAR NAV  */
 .guidance-sidebar {
   position: sticky;
   /* top = navbar height (≈60px) + body padding (8px) + small gap */
@@ -73,9 +66,7 @@
 .guidance-nav-icon { width: 17px; height: 17px; opacity: 0.6; flex-shrink: 0; }
 .guidance-nav-item.active .guidance-nav-icon { opacity: 1; }
 
-/* ============================================================
-   CONTENT AREA
-   ============================================================ */
+/*    CONTENT AREA  */
 .guidance-content {
   flex: 1;
   min-width: 0;
@@ -101,9 +92,7 @@
   margin: 0;
 }
 
-/* ============================================================
-   SECTIONS
-   ============================================================ */
+/*    SECTIONS  */
 .guidance-section {
   margin-bottom: clamp(32px, 4vw, 52px);
   scroll-margin-top: clamp(76px, 8vh, 96px);
@@ -171,9 +160,7 @@
   color: var(--text-primary); font-weight: 500;
 }
 
-/* ============================================================
-   MOBILE — hidden sidebar, mobile select
-   ============================================================ */
+/*    MOBILE — hidden sidebar, mobile select  */
 .guidance-mobile-nav { display: none; }
 
 @media screen and (max-width: 768px) {
