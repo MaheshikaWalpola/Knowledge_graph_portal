@@ -1,0 +1,184 @@
+/* InstanceGenerationWorkflow.css */
+
+.instance-gen-container {
+  padding: 20px 0;
+  margin-bottom: 40px;
+}
+
+.instance-gen-card {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+}
+
+.instance-gen-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+  & .MuiCardHeader-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+  }
+
+  & .MuiCardHeader-subheader {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.95rem;
+  }
+}
+
+.instance-gen-content {
+  padding: 32px !important;
+  background-color: #fafafa;
+}
+
+.instance-gen-stepper {
+  background-color: white !important;
+  padding: 24px 0 !important;
+  border-bottom: 2px solid #f0f0f0;
+  margin-bottom: 32px;
+
+  & .MuiStepLabel-label {
+    font-weight: 500;
+  }
+}
+
+.instance-gen-body {
+  min-height: 400px;
+  background-color: white;
+  padding: 24px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+
+  & .MuiAlert-root {
+    margin-bottom: 16px;
+  }
+}
+
+.instance-gen-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+
+  & button {
+    min-width: 120px;
+  }
+}
+
+/* FILE UPLOAD STEP */
+.file-upload-step {
+  & .MuiCard-root {
+    transition: all 0.3s ease;
+    border: 2px dashed #e0e0e0;
+
+    &:hover {
+      border-color: #667eea;
+      background-color: rgba(102, 126, 234, 0.02);
+    }
+  }
+}
+
+/* ANALYSIS REPORT STEP */
+.analysis-report-step {
+  & .MuiTable-root {
+    background-color: white;
+  }
+
+  & .MuiTableHead-root {
+    & .MuiTableCell-root {
+      background-color: #f5f5f5;
+      font-weight: 600;
+      border-bottom: 2px solid #e0e0e0;
+    }
+  }
+
+  & .MuiTableBody-root {
+    & .MuiTableRow-root:hover {
+      background-color: rgba(102, 126, 234, 0.05);
+    }
+  }
+}
+
+/* MATCHING REVIEW STEP */
+.matching-review-step {
+  & .MuiTable-root {
+    background-color: white;
+  }
+
+  & .MuiTableHead-root {
+    & .MuiTableCell-root {
+      background-color: #f5f5f5;
+      font-weight: 600;
+      border-bottom: 2px solid #e0e0e0;
+    }
+  }
+
+  & .MuiTableBody-root {
+    & .MuiTableRow-root:hover {
+      background-color: rgba(102, 126, 234, 0.05);
+    }
+  }
+}
+
+/* GENERATION STEP */
+.generation-step {
+  & .MuiTable-root {
+    background-color: white;
+  }
+
+  & .MuiTableHead-root {
+    & .MuiTableCell-root {
+      background-color: #f5f5f5;
+      font-weight: 600;
+      border-bottom: 2px solid #e0e0e0;
+    }
+  }
+
+  & pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+  }
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .instance-gen-container {
+    padding: 10px;
+  }
+
+  .instance-gen-content {
+    padding: 16px !important;
+  }
+
+  .instance-gen-body {
+    padding: 16px;
+  }
+
+  .instance-gen-footer {
+    flex-direction: column;
+
+    & button {
+      width: 100%;
+    }
+  }
+}
+
+/* ANIMATIONS */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.instance-gen-body {
+  animation: slideIn 0.3s ease-out;
+}

@@ -142,6 +142,18 @@ export default function Header({ user, onOpenAuth, onLogout }) {
             <ListItemText secondary="Main Canvas" />
           </Button>
         </ListItem>
+
+        <ListItem className="list-item" disablePadding>
+          <Button
+            component={Link}
+            to="/instance-generation"
+            variant="text"
+            className="navbar__link"
+            sx={{ justifyContent: "flex-start", width: "100%" }}
+          >
+            <ListItemText secondary="Instance Generator" />
+          </Button>
+        </ListItem>
       </List>
 
       {/* Bottom: auth area inside drawer (for mobile) */}
@@ -267,6 +279,15 @@ export default function Header({ user, onOpenAuth, onLogout }) {
                 onClick={handleWorkspaceClick}
               >
                 Workspace
+              </Button>
+
+              <Button
+                component={Link}
+                to="/instance-generation"
+                variant="text"
+                className="header__links_sub"
+              >
+                Instance Generator
               </Button>
             </div>
           )}
