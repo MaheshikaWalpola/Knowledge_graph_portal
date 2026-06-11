@@ -17,6 +17,8 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import axios from "axios";
 import "./InstanceGenerationWorkflow.css";
 
+const API = import.meta.env.VITE_API_URL;
+
 import FileUploadStep from "./InstanceGen/FileUploadStep";
 import AnalysisReportStep from "./InstanceGen/AnalysisReportStep";
 import MatchingReviewStep from "./InstanceGen/MatchingReviewStep";
@@ -52,6 +54,8 @@ export default function InstanceGenerationWorkflow() {
   const [skipReviewDialog, setSkipReviewDialog] = useState(false);
   const [infoDialog, setInfoDialog] = useState(false);
 
+  const token = localStorage.getItem("token");
+
   console.log("InstanceGenerationWorkflow rendered", { activeStep, schemaFile, dataFiles: dataFiles.length });
 
   // ============ FILE UPLOAD HANDLERS ============
@@ -83,11 +87,12 @@ export default function InstanceGenerationWorkflow() {
       });
 
       const response = await axios.post(
-        "/api/instance-generation/analyze",
+        `${API}/instance-generation/analyze`,
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -160,11 +165,12 @@ export default function InstanceGenerationWorkflow() {
       formData.append("mappings", JSON.stringify(mappings));
 
       const response = await axios.post(
-        "/api/instance-generation/generate",
+        `${API}/instance-generation/generate`,
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
           },
         }
       );
