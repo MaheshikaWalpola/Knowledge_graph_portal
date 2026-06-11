@@ -11,7 +11,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
 } from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import axios from "axios";
 import "./InstanceGenerationWorkflow.css";
 
@@ -48,6 +50,7 @@ export default function InstanceGenerationWorkflow() {
 
   // Skip review dialog
   const [skipReviewDialog, setSkipReviewDialog] = useState(false);
+  const [infoDialog, setInfoDialog] = useState(false);
 
   console.log("InstanceGenerationWorkflow rendered", { activeStep, schemaFile, dataFiles: dataFiles.length });
 
@@ -225,7 +228,31 @@ export default function InstanceGenerationWorkflow() {
             <h2 className="instance-gen-title">Instance Generation Automation</h2>
             <p className="instance-gen-subtitle">Upload schema and data files, review matches, and generate RDF instances</p>
           </div>
+          <Tooltip title="How it works">
+            <IconButton onClick={() => setInfoDialog(true)} size="small" sx={{ color: 'var(--primary-color, #1976d2)' }}>
+              <InfoOutlinedIcon />
+            </IconButton>
+          </Tooltip>
         </div>
+
+        {/* INFO DIALOG */}
+        <Dialog open={infoDialog} onClose={() => setInfoDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>How Instance Generation Works</DialogTitle>
+          <DialogContent dividers>
+            <ol style={{ paddingLeft: '20px', margin: 0, lineHeight: 1.8 }}>
+              <li><strong>Upload files</strong> — Provide your RDF schema (.ttl, .rdf, .owl) and one or more CSV data files.</li>
+              <li><strong>Analyze</strong> — The system reads CSV headers and matches them against terms defined in your schema.</li>
+              <li><strong>Review matches</strong> — You get a report of matched and unmatched headers. You can correct or reassign any mismatches.</li>
+              <li><strong>Generate</strong> — Once you're satisfied, generate an RDF instance file and download it.</li>
+            </ol>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              You can skip the manual review step if you're happy with the automatic matches.
+            </Alert>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setInfoDialog(false)}>Got it</Button>
+          </DialogActions>
+        </Dialog>
 
         <div className="instance-gen-content">
           {/* STEPPER */}
