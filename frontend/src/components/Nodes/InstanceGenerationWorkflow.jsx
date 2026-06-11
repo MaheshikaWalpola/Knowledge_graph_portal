@@ -1,12 +1,5 @@
 import React, { useState } from "react";
 import {
-  Container,
-  Card,
-  CardContent,
-  CardHeader,
-  Stepper,
-  Step,
-  StepLabel,
   Button,
   Box,
   Alert,
@@ -224,26 +217,30 @@ export default function InstanceGenerationWorkflow() {
   };
 
   return (
-    <div style={{ width: "100%", padding: "20px", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-      <Container maxWidth="lg" className="instance-gen-container">
-        <Card className="instance-gen-card">
-          <CardHeader
-            title="Instance Generation Automation"
-            subheader="Upload schema and data files, review matches, and generate RDF instances"
-            className="instance-gen-header"
-          />
+    <div className="instance-gen-container">
+      <div className="instance-gen-card">
+        {/* Header */}
+        <div className="instance-gen-header">
+          <div className="instance-gen-header-left">
+            <h2 className="instance-gen-title">Instance Generation Automation</h2>
+            <p className="instance-gen-subtitle">Upload schema and data files, review matches, and generate RDF instances</p>
+          </div>
+        </div>
 
-        <CardContent className="instance-gen-content">
+        <div className="instance-gen-content">
           {/* STEPPER */}
-          <Stepper activeStep={activeStep} className="instance-gen-stepper">
-            {STEPS.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
+          <div className="instance-gen-stepper">
+            <div className="stepper-steps">
+              {STEPS.map((label, idx) => (
+                <div key={label} className={`stepper-step ${activeStep === idx ? "active" : ""} ${activeStep > idx ? "completed" : ""}`}>
+                  <div className="stepper-circle">{idx + 1}</div>
+                  <p className="stepper-label">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          <Box className="instance-gen-body">
+          <div className="instance-gen-body">
             {/* ERROR ALERT */}
             {error && (
               <Alert severity="error" onClose={() => setError(null)}>
@@ -301,7 +298,7 @@ export default function InstanceGenerationWorkflow() {
                 onGenerateAgain={() => generateInstance(userMappings)}
               />
             )}
-          </Box>
+          </div>
 
           {/* FOOTER BUTTONS */}
           <Box className="instance-gen-footer">
@@ -373,8 +370,8 @@ export default function InstanceGenerationWorkflow() {
               </Box>
             )}
           </Box>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* SKIP REVIEW CONFIRMATION DIALOG */}
       <Dialog open={skipReviewDialog} onClose={() => setSkipReviewDialog(false)}>
@@ -400,7 +397,6 @@ export default function InstanceGenerationWorkflow() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
     </div>
   );
 }

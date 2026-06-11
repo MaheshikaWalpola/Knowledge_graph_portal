@@ -1,173 +1,189 @@
 /* InstanceGenerationWorkflow.css */
 
+/* Outer container — mirrors page-shell utility class */
 .instance-gen-container {
-  padding: 20px 0;
-  margin-bottom: 40px;
+  width: 100%;
+  max-width: calc(var(--app-max-w) + var(--app-pad-x) * 2);
+  margin-inline: auto;
+  padding-inline: var(--app-pad-x);
+  padding-top: var(--app-pad-top);
+  padding-bottom: clamp(40px, 6vh, 80px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-gap-lg);
+  box-sizing: border-box;
 }
 
+/* Main card — glass morphism effect */
 .instance-gen-card {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  margin-bottom: 20px;
+  width: 100%;
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(180%);
+  border: 1px solid var(--border-light);
+  border-radius: var(--app-radius);
+  padding: var(--app-card-pad);
+  box-shadow: var(--shadow-card);
+  animation: fadeIn 0.45s ease forwards;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-gap-lg);
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header section */
 .instance-gen-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 24px !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-
-  & .MuiCardHeader-title {
-    font-size: 1.75rem;
-    font-weight: 600;
-  }
-
-  & .MuiCardHeader-subheader {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.95rem;
-  }
-}
-
-.instance-gen-content {
-  padding: 32px !important;
-  background-color: #fafafa;
-}
-
-.instance-gen-stepper {
-  background-color: white !important;
-  padding: 24px 0 !important;
-  border-bottom: 2px solid #f0f0f0;
-  margin-bottom: 32px;
-
-  & .MuiStepLabel-label {
-    font-weight: 500;
-  }
-}
-
-.instance-gen-body {
-  min-height: 400px;
-  background-color: white;
-  padding: 24px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-
-  & .MuiAlert-root {
-    margin-bottom: 16px;
-  }
-}
-
-.instance-gen-footer {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
-
-  & button {
-    min-width: 120px;
-  }
+  align-items: flex-start;
+  gap: var(--app-gap-md);
+  margin-bottom: var(--app-gap-md);
+  flex-wrap: wrap;
 }
 
-/* FILE UPLOAD STEP */
-.file-upload-step {
-  & .MuiCard-root {
-    transition: all 0.3s ease;
-    border: 2px dashed #e0e0e0;
-
-    &:hover {
-      border-color: #667eea;
-      background-color: rgba(102, 126, 234, 0.02);
-    }
-  }
+.instance-gen-header-left {
+  flex: 1;
+  min-width: 0;
 }
 
-/* ANALYSIS REPORT STEP */
-.analysis-report-step {
-  & .MuiTable-root {
-    background-color: white;
-  }
-
-  & .MuiTableHead-root {
-    & .MuiTableCell-root {
-      background-color: #f5f5f5;
-      font-weight: 600;
-      border-bottom: 2px solid #e0e0e0;
-    }
-  }
-
-  & .MuiTableBody-root {
-    & .MuiTableRow-root:hover {
-      background-color: rgba(102, 126, 234, 0.05);
-    }
-  }
+.instance-gen-title {
+  font-size: clamp(1.4rem, 2.2vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  margin: 0 0 4px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* MATCHING REVIEW STEP */
-.matching-review-step {
-  & .MuiTable-root {
-    background-color: white;
-  }
-
-  & .MuiTableHead-root {
-    & .MuiTableCell-root {
-      background-color: #f5f5f5;
-      font-weight: 600;
-      border-bottom: 2px solid #e0e0e0;
-    }
-  }
-
-  & .MuiTableBody-root {
-    & .MuiTableRow-root:hover {
-      background-color: rgba(102, 126, 234, 0.05);
-    }
-  }
+.instance-gen-subtitle {
+  color: var(--text-secondary);
+  margin: 0;
+  font-size: clamp(0.85rem, 0.95vw, 1rem);
 }
 
-/* GENERATION STEP */
+/* Content area */
+.instance-gen-content {
+  padding: 0;
+  background-color: transparent;
+}
+
+/* Custom Stepper */
+.instance-gen-stepper {
+  margin-bottom: clamp(24px, 4vw, 40px);
+  padding-bottom: clamp(20px, 3vw, 32px);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.stepper-steps {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: clamp(16px, 2vw, 32px);
+  flex-wrap: wrap;
+}
+
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 100px;
+  text-align: center;
+}
+
+.stepper-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: white;
+  background: var(--border-medium);
+  transition: all var(--transition-normal);
+  font-size: 14px;
+}
+
+.stepper-step.active .stepper-circle {
+  background: var(--accent-primary);
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.4);
+  transform: scale(1.1);
+}
+
+.stepper-step.completed .stepper-circle {
+  background: var(--accent-success, #10b981);
+}
+
+.stepper-label {
+  font-size: clamp(12px, 0.9vw, 14px);
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.stepper-step.active .stepper-label {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* Body — step content area */
+.instance-gen-body {
+  min-height: 300px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: clamp(20px, 3vw, 32px);
+  margin-bottom: clamp(20px, 3vw, 32px);
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Alert styling */
+.instance-gen-body .MuiAlert-root {
+  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(37, 99, 235, 0.1);
+}
+
+/* Actions footer */
+.instance-gen-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: clamp(12px, 2vw, 20px);
+  flex-wrap: wrap;
+  padding-top: clamp(16px, 2vw, 24px);
+  border-top: 1px solid var(--border-light);
+}
+
+.instance-gen-actions button {
+  min-width: 120px;
+  font-weight: 600;
+  transition: all var(--transition-normal);
+}
+
+.instance-gen-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Step sections */
+.file-upload-step,
+.analysis-report-step,
+.matching-review-step,
 .generation-step {
-  & .MuiTable-root {
-    background-color: white;
-  }
-
-  & .MuiTableHead-root {
-    & .MuiTableCell-root {
-      background-color: #f5f5f5;
-      font-weight: 600;
-      border-bottom: 2px solid #e0e0e0;
-    }
-  }
-
-  & pre {
-    white-space: pre-wrap;
-    word-break: break-word;
-    line-height: 1.5;
-  }
+  width: 100%;
 }
 
-/* RESPONSIVE */
-@media (max-width: 768px) {
-  .instance-gen-container {
-    padding: 10px;
-  }
-
-  .instance-gen-content {
-    padding: 16px !important;
-  }
-
-  .instance-gen-body {
-    padding: 16px;
-  }
-
-  .instance-gen-footer {
-    flex-direction: column;
-
-    & button {
-      width: 100%;
-    }
-  }
-}
-
-/* ANIMATIONS */
+/* Animations */
 @keyframes slideIn {
   from {
     opacity: 0;
@@ -179,6 +195,26 @@
   }
 }
 
-.instance-gen-body {
-  animation: slideIn 0.3s ease-out;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .stepper-steps {
+    flex-direction: column;
+    gap: clamp(12px, 2vw, 20px);
+  }
+
+  .stepper-step {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    text-align: left;
+    min-width: auto;
+  }
+
+  .instance-gen-actions {
+    flex-direction: column;
+  }
+
+  .instance-gen-actions button {
+    width: 100%;
+  }
 }
