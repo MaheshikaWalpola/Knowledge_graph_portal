@@ -97,6 +97,12 @@ export default function InstanceGenerationWorkflow() {
         }
       );
 
+      console.log(
+        "[InstanceGen] Schema/Data analysis complete. Matching Method:",
+        response.data.matching_method,
+        "Report:",
+        response.data
+      );
       setAnalysisReport(response.data);
       setUserMappings(response.data.matched_headers || {});
       setActiveStep(1);
@@ -377,7 +383,7 @@ export default function InstanceGenerationWorkflow() {
             {activeStep === 2 && (
               <Button
                 variant="contained"
-                onClick={handleProceedToGeneration}
+                onClick={() => generateInstance(userMappings)}
                 disabled={loading}
               >
                 {loading ? <CircularProgress size={24} /> : "Generate Instance"}

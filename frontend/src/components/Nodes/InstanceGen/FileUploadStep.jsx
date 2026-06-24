@@ -131,7 +131,7 @@ export default function FileUploadStep({
             <input
               ref={dataInputRef}
               type="file"
-              accept=".csv"
+              accept=".csv,.zip"
               onChange={handleDataFilesChange}
               multiple
               style={{ display: "none" }}

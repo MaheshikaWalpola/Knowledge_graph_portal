@@ -28,6 +28,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
+import WarningIcon from "@mui/icons-material/Warning";
 
 export default function MatchingReviewStep({
   analysisReport,
@@ -40,17 +41,39 @@ export default function MatchingReviewStep({
   const [editDialog, setEditDialog] = useState(null);
   const [selectedHeader, setSelectedHeader] = useState(null);
   const [selectedTerm, setSelectedTerm] = useState(null);
+  const [dialogMode, setDialogMode] = useState("header_to_term"); // "header_to_term" or "term_to_header"
 
   const matched = analysisReport?.matched_headers || {};
   const unmatched = analysisReport?.unmatched_data_headers || [];
   const allSchemaTerms = analysisReport?.available_schema_terms || [];
 
-  // Combine initial matched with user mappings
-  const currentMappings = { ...matched, ...userMappings };
+  // Use userMappings directly as currentMappings
+  const currentMappings = userMappings;
+
+  // Dynamic filter for unmatched headers (headers not mapped yet)
+  const unmatchedHeadersList = unmatched.filter((h) => !currentMappings[h]);
+  const unmappedCount = unmatchedHeadersList.length;
+
+  // Dynamic filter for missing schema terms (terms not present as values in mappings yet)
+  const missingTermsList = (analysisReport?.missing_schema_terms || []).filter(
+    (t) => !Object.values(currentMappings).includes(t)
+  );
+  const missingCount = missingTermsList.length;
+
+  const mappedCount = Object.keys(currentMappings).length;
 
   const handleOpenEditDialog = (header) => {
+    setDialogMode("header_to_term");
     setSelectedHeader(header);
     setSelectedTerm(currentMappings[header] || "");
+    setEditDialog(true);
+  };
+
+  const handleOpenMapTermDialog = (term) => {
+    setDialogMode("term_to_header");
+    setSelectedTerm(term);
+    const headerForTerm = Object.keys(currentMappings).find(h => currentMappings[h] === term);
+    setSelectedHeader(headerForTerm || "");
     setEditDialog(true);
   };
 
@@ -66,9 +89,6 @@ export default function MatchingReviewStep({
   const handleDeleteMapping = (header) => {
     onRemoveMapping(header);
   };
-
-  const unmappedCount = unmatched.filter((h) => !currentMappings[h]).length;
-  const mappedCount = Object.keys(currentMappings).length;
 
   return (
     <Box className="matching-review-step">
@@ -177,18 +197,44 @@ export default function MatchingReviewStep({
               </Typography>
 
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
-                {unmatched
-                  .filter((h) => !currentMappings[h])
-                  .map((header) => (
-                    <Chip
-                      key={header}
-                      label={header}
-                      onClick={() => handleOpenEditDialog(header)}
-                      color="warning"
-                      variant="outlined"
-                      icon={<AddIcon />}
-                    />
-                  ))}
+                {unmatchedHeadersList.map((header) => (
+                  <Chip
+                    key={header}
+                    label={header}
+                    onClick={() => handleOpenEditDialog(header)}
+                    color="warning"
+                    variant="outlined"
+                    icon={<AddIcon />}
+                  />
+                ))}
+              </Box>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* MISSING SCHEMA TERMS */}
+        {missingCount > 0 && (
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="subtitle1" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <WarningIcon sx={{ color: "error.main" }} />
+                Missing Schema Terms
+              </Typography>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Click on a missing term below to map it to a CSV header name
+              </Typography>
+
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 2 }}>
+                {missingTermsList.map((term) => (
+                  <Chip
+                    key={term}
+                    label={term}
+                    onClick={() => handleOpenMapTermDialog(term)}
+                    color="error"
+                    variant="outlined"
+                    icon={<AddIcon />}
+                  />
+                ))}
               </Box>
             </CardContent>
           </Card>
@@ -207,36 +253,63 @@ export default function MatchingReviewStep({
       {/* EDIT MAPPING DIALOG */}
       <Dialog open={editDialog} onClose={() => setEditDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          Map Header to Schema Term
+          {dialogMode === "header_to_term" ? "Map Header to Schema Term" : "Map Schema Term to CSV Header"}
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
-          <Typography variant="body2" color="textSecondary" gutterBottom>
-            Data Header: <strong>{selectedHeader}</strong>
-          </Typography>
-
-          <Autocomplete
-            options={allSchemaTerms}
-            value={selectedTerm || null}
-            onChange={(event, value) => setSelectedTerm(value || "")}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Select Schema Term"
-                placeholder="Search or select a term"
+          {dialogMode === "header_to_term" ? (
+            <>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Data Header: <strong>{selectedHeader}</strong>
+              </Typography>
+              <Autocomplete
+                options={allSchemaTerms}
+                value={selectedTerm || null}
+                onChange={(event, value) => setSelectedTerm(value || "")}
+                onInputChange={(event, newInputValue) => setSelectedTerm(newInputValue || "")}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Schema Term"
+                    placeholder="Search or select a term"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                  />
+                )}
+                freeSolo
                 fullWidth
-                sx={{ mt: 2 }}
               />
-            )}
-            freeSolo
-            fullWidth
-          />
+            </>
+          ) : (
+            <>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                Schema Term: <strong>{selectedTerm}</strong>
+              </Typography>
+              <Autocomplete
+                options={unmatched}
+                value={selectedHeader || null}
+                onChange={(event, value) => setSelectedHeader(value || "")}
+                onInputChange={(event, newInputValue) => setSelectedHeader(newInputValue || "")}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select or Type Data Header"
+                    placeholder="Search or select a CSV header, or type a custom name"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                  />
+                )}
+                freeSolo
+                fullWidth
+              />
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialog(false)}>Cancel</Button>
           <Button
             onClick={handleSaveMapping}
             variant="contained"
-            disabled={!selectedTerm}
+            disabled={dialogMode === "header_to_term" ? !selectedTerm : !selectedHeader}
           >
             Save Mapping
           </Button>

@@ -45,6 +45,7 @@ def build_instances_from_csvs(
     filenames: List[str],
     user_key: str,
     schema_id: str,
+    mappings: Dict[str, str] = None,
 ) -> InstanceBuildResult:
     """
     Assumptions:
@@ -102,7 +103,10 @@ def build_instances_from_csvs(
                 if pd.isna(val):
                     continue
 
-                local = _local_name_from_header(col)
+                if mappings and col in mappings:
+                    local = mappings[col]
+                else:
+                    local = _local_name_from_header(col)
                 if not local:
                     continue
 

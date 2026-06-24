@@ -1,5 +1,5 @@
 """
-Instance Generation Analysis Service
+Instance Analysis Service
 
 Handles:
 - Extracting schema terms from RDF files
@@ -76,15 +76,27 @@ def match_headers_to_schema(
             "matched_headers": {},
             "unmatched_data_headers": data_headers,
             "missing_schema_terms": schema_terms,
+            "matching_method": "None",
         }
+
+    matched = {}
+    matching_method = "LLM"
 
     # Try to use LLM service for intelligent matching
     try:
+        print("[INFO] Attempting intelligent matching using LLM service...")
         matched = get_llm_matching_suggestions(data_headers, schema_terms)
+        if not matched:
+            print("[INFO] LLM matching returned empty results. Falling back to simple heuristic matching...")
+            matched = _fallback_simple_matching(data_headers, schema_terms)
+            matching_method = "Fallback Heuristics"
+        else:
+            print(f"[INFO] LLM matching succeeded. Matched {len(matched)} headers.")
     except Exception as e:
         # Fallback to simple string matching if LLM fails
-        print(f"Warning: LLM matching failed, using fallback: {str(e)}")
+        print(f"[WARNING] LLM matching failed with exception, using fallback: {str(e)}")
         matched = _fallback_simple_matching(data_headers, schema_terms)
+        matching_method = "Fallback Heuristics"
 
     # Find unmatched headers
     matched_headers = set(matched.keys())
@@ -99,6 +111,7 @@ def match_headers_to_schema(
         "unmatched_data_headers": unmatched_data,
         "missing_schema_terms": missing_terms,
         "available_schema_terms": schema_terms,
+        "matching_method": matching_method,
     }
 
 
@@ -111,7 +124,7 @@ def _fallback_simple_matching(
     Matches based on:
     1. Exact match (case-insensitive)
     2. Contains relationship
-    3. First letter match + length proximity
+    3. First 3 letters match + length proximity
     """
     matched = {}
 
@@ -137,11 +150,11 @@ def _fallback_simple_matching(
         if header in matched:
             continue
 
-        # Try first letter + similar length
-        if header:
-            header_first = header[0].lower()
+        # Try first 3 letters + similar length
+        if header and len(header) >= 3:
+            header_prefix = header[:3].lower()
             for term in schema_terms:
-                if term and term[0].lower() == header_first:
+                if term and len(term) >= 3 and term[:3].lower() == header_prefix:
                     len_diff = abs(len(header) - len(term))
                     if len_diff <= 3:  # Similar length
                         matched[header] = term
