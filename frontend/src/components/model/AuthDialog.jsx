@@ -71,11 +71,8 @@ export default function AuthDialog({ open, onClose, onAuthSuccess }) {
     onClose();
   };
 
-  // adjust this depending on what RegistrationForm returns
   const handleRegisterSuccess = (userData) => {
-    if (typeof onAuthSuccess === "function") {
-      onAuthSuccess(userData);
-    }
+    // Just close the registration dialog since the user must verify their email first
     onClose();
   };
 
