@@ -27,6 +27,11 @@ from controllers.controller import (
     ctrl_workspace_full_schema_graph,
 )
 
+from controllers.instance_generation_controller import (
+    ctrl_analyze_schema_and_data,
+    ctrl_generate_instance,
+)
+
 from core.auth import get_current_user
 
 router = APIRouter()
@@ -401,4 +406,50 @@ async def api_canvas_import(
         "nodes": list(node_map.values()),
         "edges": edge_list,
     }
+
+
+# ────────────────── INSTANCE GENERATION WORKFLOW ──────────────────
+
+@router.post("/instance-generation/analyze")
+async def api_analyze_schema_and_data(
+    schema_file: UploadFile = File(..., description="RDF/Turtle schema file"),
+    data_files: List[UploadFile] = File(..., description="CSV data files"),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """
+    Analyze schema file and CSV data files.
+    Returns matching analysis report with:
+    - matched_headers: CSV headers matched to schema terms
+    - unmatched_data_headers: CSV headers without matches
+    - missing_schema_terms: Schema terms without data headers
+    - available_schema_terms: All schema terms for manual mapping
+    """
+    return await ctrl_analyze_schema_and_data(
+        schema_file=schema_file,
+        data_files=data_files,
+        user_email=current_user["email"],
+    )
+
+
+@router.post("/instance-generation/generate")
+async def api_generate_instance(
+    schema_file: UploadFile = File(..., description="RDF/Turtle schema file"),
+    data_files: List[UploadFile] = File(..., description="CSV data files"),
+    mappings: str = Form(..., description="JSON string of {data_header: schema_term} mappings"),
+    schema_id: Optional[str] = Form("main", description="Which schema workspace to use"),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """
+    Generate RDF instance file from schema and data files.
+    
+    Uses the provided mappings to determine how CSV headers map to schema terms.
+    Returns generated Turtle content and metadata.
+    """
+    return await ctrl_generate_instance(
+        schema_file=schema_file,
+        data_files=data_files,
+        mappings=mappings,
+        user_email=current_user["email"],
+        schema_id=schema_id,
+    )
 

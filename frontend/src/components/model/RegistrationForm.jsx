@@ -9,10 +9,14 @@ import {
   OutlinedInput,
   InputAdornment,
   IconButton,
+  Box,
+  Typography,
 } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import EmailIcon from "@mui/icons-material/Email";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Form.css";
 
@@ -34,6 +38,9 @@ export default function RegistrationForm({ onRegisterSuccess }) {
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const navigate = useNavigate();
 
   const termsAndConditionsUrl = "/termsandconditions";
 
@@ -98,6 +105,8 @@ axios.post(`${API}/auth/register`, requestBody)
 
       if (status === "ok") {
         // show success
+        setRegisteredEmail(email);
+        setIsRegistered(true);
         setOpenAlert(true);
         setErrorMessage("");
 
@@ -109,12 +118,6 @@ axios.post(`${API}/auth/register`, requestBody)
         setCPassword("");
         setTermsAccepted(false);
         setSubmitted(false);
-
-        if (typeof onRegisterSuccess === "function") {
-          setTimeout(() => {
-            onRegisterSuccess(email);
-          }, 4000);
-        }
       } else {
         console.error("Unexpected response:", response.data);
         setErrorMessage(message || "User already exists");
@@ -136,6 +139,116 @@ axios.post(`${API}/auth/register`, requestBody)
     setOpenAlert(false);
   });
   };
+
+  if (isRegistered) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
+          padding: "30px 20px",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 80,
+            height: 80,
+            borderRadius: "50%",
+            backgroundColor: "#dbeafe",
+            color: "#1d4ed8",
+            marginBottom: "24px",
+            boxShadow: "0 4px 14px rgba(29, 78, 216, 0.15)",
+          }}
+        >
+          <EmailIcon sx={{ fontSize: 40 }} />
+        </Box>
+
+        <Typography
+          variant="h5"
+          component="h2"
+          sx={{
+            fontWeight: "bold",
+            color: "#1e293b",
+            marginBottom: "16px",
+            fontFamily: "'Outfit', 'Inter', sans-serif",
+          }}
+        >
+          Verify Your Email
+        </Typography>
+
+        <Typography
+          variant="body1"
+          sx={{
+            color: "#475569",
+            lineHeight: 1.6,
+            marginBottom: "20px",
+            fontSize: "15px",
+          }}
+        >
+          Thank you for registering! We've sent a verification link to{" "}
+          <strong style={{ color: "#0f172a" }}>{registeredEmail}</strong>.
+          Please click the link in the email to activate your account.
+        </Typography>
+
+        <Box
+          sx={{
+            backgroundColor: "#fef3c7",
+            borderLeft: "4px solid #d97706",
+            borderRadius: "6px",
+            padding: "12px 16px",
+            marginBottom: "28px",
+            textAlign: "left",
+            width: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: "#92400e",
+              fontWeight: 500,
+              lineHeight: 1.5,
+            }}
+          >
+            <strong>Note:</strong> If you don't receive the email within a few
+            minutes, please check your <strong>Junk</strong> or <strong>Spam</strong> folder.
+          </Typography>
+        </Box>
+
+        <Button
+          variant="contained"
+          onClick={() => {
+            if (typeof onRegisterSuccess === "function") {
+              onRegisterSuccess(registeredEmail);
+            } else {
+              navigate("/");
+            }
+          }}
+          sx={{
+            height: "45px",
+            width: "100%",
+            backgroundColor: "#1d4ed8",
+            color: "white",
+            fontWeight: 600,
+            borderRadius: "8px",
+            textTransform: "none",
+            fontSize: "16px",
+            boxShadow: "0 4px 12px rgba(29, 78, 216, 0.2)",
+            "&:hover": {
+              backgroundColor: "#1e40af",
+            },
+          }}
+        >
+          Got it, thank you!
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <form className="login__form" onSubmit={(e) => { e.preventDefault(); handleRegistration(); }}>

@@ -5,6 +5,7 @@ const sections = [
   { id: "getting-started", label: "Getting Started", icon: "rocket" },
   { id: "workspace", label: "Workspace", icon: "grid" },
   { id: "schema-ontology", label: "Schema Ontology", icon: "layers" },
+  { id: "instance-generation", label: "Instance Generation", icon: "file-text" },
   { id: "ai-assistant", label: "AI Assistant", icon: "cpu" },
   { id: "main-canvas", label: "Main Canvas", icon: "pen-tool" },
   { id: "search", label: "Search Connections", icon: "search" },
@@ -63,6 +64,15 @@ const Icon = ({ name, size = 16, className = "" }) => {
         <ellipse cx="12" cy="5" rx="9" ry="3" />
         <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
         <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+      </svg>
+    ),
+    "file-text": (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <line x1="10" y1="9" x2="8" y2="9" />
       </svg>
     ),
     user: (
@@ -308,6 +318,64 @@ const UserGuidance = () => {
               Use the search bar above the graph to quickly find specific classes or entities.
               The filter panel lets you show/hide different types of relationships and
               focus on specific parts of the ontology.
+            </p>
+          </div>
+        </section>
+
+        {/* Instance Generation */}
+        <section id="instance-generation" className="guidance-section">
+          <h2 className="guidance-section-title">
+            <span className="guidance-section-icon"><Icon name="file-text" /></span>
+            Instance Generation
+          </h2>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Overview</h3>
+            <p className="guidance-text">
+              The Instance Generation workflow allows you to build rich RDF instance data files based on raw CSV data files aligned with an RDF/OWL/Turtle schema. By utilizing automated header mapping heuristics, custom override options, and batch folder uploads, you can efficiently construct structural triple configurations.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 1: Upload Files</h3>
+            <p className="guidance-text">
+              Begin by providing the structural schema and the corresponding data files:
+            </p>
+            <Steps items={[
+              "Provide a Schema file — Choose an RDF, OWL, or Turtle (.ttl) schema definition file.",
+              "Provide Data files — Choose one or more CSV files, or select a single .zip file. If a .zip file is uploaded, the system recursively scans and extracts all nested CSV files automatically.",
+              "To remove any uploaded schema or data file, simply click the small cross (x) button on its display chip."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 2: Analyze</h3>
+            <p className="guidance-text">
+              After selecting your files, click <strong>Analyze Files</strong>. The system reads the column headers of all uploaded CSV files, cross-references them against terms (classes and properties) in your schema, and automatically produces the best prefix and keyword match recommendations.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 3: Review & Custom Mappings</h3>
+            <p className="guidance-text">
+              The Matching Review screen lists matched and unmatched elements. You can modify these to fine-tune the resulting knowledge graph structure:
+            </p>
+            <Steps items={[
+              "Edit Mappings — Click on any CSV header mapping card to open the custom mapping dialog.",
+              "Dual-Mode Mapping — Toggle between mapping a CSV header to a schema term, or a schema term to a CSV header, using the intelligent search/autocomplete dropdown.",
+              "Save Free-form Mappings — If a schema term isn't found in the autocomplete results, you can type your own namespace/URI term and press Enter to save it.",
+              "Delete Mappings — Use the delete icon to remove any incorrect automatic mappings. Unmapped headers will be ignored during output construction.",
+              "Map Missing Schema Terms — A dedicated list card displays all key terms in the schema that are not yet bound. You can easily map these to any available CSV header."
+            ]} />
+            <Callout type="tip">
+              If you are confident in the system's automated suggestions, you can skip the manual review step entirely by clicking <strong>Skip Review</strong> to proceed straight to RDF compilation.
+            </Callout>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 4: Generate & Download</h3>
+            <p className="guidance-text">
+              Once review is complete, click <strong>Generate Instance</strong>. The service constructs Turtle/RDF records conforming to the correct RDFLib naming conventions, mapping CSV attributes to instances (such as wafer runs and parameter details). You can view generating details (file size, triple count, rows processed) and download the completed .ttl file directly to your device.
             </p>
           </div>
         </section>
