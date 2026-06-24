@@ -61,16 +61,10 @@ export default function GenerationStep({
   return (
     <Box className="generation-step">
       <Typography variant="h6" gutterBottom>
-        Step 4: Instance Generated Successfully! 🎉
+        Step 4: Instance Generated Successfully!
       </Typography>
 
       <Stack spacing={3}>
-        {/* SUCCESS ALERT */}
-        <Alert severity="success">
-          <AlertTitle>Instance File Created</AlertTitle>
-          Your RDF instance file has been generated successfully. You can now download
-          it and upload it to your knowledge graph.
-        </Alert>
 
         {/* INSTANCE DETAILS */}
         <Card variant="outlined">
@@ -115,64 +109,14 @@ export default function GenerationStep({
                         : "N/A"}
                     </TableCell>
                   </TableRow>
-                  {generatedInstance.rows_processed && (
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: "bold" }}>Rows Processed</TableCell>
-                      <TableCell>{generatedInstance.rows_processed}</TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
             </TableContainer>
           </CardContent>
         </Card>
 
-        {/* PREVIEW */}
-        {generatedInstance.preview && (
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="subtitle1" gutterBottom>
-                📋 Preview (First 10 Lines)
-              </Typography>
-              <Paper
-                sx={{
-                  p: 2,
-                  backgroundColor: "#f5f5f5",
-                  overflowX: "auto",
-                  fontFamily: "monospace",
-                  fontSize: "0.85rem",
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                }}
-              >
-                <pre>{generatedInstance.preview}</pre>
-              </Paper>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* NEXT STEPS */}
-        <Alert severity="info">
-          <Typography variant="subtitle2" gutterBottom>
-            📝 Next Steps:
-          </Typography>
-          <ol style={{ margin: "8px 0", paddingLeft: "20px" }}>
-            <li>Download your instance file using the button below</li>
-            <li>Navigate to the RDF Upload section</li>
-            <li>Upload the generated instance file to your knowledge graph</li>
-            <li>Verify the instances in your workspace</li>
-          </ol>
-        </Alert>
-
         {/* ACTION BUTTONS */}
         <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
-          <Button
-            variant="outlined"
-            onClick={onGenerateAgain}
-            disabled={loading}
-          >
-            Generate Again
-          </Button>
           <Button
             variant="contained"
             startIcon={<FileDownloadIcon />}

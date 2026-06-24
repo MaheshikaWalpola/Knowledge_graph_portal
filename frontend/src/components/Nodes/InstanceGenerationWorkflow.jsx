@@ -69,6 +69,14 @@ export default function InstanceGenerationWorkflow() {
     setError(null);
   };
 
+  const handleSchemaRemove = () => {
+    setSchemaFile(null);
+  };
+
+  const handleDataFileRemove = (fileName) => {
+    setDataFiles((prev) => prev.filter((file) => file.name !== fileName));
+  };
+
   // ============ ANALYSIS STEP ============
   const handleAnalyzeFiles = async () => {
     if (!schemaFile || dataFiles.length === 0) {
@@ -303,6 +311,8 @@ export default function InstanceGenerationWorkflow() {
                 onDataFilesUpload={handleDataFilesUpload}
                 schemaFile={schemaFile}
                 dataFiles={dataFiles}
+                onSchemaRemove={handleSchemaRemove}
+                onDataFileRemove={handleDataFileRemove}
               />
             )}
 
@@ -340,7 +350,7 @@ export default function InstanceGenerationWorkflow() {
           </div>
 
           {/* FOOTER BUTTONS */}
-          <Box className="instance-gen-footer">
+          <Box className="instance-gen-actions">
             <Button
               disabled={activeStep === 0 || loading}
               onClick={handleBack}
@@ -398,13 +408,6 @@ export default function InstanceGenerationWorkflow() {
                   disabled={loading}
                 >
                   Start Over
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={handleDownloadInstance}
-                  disabled={loading}
-                >
-                  Download Instance
                 </Button>
               </Box>
             )}

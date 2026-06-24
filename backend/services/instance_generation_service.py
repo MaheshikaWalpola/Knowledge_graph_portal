@@ -7,10 +7,8 @@ import urllib.parse
 import re
 
 import pandas as pd
-
 from rdflib import Graph, Namespace, Literal
 from rdflib.namespace import RDF, XSD
-
 from core.config import settings
 
 
@@ -18,6 +16,7 @@ from core.config import settings
 class InstanceBuildResult:
     turtle: str
     triples: int
+    rows_processed: int
 
 
 def _safe_seg(s: str) -> str:
@@ -40,6 +39,50 @@ def _local_name_from_header(header: str) -> str:
     return "".join(p[:1].upper() + p[1:].lower() for p in parts)
 
 
+def _infer_unit(header: str) -> str:
+    """Infer unit from column header string matching Instances_v2.ttl units."""
+    h = header.lower()
+    if "pressure" in h:
+        if "kpa" in h:
+            return "kPa"
+        return "psi"
+    if "rotation" in h or "speed" in h:
+        return "rpm"
+    if "rate" in h or "flow" in h:
+        if "ml/min" in h or "flow" in h:
+            return "ml/min"
+        return "nm/min"
+    if "status" in h:
+        return "status"
+    if "velocity" in h:
+        return "m/s"
+    if "usage" in h or "lifetime" in h or "minutes" in h:
+        if "wafer" in h or "count" in h:
+            return "count"
+        return "min"
+    if "temperature" in h:
+        return "degC"
+    if "humidity" in h or "percent" in h or "concentration" in h or "content" in h:
+        return "%"
+    if "force" in h or "downforce" in h:
+        return "N"
+    if "sweep" in h or "spm" in h:
+        return "spm"
+    if "ionic" in h or "mm" in h:
+        return "mM"
+    if "particle" in h or "size" in h or "amount" in h or "nm" in h:
+        return "nm"
+    if "ratio" in h:
+        return "ratio"
+    if "ph" in h:
+        return "pH"
+    if "viscosity" in h or "cp" in h:
+        return "cP"
+    if "mv" in h:
+        return "mV"
+    return ""
+
+
 def build_instances_from_csvs(
     files: List[bytes],
     filenames: List[str],
@@ -48,25 +91,16 @@ def build_instances_from_csvs(
     mappings: Dict[str, str] = None,
 ) -> InstanceBuildResult:
     """
-    Assumptions:
-    - CSV headers match schema terms (after normalization)
-    - Values are numeric (float) when present
-    - Each row becomes a CMPProcess + associated value nodes
-
-    Result:
-    - Turtle string to be uploaded into the user's instance named graph
+    Generate RDF instance file from CSVs matching the style of Instances_v2.ttl.
     """
 
-    CMPO = Namespace(settings.CMP_NS)
-    EX = Namespace(settings.CMP_INSTANCE_NS)
+    CMPO = Namespace("https://tucid/cpmo/")
+    INST = Namespace("https://tucid/cpmo/instance/")
 
     g = Graph()
     g.bind("cmpo", CMPO)
-    g.bind("ex", EX)
-
-    # For uniqueness across uploads:
-    user_part = _safe_seg(user_key)
-    schema_part = _safe_seg(schema_id)
+    g.bind("inst", INST)
+    g.bind("xsd", XSD)
 
     total_rows = 0
 
@@ -75,28 +109,67 @@ def build_instances_from_csvs(
         if df.empty:
             continue
 
-        file_tag = _safe_seg(fname.rsplit(".", 1)[0])
+        # Find critical columns dynamically (case-insensitive)
+        wafer_col = None
+        stage_col = None
+        time_col = None
+
+        for col in df.columns:
+            col_lower = col.lower()
+            if "wafer" in col_lower:
+                wafer_col = col
+            elif "stage" in col_lower:
+                stage_col = col
+            elif "timestamp" in col_lower or "time" in col_lower:
+                if time_col is None or len(col_lower) < len(time_col.lower()):
+                    time_col = col
 
         for i, row in df.iterrows():
             total_rows += 1
 
-            process_uri = EX[f"process/{user_part}/{schema_part}/{file_tag}/{i}"]
-            g.add((process_uri, RDF.type, CMPO.CMPProcess))
+            # Extract wafer_id
+            wafer_id = "0000000000"
+            if wafer_col:
+                w_val = row.get(wafer_col)
+                if pd.notna(w_val):
+                    try:
+                        wafer_id = str(int(float(w_val)))
+                    except Exception:
+                        wafer_id = str(w_val).strip()
 
-            # If a wafer id exists, link wafer (optional)
-            if "WAFER_ID" in df.columns and pd.notna(row.get("WAFER_ID")):
-                wafer_id = _safe_seg(row.get("WAFER_ID"))
-                wafer_uri = EX[f"wafer/{user_part}/{schema_part}/{wafer_id}"]
+            # Extract stage
+            stage = "A"
+            if stage_col:
+                s_val = row.get(stage_col)
+                if pd.notna(s_val):
+                    stage = str(s_val).strip()
+
+            # Extract timestamp
+            timestamp_val = 0.0
+            if time_col:
+                t_val = row.get(time_col)
+                if pd.notna(t_val):
+                    try:
+                        timestamp_val = float(t_val)
+                    except Exception:
+                        pass
+
+            # Format run_id padded to 5 digits
+            run_id = f"{i:05d}"
+
+            # Create process/run URI
+            run_uri = INST[f"cmp_run_{wafer_id}_{stage}_{run_id}"]
+            g.add((run_uri, RDF.type, CMPO.Measurement))
+            if time_col:
+                g.add((run_uri, CMPO.atTime, Literal(timestamp_val, datatype=XSD.float)))
+            if wafer_col:
+                wafer_uri = INST[f"wafer_{wafer_id}"]
                 g.add((wafer_uri, RDF.type, CMPO.Wafer))
-                g.add((process_uri, CMPO.actsOn, wafer_uri))
+                g.add((run_uri, CMPO.hasInput, wafer_uri))
 
-            # If timestamp exists, store as literal (optional)
-            if "TIMESTAMP" in df.columns and pd.notna(row.get("TIMESTAMP")):
-                g.add((process_uri, CMPO.hasTimestamp, Literal(str(row.get("TIMESTAMP")), datatype=XSD.string)))
-
-            # For each column header (excluding identifiers), create a value node
+            # Add parameters for columns
             for col in df.columns:
-                if col in ("WAFER_ID", "TIMESTAMP"):
+                if col in (wafer_col, stage_col, time_col):
                     continue
 
                 val = row.get(col)
@@ -110,24 +183,31 @@ def build_instances_from_csvs(
                 if not local:
                     continue
 
-                # Schema class assumed to exist: cmpo:<LocalName>
-                class_iri = CMPO[local]
+                param_uri = INST[f"parameter_{wafer_id}_{stage}_{run_id}_{col}"]
 
-                # Create an instance node for this variable measurement
-                inst_uri = EX[f"value/{user_part}/{schema_part}/{file_tag}/{i}/{_safe_seg(local)}"]
-                g.add((inst_uri, RDF.type, class_iri))
+                # Set type to the mapped schema class
+                g.add((param_uri, RDF.type, CMPO[local]))
 
-                # Numeric value
+                if time_col:
+                    g.add((param_uri, CMPO.atTime, Literal(timestamp_val, datatype=XSD.float)))
+
+                g.add((param_uri, CMPO.hasParameterName, Literal(col, datatype=XSD.string)))
+                g.add((param_uri, CMPO.hasStage, Literal(stage)))
+
+                unit = _infer_unit(col)
+                if unit:
+                    g.add((param_uri, CMPO.hasUnit, Literal(unit, datatype=XSD.string)))
+
                 try:
                     fval = float(val)
-                    g.add((inst_uri, CMPO.hasNumericValue, Literal(fval, datatype=XSD.float)))
+                    g.add((param_uri, CMPO.hasNumericValue, Literal(fval, datatype=XSD.float)))
                 except Exception:
-                    # fallback to string if not numeric
-                    g.add((inst_uri, CMPO.hasStringValue, Literal(str(val), datatype=XSD.string)))
+                    g.add((param_uri, CMPO.hasValue, Literal(str(val))))
 
-                # Link it to the process
-                g.add((process_uri, CMPO.hasInputParameter, inst_uri))
+                # Link parameter to run
+                g.add((param_uri, CMPO.isMeasurementOf, run_uri))
+                g.add((run_uri, CMPO.hasMeasurement, param_uri))
 
     turtle = g.serialize(format="turtle")
     triples = len(g)
-    return InstanceBuildResult(turtle=turtle, triples=triples)
+    return InstanceBuildResult(turtle=turtle, triples=triples, rows_processed=total_rows)

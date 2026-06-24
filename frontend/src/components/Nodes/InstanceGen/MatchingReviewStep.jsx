@@ -243,7 +243,7 @@ export default function MatchingReviewStep({
         {/* INFO */}
         <Alert severity="info">
           <Typography variant="body2">
-            💡 <strong>Tip:</strong> You can click on any header above to edit its
+            <strong>Tip:</strong> You can click on any header above to edit its
             schema term mapping. Click the delete icon to remove a mapping. All
             unmapped headers will be ignored when generating the instance.
           </Typography>

@@ -16,6 +16,8 @@ export default function FileUploadStep({
   onDataFilesUpload,
   schemaFile,
   dataFiles,
+  onSchemaRemove,
+  onDataFileRemove,
 }) {
   const schemaInputRef = useRef(null);
   const dataInputRef = useRef(null);
@@ -73,6 +75,7 @@ export default function FileUploadStep({
                   label={schemaFile.name}
                   color="success"
                   variant="outlined"
+                  onDelete={onSchemaRemove}
                 />
               )}
             </Box>
@@ -122,6 +125,7 @@ export default function FileUploadStep({
                       label={file.name}
                       color="success"
                       variant="outlined"
+                      onDelete={() => onDataFileRemove(file.name)}
                     />
                   ))}
                 </Box>
