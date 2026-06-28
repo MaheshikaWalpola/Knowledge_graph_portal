@@ -64,8 +64,13 @@ export default function InstanceGenerationWorkflow() {
     setError(null);
   };
 
-  const handleDataFilesUpload = (files) => {
-    setDataFiles(files);
+  const handleDataFilesUpload = (newFiles) => {
+    setDataFiles((prev) => {
+      const fileMap = new Map();
+      prev.forEach((file) => fileMap.set(file.name, file));
+      newFiles.forEach((file) => fileMap.set(file.name, file));
+      return Array.from(fileMap.values());
+    });
     setError(null);
   };
 

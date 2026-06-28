@@ -26,6 +26,7 @@ export default function FileUploadStep({
     const file = event.target.files?.[0];
     if (file) {
       onSchemaUpload(file);
+      event.target.value = "";
     }
   };
 
@@ -33,6 +34,7 @@ export default function FileUploadStep({
     const files = event.target.files;
     if (files) {
       onDataFilesUpload(Array.from(files));
+      event.target.value = "";
     }
   };
 
