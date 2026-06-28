@@ -16,6 +16,8 @@ import json
 
 from core.config import settings
 from services.llm_matching_service import get_llm_matching_suggestions
+from services.local_llm_service import LocalLLMService
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def extract_schema_terms(rdf_content: bytes) -> List[str]:
@@ -206,3 +208,189 @@ def analyze_schema_and_data(
 
     except Exception as e:
         raise ValueError(f"Analysis failed: {str(e)}")
+
+
+def get_single_llm_match(header: str, schema_terms: List[str]):
+    """
+    Use LLM to match a single CSV header to schema terms.
+    Returns the matched term name or None.
+    """
+    if not header or not schema_terms:
+        return None
+
+    try:
+        llm_service = LocalLLMService()
+
+        system = (
+            "You are a data mapping expert. Your task is to match a single CSV column header to a list of ontology schema terms.\n"
+            "Return ONLY the exact matched schema term from the list.\n"
+            "If no good match exists in the list, return 'NONE'.\n"
+            "Do NOT output any other text, only the matched term or 'NONE'."
+        )
+
+        user = f"Schema terms: {json.dumps(schema_terms)}\nCSV Header: '{header}'\nBest matching schema term:"
+
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user}
+        ]
+
+        ans = llm_service._call_kiste(messages, json_mode=False, temperature=0.1)
+        ans = ans.strip().replace('"', '').replace("'", '').replace("`", "")
+        
+        # Check if the returned answer matches a schema term
+        for term in schema_terms:
+            if term.lower() == ans.lower():
+                return term
+
+    except Exception as e:
+        print(f"LLM match error for header '{header}': {str(e)}")
+    return None
+
+
+def analyze_schema_and_data_stream(
+    schema_content: bytes,
+    csv_files: List[bytes],
+    filenames: List[str],
+):
+    """
+    Generator function that:
+    1. Extracts schema terms from RDF
+    2. Extracts headers from CSVs
+    3. Yields matching updates in real-time, matching concurrently using AI
+    """
+    try:
+        # Step 1: Extract schema terms
+        schema_terms = extract_schema_terms(schema_content)
+        if not schema_terms:
+            yield {"type": "error", "message": "No schema terms found in RDF file. Ensure it contains class definitions."}
+            return
+
+        # Step 2: Extract CSV headers
+        data_headers = extract_csv_headers(csv_files, filenames)
+        if not data_headers:
+            yield {"type": "error", "message": "No CSV headers found in uploaded files."}
+            return
+
+        # Yield initial info
+        yield {
+            "type": "init",
+            "schema_terms": schema_terms,
+            "schema_terms_count": len(schema_terms),
+            "data_headers_count": len(data_headers)
+        }
+
+        # Step 3: Progressive Match
+        matched = {}
+        matching_method = "LLM"
+        llm_success = False
+
+        yield {"type": "status", "message": "Attempting intelligent matching using AI...", "method": "LLM"}
+        print(f"\n--- [MATCHING PROCESS START] data_headers={len(data_headers)} schema_terms={len(schema_terms)} ---")
+        print("[INFO] Attempting concurrent AI matching...")
+
+        try:
+            # Match each header in parallel using ThreadPoolExecutor
+            # The matches will stream to the client as soon as each one finishes!
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                # Submit all matching tasks
+                future_to_header = {
+                    executor.submit(get_single_llm_match, header, schema_terms): header
+                    for header in data_headers
+                }
+                
+                # As each task completes, yield the matched pair immediately
+                for future in as_completed(future_to_header):
+                    header = future_to_header[future]
+                    try:
+                        term = future.result()
+                        if term:
+                            matched[header] = term
+                            llm_success = True
+                            print(f"[MATCH - AI/LLM] CSV Header '{header}' -> Schema Term '{term}'")
+                            yield {"type": "match", "header": header, "term": term, "method": "LLM"}
+                    except Exception as e:
+                        print(f"[WARNING] LLM match failed for header '{header}': {str(e)}")
+                        
+            if not llm_success:
+                print("[INFO] LLM matching returned empty results. Falling back to heuristics...")
+        except Exception as e:
+            print(f"[WARNING] LLM matching failed during stream: {str(e)}. Falling back to heuristics...")
+
+        # Fallback to heuristics if LLM is not viable (didn't make any matches or crashed)
+        if not llm_success:
+            matching_method = "Fallback Heuristics"
+            yield {"type": "status", "message": "AI matching not viable. Falling back to quick heuristic matching...", "method": "Fallback Heuristics"}
+            print("[INFO] Running heuristic fallback matching...")
+
+            for header in data_headers:
+                header_lower = header.lower().strip()
+                found = False
+
+                # 1. Exact match (case-insensitive)
+                for term in schema_terms:
+                    if term.lower() == header_lower:
+                        matched[header] = term
+                        print(f"[MATCH - Heuristics (Exact)] CSV Header '{header}' -> Schema Term '{term}'")
+                        yield {"type": "match", "header": header, "term": term, "method": "Fallback Heuristics"}
+                        found = True
+                        break
+                if found:
+                    continue
+
+                # 2. Contains relationship
+                for term in schema_terms:
+                    term_lower = term.lower()
+                    if term_lower in header_lower or header_lower in term_lower:
+                        matched[header] = term
+                        print(f"[MATCH - Heuristics (Contains)] CSV Header '{header}' -> Schema Term '{term}'")
+                        yield {"type": "match", "header": header, "term": term, "method": "Fallback Heuristics"}
+                        found = True
+                        break
+                if found:
+                    continue
+
+                # 3. Prefix matching
+                if header and len(header) >= 3:
+                    header_prefix = header[:3].lower()
+                    for term in schema_terms:
+                        if term and len(term) >= 3 and term[:3].lower() == header_prefix:
+                            len_diff = abs(len(header) - len(term))
+                            if len_diff <= 3:  # Similar length
+                                matched[header] = term
+                                print(f"[MATCH - Heuristics (Prefix)] CSV Header '{header}' -> Schema Term '{term}'")
+                                yield {"type": "match", "header": header, "term": term, "method": "Fallback Heuristics"}
+                                found = True
+                                break
+
+        # Yield unmatched headers
+        final_unmatched = []
+        for header in data_headers:
+            if header not in matched:
+                final_unmatched.append(header)
+                print(f"[UNMATCHED] CSV Header '{header}' could not be matched")
+                yield {"type": "unmatched", "header": header}
+
+        # Calculate missing schema terms
+        matched_terms = set(matched.values())
+        missing_terms = [t for t in schema_terms if t not in matched_terms]
+
+        heuristic_count = len(matched) if not llm_success else 0
+        llm_count = len(matched) if llm_success else 0
+        print(f"--- [MATCHING PROCESS DONE] Total={len(data_headers)} Heuristics={heuristic_count} AI/LLM={llm_count} Unmatched={len(final_unmatched)} ---\n")
+
+        # Send final done message
+        yield {
+            "type": "done",
+            "matched_headers": matched,
+            "unmatched_data_headers": final_unmatched,
+            "missing_schema_terms": missing_terms,
+            "matching_method": matching_method,
+            "success": True
+        }
+
+    except Exception as e:
+        yield {"type": "error", "message": f"Analysis failed: {str(e)}"}
+
+
+

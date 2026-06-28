@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Optional
 
 from fastapi import APIRouter, Query, Body, Depends, Response, UploadFile, File, Form, Path
+from fastapi.responses import StreamingResponse
 
 from controllers.controller import (
     # base ontology (read-only)
@@ -29,6 +30,7 @@ from controllers.controller import (
 
 from controllers.instance_generation_controller import (
     ctrl_analyze_schema_and_data,
+    ctrl_analyze_schema_and_data_stream,
     ctrl_generate_instance,
 )
 
@@ -415,16 +417,16 @@ async def api_analyze_schema_and_data(
     schema_file: UploadFile = File(..., description="RDF/Turtle schema file"),
     data_files: List[UploadFile] = File(..., description="CSV data files"),
     current_user: Any = Depends(get_current_user),
-) -> Dict:
+):
     """
     Analyze schema file and CSV data files.
-    Returns matching analysis report with:
+    Returns a streamed NDJSON matching analysis report with:
     - matched_headers: CSV headers matched to schema terms
     - unmatched_data_headers: CSV headers without matches
     - missing_schema_terms: Schema terms without data headers
     - available_schema_terms: All schema terms for manual mapping
     """
-    return await ctrl_analyze_schema_and_data(
+    return await ctrl_analyze_schema_and_data_stream(
         schema_file=schema_file,
         data_files=data_files,
         user_email=current_user["email"],
