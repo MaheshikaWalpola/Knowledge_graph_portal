@@ -20,11 +20,16 @@ def strip_markdown(text: str) -> str:
     return text
 
 
+class KisteConnectionError(Exception):
+    """Raised when the Kiste LLM API cannot be reached or fails to respond."""
+    pass
+
+
 class LocalLLMService:
     def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7) -> str:
         """Call Kiste API (OpenAI-compatible)"""
         if not KISTE_API_KEY:
-            return "Error: KISTE_API_KEY environment variable not set."
+            raise KisteConnectionError("We are experiencing connection issues with the AI server. Please try again shortly.")
         
         data = {
             "model": MODEL_NAME,
@@ -55,7 +60,8 @@ class LocalLLMService:
                 return result.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:
             print(f"Kiste API error: {e}")
-            return f"Error: Could not reach Kiste API. {str(e)}"
+            raise KisteConnectionError("We are experiencing connection issues with the AI server. Please try again shortly.") from e
+
 
 
 
