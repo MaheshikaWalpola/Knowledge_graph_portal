@@ -241,7 +241,8 @@ export default function AIAssistance({ onOpenAuth }) {
             } else if (eventLine === "result") {
               const answer    = payload.answer ?? "No answer returned.";
               const chartData = payload.chart_data;
-              const finalMsgs = [...nextMessages, { role: "assistant", content: answer, chart_data: chartData }];
+              const options   = payload.options ?? [];
+              const finalMsgs = [...nextMessages, { role: "assistant", content: answer, chart_data: chartData, options: options }];
               setChats((prev) =>
                 prev.map((chat) =>
                   chat.id === capturedChatId ? { ...chat, messages: finalMsgs } : chat
@@ -466,6 +467,20 @@ export default function AIAssistance({ onOpenAuth }) {
                 <div key={i} className={`chat-row ${m.role}`}>
                   <div className="bubble">
                     <div className="bubble-content">{m.content}</div>
+                    {m.options && m.options.length > 0 && (
+                      <div className="quick-responses">
+                        {m.options.map((opt, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            className="quick-response-btn"
+                            onClick={() => sendMessage(opt)}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {m.chart_data && m.chart_data.length > 0 && (
                       <div className="chart-container" style={{ width: "100%", height: 300, marginTop: 16 }}>
                         <ResponsiveContainer width="100%" height="100%">

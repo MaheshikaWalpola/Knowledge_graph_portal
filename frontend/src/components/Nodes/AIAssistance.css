@@ -1691,3 +1691,37 @@
   text-decoration: line-through;
   text-decoration-color: rgba(34,197,94,0.4);
 }
+
+
+/* Quick Response Suggestions */
+.quick-responses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.quick-response-btn {
+  background: transparent;
+  border: 1.5px solid var(--accent-primary, #6366f1);
+  color: var(--accent-primary, #6366f1);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+}
+
+.quick-response-btn:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: var(--accent-primary, #6366f1);
+  transform: translateY(-1px);
+}
+
+.quick-response-btn:active {
+  transform: translateY(0);
+}
+
