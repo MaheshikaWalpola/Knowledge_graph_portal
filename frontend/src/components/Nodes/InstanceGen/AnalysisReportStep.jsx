@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  LinearProgress,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
@@ -41,11 +42,34 @@ export default function AnalysisReportStep({
   const unmatchedCount = unmatched.length;
   const missingCount = missingSchemaTerm.length;
 
+  const totalHeaders = report?.data_headers_count || 0;
+  const processedHeaders = matchCount + unmatchedCount;
+  const percent = totalHeaders > 0 ? Math.round((processedHeaders / totalHeaders) * 100) : 0;
+
   return (
     <Box className="analysis-report-step">
       <Typography variant="h6" gutterBottom>
         Step 2: Analysis Report
       </Typography>
+
+      {loading && (
+        <Box sx={{ width: "100%", mb: 3, p: 2, bgcolor: "#f8f9fa", borderRadius: 2, border: "1px solid #e9ecef" }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+            <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 500 }}>
+              Analyzing and matching headers... ({processedHeaders} of {totalHeaders} columns)
+            </Typography>
+            <Typography variant="body2" fontWeight="bold" color="primary">
+              {percent}%
+            </Typography>
+          </Box>
+          <LinearProgress variant="determinate" value={percent} sx={{ height: 8, borderRadius: 4 }} />
+          {report?.matching_method && (
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: "block", fontStyle: "italic" }}>
+              Current Phase: {report.matching_method}
+            </Typography>
+          )}
+        </Box>
+      )}
 
       <Stack spacing={3}>
         {/* SUMMARY CARDS */}

@@ -64,8 +64,13 @@ export default function InstanceGenerationWorkflow() {
     setError(null);
   };
 
-  const handleDataFilesUpload = (files) => {
-    setDataFiles(files);
+  const handleDataFilesUpload = (newFiles) => {
+    setDataFiles((prev) => {
+      const fileMap = new Map();
+      prev.forEach((file) => fileMap.set(file.name, file));
+      newFiles.forEach((file) => fileMap.set(file.name, file));
+      return Array.from(fileMap.values());
+    });
     setError(null);
   };
 
@@ -86,6 +91,23 @@ export default function InstanceGenerationWorkflow() {
 
     setLoading(true);
     setError(null);
+    setSuccess(null);
+
+    // Reset report state so it updates progressively
+    setAnalysisReport({
+      matched_headers: {},
+      unmatched_data_headers: [],
+      missing_schema_terms: [],
+      available_schema_terms: [],
+      matching_method: "Initializing...",
+      success: false,
+      schema_terms_count: 0,
+      data_headers_count: 0,
+    });
+    setUserMappings({});
+
+    // Transition to step 1 immediately to see progressive results
+    setActiveStep(1);
 
     try {
       const formData = new FormData();
@@ -94,33 +116,101 @@ export default function InstanceGenerationWorkflow() {
         formData.append("data_files", file);
       });
 
-      const response = await axios.post(
-        `${API}/instance-generation/analyze`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API}/instance-generation/analyze`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
-      console.log(
-        "[InstanceGen] Schema/Data analysis complete. Matching Method:",
-        response.data.matching_method,
-        "Report:",
-        response.data
-      );
-      setAnalysisReport(response.data);
-      setUserMappings(response.data.matched_headers || {});
-      setActiveStep(1);
-      setSuccess("Analysis complete! Review the matched and unmatched terms.");
+      if (!response.ok) {
+        let errMsg = `Failed to analyze files (Status: ${response.status})`;
+        try {
+          const errData = await response.json();
+          if (errData?.detail) errMsg = errData.detail;
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // Keep last incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+
+            if (data.type === "error") {
+              throw new Error(data.message || "An error occurred during analysis.");
+            } else if (data.type === "init") {
+              setAnalysisReport((prev) => ({
+                ...prev,
+                available_schema_terms: data.schema_terms,
+                missing_schema_terms: data.schema_terms,
+                schema_terms_count: data.schema_terms_count,
+                data_headers_count: data.data_headers_count,
+              }));
+            } else if (data.type === "status") {
+              setAnalysisReport((prev) => ({
+                ...prev,
+                matching_method: data.method || prev.matching_method,
+              }));
+            } else if (data.type === "match") {
+              setAnalysisReport((prev) => {
+                const nextMatched = { ...prev.matched_headers, [data.header]: data.term };
+                const nextMissing = prev.missing_schema_terms.filter((t) => t !== data.term);
+                return {
+                  ...prev,
+                  matched_headers: nextMatched,
+                  missing_schema_terms: nextMissing,
+                  matching_method: data.method || prev.matching_method,
+                };
+              });
+              setUserMappings((prev) => ({
+                ...prev,
+                [data.header]: data.term,
+              }));
+            } else if (data.type === "unmatched") {
+              setAnalysisReport((prev) => {
+                if (prev.unmatched_data_headers.includes(data.header)) return prev;
+                return {
+                  ...prev,
+                  unmatched_data_headers: [...prev.unmatched_data_headers, data.header],
+                };
+              });
+            } else if (data.type === "done") {
+              setAnalysisReport((prev) => ({
+                ...prev,
+                matched_headers: data.matched_headers || prev.matched_headers,
+                unmatched_data_headers: data.unmatched_data_headers || prev.unmatched_data_headers,
+                missing_schema_terms: data.missing_schema_terms || prev.missing_schema_terms,
+                matching_method: data.matching_method || prev.matching_method,
+                success: true,
+              }));
+              setUserMappings(data.matched_headers || {});
+              setSuccess("Analysis complete! Review the matched and unmatched terms.");
+            }
+          } catch (e) {
+            console.error("Failed to parse JSON line from stream", e, line);
+            if (e.message && !e.message.includes("JSON")) {
+              throw e;
+            }
+          }
+        }
+      }
     } catch (err) {
-      setError(
-        err.response?.data?.detail ||
-          err.message ||
-          "Failed to analyze files"
-      );
+      setError(err.message || "Failed to analyze files");
+      setActiveStep(0);
     } finally {
       setLoading(false);
     }

@@ -4,11 +4,14 @@ Instance Generation Workflow Controllers
 
 from typing import Dict, List, Any
 from fastapi import HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from io import BytesIO
 import zipfile
+import json
 
-from services.instance_analysis_service import analyze_schema_and_data
+from services.instance_analysis_service import analyze_schema_and_data, analyze_schema_and_data_stream
 from services.instance_generation_service import build_instances_from_csvs
+
 
 
 async def ctrl_analyze_schema_and_data(
@@ -43,6 +46,39 @@ async def ctrl_analyze_schema_and_data(
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+async def ctrl_analyze_schema_and_data_stream(
+    schema_file: UploadFile,
+    data_files: List[UploadFile],
+    user_email: str,
+) -> StreamingResponse:
+    """
+    Reads files in the request context and returns a StreamingResponse.
+    """
+    try:
+        # Read schema file immediately while the file is open
+        schema_content = await schema_file.read()
+        if not schema_content:
+            raise ValueError("Schema file is empty")
+
+        # Process and extract data files immediately while files are open
+        csv_contents, csv_filenames = await _process_data_files(data_files)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read upload files: {str(e)}")
+
+    def generator():
+        try:
+            for chunk in analyze_schema_and_data_stream(schema_content, csv_contents, csv_filenames):
+                yield json.dumps(chunk) + "\n"
+        except Exception as e:
+            yield json.dumps({"type": "error", "message": str(e)}) + "\n"
+
+    return StreamingResponse(generator(), media_type="text/event-stream")
+
+
 
 
 async def ctrl_generate_instance(

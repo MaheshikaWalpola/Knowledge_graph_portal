@@ -237,9 +237,14 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
 
             needs_clarification = intent.get("needs_clarification", False)
             if needs_clarification:
+                schemas = list_user_schemas(current_user["email"])
+                options = [s.get("name") for s in schemas if s.get("name")][:3]
+                answer = intent.get("clarification_message", "Please clarify your request.")
+                answer = re.sub(r"\s*\([eE]\.g\.?[^)]+\)", "", answer)
+                answer = re.sub(r"\s*\(for example,[^)]+\)", "", answer, flags=re.IGNORECASE)
                 yield _sse("result", {
-                    "answer": intent.get("clarification_message", "Please clarify your request."),
-                    "options": []
+                    "answer": answer.strip(),
+                    "options": options
                 })
                 return
 
@@ -289,7 +294,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                     graph_name = meta.get("name")
                 elif len(matched) > 1:
                     yield _sse("result", {
-                        "answer": f"I found multiple ontologies matching '{extracted_ontology_name}'. Please specify which one you mean (e.g., '{matched[0].get('name')}').",
+                        "answer": f"I found multiple ontologies matching '{extracted_ontology_name}'. Please specify which one you mean.",
                         "options": [s.get("name") for s in matched[:3]]
                     })
                     return
@@ -325,9 +330,11 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                     return
 
             if not target_graphs:
+                schemas = list_user_schemas(current_user["email"])
+                options = [s.get("name") for s in schemas if s.get("name")][:3]
                 yield _sse("result", {
                     "answer": "Please select an ontology or specify which ontology you are asking about.",
-                    "options": []
+                    "options": options
                 })
                 return
 
@@ -502,9 +509,14 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
         
         needs_clarification = intent.get("needs_clarification", False)
         if needs_clarification:
+            schemas = list_user_schemas(current_user["email"])
+            options = [s.get("name") for s in schemas if s.get("name")][:3]
+            answer = intent.get("clarification_message", "Please clarify your request.")
+            answer = re.sub(r"\s*\([eE]\.g\.?[^)]+\)", "", answer)
+            answer = re.sub(r"\s*\(for example,[^)]+\)", "", answer, flags=re.IGNORECASE)
             return {
-                "answer": intent.get("clarification_message", "Please clarify your request."),
-                "options": []
+                "answer": answer.strip(),
+                "options": options
             }
 
         requires_graphdb = intent.get("requires_graphdb", True)
@@ -546,7 +558,7 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
                 graph_name = meta.get("name")
             elif len(matched) > 1:
                 return {
-                    "answer": f"I found multiple ontologies matching '{extracted_ontology_name}'. Please specify which one you mean (e.g., '{matched[0].get('name')}').",
+                    "answer": f"I found multiple ontologies matching '{extracted_ontology_name}'. Please specify which one you mean.",
                     "options": [s.get("name") for s in matched[:3]]
                 }
             else:
@@ -577,9 +589,11 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
                 }
         
         if not target_graphs:
+            schemas = list_user_schemas(current_user["email"])
+            options = [s.get("name") for s in schemas if s.get("name")][:3]
             return {
                 "answer": "Please select an ontology or specify which ontology you are asking about.",
-                "options": []
+                "options": options
             }
 
         schema_graph_iri = target_graphs[0] if len(target_graphs) > 0 else "None"
