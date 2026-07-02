@@ -101,21 +101,34 @@ inst:Wafer_2981014422 a cmpo:Wafer ;
     cmpo:hasMaterial inst:WaferMaterial_Copper .
 `;
 
-export default function ValidationPage() {
+export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [activeTab, setActiveTab] = useState(0);
   const [user, setUser] = useState(null);
-  
-  // Auth details
+
+  // Sync user with propUser, fallback to localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem("kgp_user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error(e);
+    if (propUser) {
+      setUser(propUser);
+    } else {
+      const storedUser = localStorage.getItem("kgp_user");
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        setUser(null);
       }
     }
-  }, []);
+  }, [propUser]);
+
+  // Open login dialog automatically if not authenticated
+  useEffect(() => {
+    if (!propUser && !localStorage.getItem("kgp_user")) {
+      onOpenAuth?.();
+    }
+  }, [propUser, onOpenAuth]);
 
   const getAuthConfig = () => {
     const token = localStorage.getItem("token");
@@ -335,7 +348,7 @@ export default function ValidationPage() {
 
   if (!user) {
     return (
-      <Box className="validation-workspace" sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+      <Box className="validation-workspace" sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
         <Box className="validation-auth-gate">
           <Box className="validation-auth-icon">
             <AutoAwesomeIcon sx={{ fontSize: 40 }} />
@@ -346,6 +359,14 @@ export default function ValidationPage() {
           <Typography className="validation-auth-message">
             Please log in to access the Graph Validation tab and validation playground options.
           </Typography>
+          <Button
+            variant="contained"
+            className="validation-primary-btn"
+            onClick={onOpenAuth}
+            sx={{ mt: 2 }}
+          >
+            Sign In
+          </Button>
         </Box>
       </Box>
     );

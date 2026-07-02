@@ -152,7 +152,7 @@ function App() {
             <Route path="/my-ontologies" element={<MyOntologies onOpenAuth={handleOpenAuth} />} />
             <Route path="/canvas" element={<CanvasEditor onOpenAuth={handleOpenAuth} />} />
             <Route path="/instance-generation" element={<InstanceGenerationWorkflow />} />
-            <Route path="/validate" element={<ValidationPage />} />
+            <Route path="/validate" element={<ValidationPage user={user} onOpenAuth={handleOpenAuth} />} />
             <Route path="/termsandconditions" element={<Terms />} />
             <Route
               path="/verify-email"
