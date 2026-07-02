@@ -3,7 +3,6 @@ import axios from "axios";
 import {
   Box,
   Typography,
-  Paper,
   Tabs,
   Tab,
   Button,
@@ -21,10 +20,8 @@ import {
   TextField,
   Grid,
   Checkbox,
-  FormControlLabel,
   Card,
   CardContent,
-  IconButton,
   Stepper,
   Step,
   StepLabel,
@@ -37,6 +34,8 @@ import DownloadIcon from "@mui/icons-material/Download";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import RefreshIcon from "@mui/icons-material/Refresh";
+
+import "./ValidationPage.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -232,7 +231,6 @@ export default function ValidationPage() {
       setPlaygroundSchemaFile(file);
       setPlaygroundSchemaName(file.name);
       
-      // Read schema file as text for playground step later
       const reader = new FileReader();
       reader.onload = (event) => {
         setPlaygroundSchemaText(event.target.result);
@@ -337,33 +335,36 @@ export default function ValidationPage() {
 
   if (!user) {
     return (
-      <Box sx={{ p: 4, display: "flex", justifyContent: "center", alignItems: "center", height: "60vh" }}>
-        <Paper elevation={3} sx={{ p: 4, maxWidth: 500, textAlign: "center", borderRadius: "16px" }}>
-          <Typography variant="h5" color="text.secondary" gutterBottom>
-            Access Denied
+      <Box className="validation-workspace" sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+        <Box className="validation-auth-gate">
+          <Box className="validation-auth-icon">
+            <AutoAwesomeIcon sx={{ fontSize: 40 }} />
+          </Box>
+          <Typography className="validation-auth-title">
+            Sign In Required
           </Typography>
-          <Typography variant="body1" sx={{ mb: 3 }}>
-            You need to be logged in to access the Data Validation tab and Graph Validation services.
+          <Typography className="validation-auth-message">
+            Please log in to access the Graph Validation tab and validation playground options.
           </Typography>
-        </Paper>
+        </Box>
       </Box>
     );
   }
 
   return (
-    <Box className="validation-container" sx={{ maxWidth: 1200, margin: "0 auto", p: 3 }}>
+    <Box className="validation-workspace">
       {/* Title */}
-      <Paper elevation={0} sx={{ p: 3, mb: 3, backgroundColor: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f172a" }}>
+      <Box className="validation-header">
+        <Typography className="validation-title">
           Data Quality Validation
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
+        <Typography className="validation-subtitle">
           Validate your RDF datasets against SHACL shapes rules, compile rules using AI, and export PDF compliance reports.
         </Typography>
-      </Paper>
+      </Box>
 
       {/* Tabs Header */}
-      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+      <Box className="validation-tabs-container">
         <Tabs value={activeTab} onChange={(_, val) => setActiveTab(val)} textColor="primary" indicatorColor="primary">
           <Tab label="Workspace Validator" sx={{ textTransform: "none", fontWeight: 600 }} />
           <Tab label="Interactive AI Assistant & Playground" sx={{ textTransform: "none", fontWeight: 600 }} />
@@ -375,8 +376,8 @@ export default function ValidationPage() {
         <Grid container spacing={3}>
           {/* Config column */}
           <Grid item xs={12} md={5}>
-            <Paper elevation={2} sx={{ p: 3, borderRadius: "16px" }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            <Box className="validation-card">
+              <Typography className="validation-card-title">
                 Configure Validation Run
               </Typography>
               
@@ -411,28 +412,17 @@ export default function ValidationPage() {
                 variant="outlined"
                 value={shaclShapes}
                 onChange={(e) => setShaclShapes(e.target.value)}
-                sx={{
-                  fontFamily: "monospace",
-                  fontSize: "13px",
-                  backgroundColor: "#fafafa",
-                  mb: 3
-                }}
+                InputProps={{ className: "validation-code-area" }}
+                sx={{ mb: 3 }}
               />
 
               <Button
                 variant="contained"
+                className="validation-primary-btn"
                 startIcon={workspaceLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
                 disabled={workspaceLoading || !selectedSchema}
                 onClick={handleWorkspaceValidate}
                 fullWidth
-                sx={{
-                  backgroundColor: "#000",
-                  color: "#fff",
-                  textTransform: "none",
-                  py: 1,
-                  borderRadius: "30px",
-                  "&:hover": { backgroundColor: "#333" }
-                }}
               >
                 Validate Active Workspace
               </Button>
@@ -442,80 +432,83 @@ export default function ValidationPage() {
                   {workspaceError}
                 </Alert>
               )}
-            </Paper>
+            </Box>
           </Grid>
 
           {/* Report column */}
           <Grid item xs={12} md={7}>
             {workspaceLoading ? (
-              <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "60vh" }}>
+              <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "50vh" }}>
                 <CircularProgress size={45} color="primary" sx={{ mb: 2 }} />
                 <Typography color="text.secondary">Running SHACL validator with RDFS inference...</Typography>
               </Box>
             ) : workspaceReport ? (
               <Box>
                 {/* Result header card */}
-                <Card sx={{ mb: 3, borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-                  <CardContent sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Box className="validation-card" sx={{ mb: 3 }}>
+                  <Box className="validation-results-summary">
                     <Box>
                       <Typography variant="subtitle2" color="text.secondary">
                         VALIDATION STATUS
                       </Typography>
                       <Box sx={{ display: "flex", alignItems: "center", mt: 0.5 }}>
                         {workspaceReport.conforms ? (
-                          <CheckCircleIcon sx={{ color: "#10b981", mr: 1, fontSize: 32 }} />
+                          <Box className="validation-status-badge pass">
+                            <CheckCircleIcon sx={{ fontSize: 20 }} /> CONFORMS
+                          </Box>
                         ) : (
-                          <CancelIcon sx={{ color: "#ef4444", mr: 1, fontSize: 32 }} />
+                          <Box className="validation-status-badge fail">
+                            <CancelIcon sx={{ fontSize: 20 }} /> FAILED
+                          </Box>
                         )}
-                        <Typography variant="h5" sx={{ fontWeight: 700, color: workspaceReport.conforms ? "#10b981" : "#ef4444" }}>
-                          {workspaceReport.conforms ? "CONFORMS" : "FAILED"}
-                        </Typography>
                       </Box>
                     </Box>
-                    <Box sx={{ textAlign: "right" }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Violations Found: <b>{workspaceReport.total_violations}</b>
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Triples Validated: <b>{workspaceReport.total_triples}</b>
-                      </Typography>
+                    <Box sx={{ display: "flex", gap: 3, alignItems: "center" }}>
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Violations: <b>{workspaceReport.total_violations}</b>
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Triples: <b>{workspaceReport.total_triples}</b>
+                        </Typography>
+                      </Box>
                       <Button
                         variant="outlined"
-                        size="small"
+                        className="validation-secondary-btn"
                         startIcon={<DownloadIcon />}
                         onClick={() => handleDownloadPDF(workspaceReport)}
-                        sx={{ mt: 1, textTransform: "none", borderRadius: "15px" }}
+                        sx={{ height: "40px !important" }}
                       >
                         Download PDF Report
                       </Button>
                     </Box>
-                  </CardContent>
-                </Card>
+                  </Box>
+                </Box>
 
                 {/* Rules Table */}
-                <Paper sx={{ p: 3, mb: 3, borderRadius: "16px" }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                <Box className="validation-card" sx={{ mb: 3 }}>
+                  <Typography className="validation-card-title">
                     Rules Evaluated
                   </Typography>
-                  <TableContainer>
+                  <TableContainer className="validation-table-container">
                     <Table size="small">
-                      <TableHead sx={{ backgroundColor: "#f1f5f9" }}>
+                      <TableHead className="validation-table-head">
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 600 }}>Rule/Shape</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Target Class</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }} align="center">Status</TableCell>
+                          <TableCell className="validation-table-cell-header">Rule/Shape</TableCell>
+                          <TableCell className="validation-table-cell-header">Target Class</TableCell>
+                          <TableCell className="validation-table-cell-header" align="center">Status</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {workspaceReport.rules?.map((r, i) => (
-                          <TableRow key={i}>
-                            <TableCell>{r.label}</TableCell>
-                            <TableCell>{r.target_class_short}</TableCell>
-                            <TableCell align="center">
+                          <TableRow key={i} className="validation-table-row">
+                            <TableCell className="validation-table-cell">{r.label}</TableCell>
+                            <TableCell className="validation-table-cell">{r.target_class_short}</TableCell>
+                            <TableCell className="validation-table-cell" align="center">
                               {r.status === "Pass" ? (
-                                <Box sx={{ color: "#10b981", fontWeight: 700 }}>Pass</Box>
+                                <Box sx={{ color: "var(--accent-success)", fontWeight: 700 }}>Pass</Box>
                               ) : (
-                                <Box sx={{ color: "#ef4444", fontWeight: 700 }}>Fail</Box>
+                                <Box sx={{ color: "var(--accent-error)", fontWeight: 700 }}>Fail</Box>
                               )}
                             </TableCell>
                           </TableRow>
@@ -523,41 +516,41 @@ export default function ValidationPage() {
                       </TableBody>
                     </Table>
                   </TableContainer>
-                </Paper>
+                </Box>
 
                 {/* Violations Table */}
                 {workspaceReport.violations && workspaceReport.violations.length > 0 && (
-                  <Paper sx={{ p: 3, borderRadius: "16px" }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "#ef4444" }}>
+                  <Box className="validation-card">
+                    <Typography className="validation-card-title" sx={{ color: "var(--accent-error) !important" }}>
                       Violations Log
                     </Typography>
-                    <TableContainer>
+                    <TableContainer className="validation-table-container">
                       <Table size="small">
-                        <TableHead sx={{ backgroundColor: "#f1f5f9" }}>
+                        <TableHead className="validation-table-head">
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Focus Node</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Property Path</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Message</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Value</TableCell>
+                            <TableCell className="validation-table-cell-header">Focus Node</TableCell>
+                            <TableCell className="validation-table-cell-header">Property Path</TableCell>
+                            <TableCell className="validation-table-cell-header">Message</TableCell>
+                            <TableCell className="validation-table-cell-header">Value</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {workspaceReport.violations.map((v, i) => (
-                            <TableRow key={i}>
-                              <TableCell sx={{ fontSize: "12px", fontFamily: "monospace" }}>{v.focus_node_short}</TableCell>
-                              <TableCell sx={{ fontSize: "12px", fontFamily: "monospace" }}>{v.path_short}</TableCell>
-                              <TableCell>{v.message}</TableCell>
-                              <TableCell sx={{ fontSize: "12px" }}>{v.value}</TableCell>
+                            <TableRow key={i} className="validation-table-row">
+                              <TableCell className="validation-table-cell validation-table-cell-mono">{v.focus_node_short}</TableCell>
+                              <TableCell className="validation-table-cell validation-table-cell-mono">{v.path_short}</TableCell>
+                              <TableCell className="validation-table-cell">{v.message}</TableCell>
+                              <TableCell className="validation-table-cell">{v.value}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </TableContainer>
-                  </Paper>
+                  </Box>
                 )}
               </Box>
             ) : (
-              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "60vh", border: "2px dashed #cbd5e1", borderRadius: "16px", backgroundColor: "#fafafa" }}>
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh", border: "2px dashed var(--border-medium)", borderRadius: "var(--radius-xl)", backgroundColor: "var(--bg-secondary)" }}>
                 <Typography color="text.secondary" sx={{ textAlign: "center", p: 3 }}>
                   Select a workspace schema and click "Validate Active Workspace" to view validation results.
                 </Typography>
@@ -570,7 +563,7 @@ export default function ValidationPage() {
       {/* --- TAB 1: Interactive AI Assistant & Playground --- */}
       {activeTab === 1 && (
         <Box>
-          <Stepper activeStep={step} sx={{ mb: 4 }}>
+          <Stepper activeStep={step} className="validation-stepper">
             <Step><StepLabel>Rule Criteria (AI)</StepLabel></Step>
             <Step><StepLabel>Refine Rules</StepLabel></Step>
             <Step><StepLabel>SHACL Shapes</StepLabel></Step>
@@ -579,12 +572,12 @@ export default function ValidationPage() {
 
           {/* Step 0: Input Criteria & Upload Schema */}
           {step === 0 && (
-            <Paper elevation={2} sx={{ p: 4, borderRadius: "16px", maxWidth: 800, margin: "0 auto" }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+            <Box className="validation-card" sx={{ maxWidth: 800, margin: "0 auto" }}>
+              <Typography className="validation-card-title">
                 Explain Your Validation Situation
               </Typography>
               
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Tell the AI validation assistant what data properties you want to check (e.g., sensor bounds, positive pressures, presence of links). Upload an ontology schema (.ttl, .rdf) or choose your active workspace schema to ground the recommendations.
               </Typography>
 
@@ -634,28 +627,21 @@ export default function ValidationPage() {
 
               <Button
                 variant="contained"
+                className="validation-primary-btn"
                 startIcon={assistantLoading ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
                 disabled={assistantLoading}
                 onClick={handleSuggestRules}
                 fullWidth
-                sx={{
-                  backgroundColor: "#000",
-                  color: "#fff",
-                  py: 1.5,
-                  borderRadius: "30px",
-                  textTransform: "none",
-                  "&:hover": { backgroundColor: "#333" }
-                }}
               >
                 {assistantLoading ? "AI Analyzing Schema & Generating Rules..." : "Ask AI to Suggest 10 Validation Questions"}
               </Button>
-            </Paper>
+            </Box>
           )}
 
           {/* Step 1: Select & Refine Recommendations */}
           {step === 1 && (
-            <Paper elevation={2} sx={{ p: 4, borderRadius: "16px", maxWidth: 850, margin: "0 auto" }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+            <Box className="validation-card" sx={{ maxWidth: 850, margin: "0 auto" }}>
+              <Typography className="validation-card-title">
                 Select and Refine Recommended Rules
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -664,7 +650,7 @@ export default function ValidationPage() {
 
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mb: 3 }}>
                 {suggestedRules.map((rule, idx) => (
-                  <Box key={idx} sx={{ display: "flex", alignItems: "center", border: "1px solid #e2e8f0", p: 1.5, borderRadius: "8px", backgroundColor: "#f8fafc" }}>
+                  <Box key={idx} className="validation-rule-wrapper">
                     <Checkbox
                       checked={!!selectedRules[idx]}
                       onChange={(e) => setSelectedRules({ ...selectedRules, [idx]: e.target.checked })}
@@ -700,33 +686,26 @@ export default function ValidationPage() {
               />
 
               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Button variant="outlined" onClick={() => setStep(0)} sx={{ textTransform: "none", borderRadius: "15px" }}>
+                <Button variant="outlined" className="validation-secondary-btn" onClick={() => setStep(0)}>
                   Back
                 </Button>
                 <Button
                   variant="contained"
+                  className="validation-primary-btn"
                   disabled={assistantLoading}
                   onClick={handleCompileSHACL}
                   startIcon={assistantLoading && <CircularProgress size={20} color="inherit" />}
-                  sx={{
-                    backgroundColor: "#000",
-                    color: "#fff",
-                    textTransform: "none",
-                    borderRadius: "30px",
-                    px: 3,
-                    "&:hover": { backgroundColor: "#333" }
-                  }}
                 >
                   Compile rules into SHACL (.ttl)
                 </Button>
               </Box>
-            </Paper>
+            </Box>
           )}
 
           {/* Step 2: Review Generated SHACL shapes code */}
           {step === 2 && (
-            <Paper elevation={2} sx={{ p: 4, borderRadius: "16px", maxWidth: 850, margin: "0 auto" }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+            <Box className="validation-card" sx={{ maxWidth: 850, margin: "0 auto" }}>
+              <Typography className="validation-card-title">
                 Review Generated SHACL Shapes Code
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
@@ -743,34 +722,23 @@ export default function ValidationPage() {
                   setCompiledSHACL(e.target.value);
                   setPlaygroundShaclText(e.target.value);
                 }}
-                sx={{
-                  fontFamily: "monospace",
-                  fontSize: "13px",
-                  backgroundColor: "#fafafa",
-                  mb: 3
-                }}
+                InputProps={{ className: "validation-code-area" }}
+                sx={{ mb: 3 }}
               />
 
               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Button variant="outlined" onClick={() => setStep(1)} sx={{ textTransform: "none", borderRadius: "15px" }}>
+                <Button variant="outlined" className="validation-secondary-btn" onClick={() => setStep(1)}>
                   Back
                 </Button>
                 <Button
                   variant="contained"
+                  className="validation-primary-btn"
                   onClick={() => setStep(3)}
-                  sx={{
-                    backgroundColor: "#000",
-                    color: "#fff",
-                    textTransform: "none",
-                    borderRadius: "30px",
-                    px: 3,
-                    "&:hover": { backgroundColor: "#333" }
-                  }}
                 >
                   Proceed to Playground
                 </Button>
               </Box>
-            </Paper>
+            </Box>
           )}
 
           {/* Step 3: Playground validation editor & output */}
@@ -779,7 +747,7 @@ export default function ValidationPage() {
               <Grid container spacing={3} sx={{ mb: 3 }}>
                 {/* Shapes Column */}
                 <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, borderRadius: "12px" }}>
+                  <Box className="validation-card" sx={{ p: 2 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                       SHACL Shapes (.ttl)
                     </Typography>
@@ -790,14 +758,14 @@ export default function ValidationPage() {
                       variant="outlined"
                       value={playgroundShaclText}
                       onChange={(e) => setPlaygroundShaclText(e.target.value)}
-                      sx={{ fontFamily: "monospace", fontSize: "12px", backgroundColor: "#fcfcfc" }}
+                      InputProps={{ className: "validation-code-area" }}
                     />
-                  </Paper>
+                  </Box>
                 </Grid>
 
                 {/* Schema Column */}
                 <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, borderRadius: "12px" }}>
+                  <Box className="validation-card" sx={{ p: 2 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                       Ontology Schema (.ttl)
                     </Typography>
@@ -809,14 +777,14 @@ export default function ValidationPage() {
                       placeholder="# Optional: Paste or upload schema TTL code..."
                       value={playgroundSchemaText}
                       onChange={(e) => setPlaygroundSchemaText(e.target.value)}
-                      sx={{ fontFamily: "monospace", fontSize: "12px", backgroundColor: "#fcfcfc" }}
+                      InputProps={{ className: "validation-code-area" }}
                     />
-                  </Paper>
+                  </Box>
                 </Grid>
 
                 {/* Instances Column */}
                 <Grid item xs={12} md={4}>
-                  <Paper sx={{ p: 2, borderRadius: "12px" }}>
+                  <Box className="validation-card" sx={{ p: 2 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                       Instances Data (.ttl)
                     </Typography>
@@ -827,31 +795,24 @@ export default function ValidationPage() {
                       variant="outlined"
                       value={playgroundInstancesText}
                       onChange={(e) => setPlaygroundInstancesText(e.target.value)}
-                      sx={{ fontFamily: "monospace", fontSize: "12px", backgroundColor: "#fcfcfc" }}
+                      InputProps={{ className: "validation-code-area" }}
                     />
-                  </Paper>
+                  </Box>
                 </Grid>
               </Grid>
 
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
-                <Button variant="outlined" onClick={() => setStep(2)} sx={{ textTransform: "none", borderRadius: "15px" }}>
+                <Button variant="outlined" className="validation-secondary-btn" onClick={() => setStep(2)}>
                   Back to SHACL Shapes
                 </Button>
                 
                 <Button
                   variant="contained"
+                  className="validation-primary-btn"
                   disabled={assistantLoading}
                   startIcon={assistantLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
                   onClick={handlePlaygroundValidate}
-                  sx={{
-                    backgroundColor: "#000",
-                    color: "#fff",
-                    textTransform: "none",
-                    borderRadius: "30px",
-                    px: 4,
-                    py: 1,
-                    "&:hover": { backgroundColor: "#333" }
-                  }}
+                  sx={{ px: "32px !important" }}
                 >
                   Run Playground Validation
                 </Button>
@@ -866,63 +827,66 @@ export default function ValidationPage() {
               {/* Playground validation results */}
               {playgroundReport && (
                 <Box>
-                  <Card sx={{ mb: 3, borderRadius: "16px" }}>
-                    <CardContent sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Box className="validation-card" sx={{ mb: 3 }}>
+                    <Box className="validation-results-summary">
                       <Box>
                         <Typography variant="subtitle2" color="text.secondary">
                           PLAYGROUND STATUS
                         </Typography>
                         <Box sx={{ display: "flex", alignItems: "center", mt: 0.5 }}>
                           {playgroundReport.conforms ? (
-                            <CheckCircleIcon sx={{ color: "#10b981", mr: 1, fontSize: 32 }} />
+                            <Box className="validation-status-badge pass">
+                              <CheckCircleIcon sx={{ fontSize: 20 }} /> CONFORMS
+                            </Box>
                           ) : (
-                            <CancelIcon sx={{ color: "#ef4444", mr: 1, fontSize: 32 }} />
+                            <Box className="validation-status-badge fail">
+                              <CancelIcon sx={{ fontSize: 20 }} /> FAILED
+                            </Box>
                           )}
-                          <Typography variant="h5" sx={{ fontWeight: 700, color: playgroundReport.conforms ? "#10b981" : "#ef4444" }}>
-                            {playgroundReport.conforms ? "CONFORMS" : "FAILED"}
-                          </Typography>
                         </Box>
                       </Box>
-                      <Box sx={{ textAlign: "right" }}>
-                        <Typography variant="body2">Violations: <b>{playgroundReport.total_violations}</b></Typography>
-                        <Typography variant="body2">Triples: <b>{playgroundReport.total_triples}</b></Typography>
+                      <Box sx={{ display: "flex", gap: 3, alignItems: "center" }}>
+                        <Box>
+                          <Typography variant="body2">Violations: <b>{playgroundReport.total_violations}</b></Typography>
+                          <Typography variant="body2">Triples: <b>{playgroundReport.total_triples}</b></Typography>
+                        </Box>
                         <Button
                           variant="outlined"
-                          size="small"
+                          className="validation-secondary-btn"
                           startIcon={<DownloadIcon />}
                           onClick={() => handleDownloadPDF(playgroundReport)}
-                          sx={{ mt: 1, textTransform: "none", borderRadius: "15px" }}
+                          sx={{ height: "40px !important" }}
                         >
                           Download PDF Report
                         </Button>
                       </Box>
-                    </CardContent>
-                  </Card>
+                    </Box>
+                  </Box>
 
                   {/* Rules table */}
-                  <Paper sx={{ p: 3, mb: 3, borderRadius: "16px" }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                  <Box className="validation-card" sx={{ mb: 3 }}>
+                    <Typography className="validation-card-title">
                       Rules Evaluated
                     </Typography>
-                    <TableContainer>
+                    <TableContainer className="validation-table-container">
                       <Table size="small">
-                        <TableHead sx={{ backgroundColor: "#f1f5f9" }}>
+                        <TableHead className="validation-table-head">
                           <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Rule/Shape</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Target Class</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="center">Status</TableCell>
+                            <TableCell className="validation-table-cell-header">Rule/Shape</TableCell>
+                            <TableCell className="validation-table-cell-header">Target Class</TableCell>
+                            <TableCell className="validation-table-cell-header" align="center">Status</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {playgroundReport.rules?.map((r, i) => (
-                            <TableRow key={i}>
-                              <TableCell>{r.label}</TableCell>
-                              <TableCell>{r.target_class_short}</TableCell>
-                              <TableCell align="center">
+                            <TableRow key={i} className="validation-table-row">
+                              <TableCell className="validation-table-cell">{r.label}</TableCell>
+                              <TableCell className="validation-table-cell">{r.target_class_short}</TableCell>
+                              <TableCell className="validation-table-cell" align="center">
                                 {r.status === "Pass" ? (
-                                  <Box sx={{ color: "#10b981", fontWeight: 700 }}>Pass</Box>
+                                  <Box sx={{ color: "var(--accent-success)", fontWeight: 700 }}>Pass</Box>
                                 ) : (
-                                  <Box sx={{ color: "#ef4444", fontWeight: 700 }}>Fail</Box>
+                                  <Box sx={{ color: "var(--accent-error)", fontWeight: 700 }}>Fail</Box>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -930,37 +894,37 @@ export default function ValidationPage() {
                         </TableBody>
                       </Table>
                     </TableContainer>
-                  </Paper>
+                  </Box>
 
                   {/* Violations Log table */}
                   {playgroundReport.violations && playgroundReport.violations.length > 0 && (
-                    <Paper sx={{ p: 3, borderRadius: "16px" }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: "#ef4444" }}>
+                    <Box className="validation-card">
+                      <Typography className="validation-card-title" sx={{ color: "var(--accent-error) !important" }}>
                         Violations Log
                       </Typography>
-                      <TableContainer>
+                      <TableContainer className="validation-table-container">
                         <Table size="small">
-                          <TableHead sx={{ backgroundColor: "#f1f5f9" }}>
+                          <TableHead className="validation-table-head">
                             <TableRow>
-                              <TableCell sx={{ fontWeight: 600 }}>Focus Node</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>Property Path</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>Message</TableCell>
-                              <TableCell sx={{ fontWeight: 600 }}>Value</TableCell>
+                              <TableCell className="validation-table-cell-header">Focus Node</TableCell>
+                              <TableCell className="validation-table-cell-header">Property Path</TableCell>
+                              <TableCell className="validation-table-cell-header">Message</TableCell>
+                              <TableCell className="validation-table-cell-header">Value</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {playgroundReport.violations.map((v, i) => (
-                              <TableRow key={i}>
-                                <TableCell sx={{ fontSize: "12px", fontFamily: "monospace" }}>{v.focus_node_short}</TableCell>
-                                <TableCell sx={{ fontSize: "12px", fontFamily: "monospace" }}>{v.path_short}</TableCell>
-                                <TableCell>{v.message}</TableCell>
-                                <TableCell sx={{ fontSize: "12px" }}>{v.value}</TableCell>
+                              <TableRow key={i} className="validation-table-row">
+                                <TableCell className="validation-table-cell validation-table-cell-mono">{v.focus_node_short}</TableCell>
+                                <TableCell className="validation-table-cell validation-table-cell-mono">{v.path_short}</TableCell>
+                                <TableCell className="validation-table-cell">{v.message}</TableCell>
+                                <TableCell className="validation-table-cell">{v.value}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
                       </TableContainer>
-                    </Paper>
+                    </Box>
                   )}
                 </Box>
               )}
