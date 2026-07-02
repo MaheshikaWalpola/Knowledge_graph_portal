@@ -1,15 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import {
   Box,
   Typography,
-  Tabs,
-  Tab,
   Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   CircularProgress,
   Table,
   TableBody,
@@ -20,12 +14,18 @@ import {
   TextField,
   Grid,
   Checkbox,
+  Alert,
+  AlertTitle,
+  Tooltip,
+  IconButton,
   Card,
   CardContent,
-  Stepper,
-  Step,
-  StepLabel,
-  Alert
+  Stack,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -33,52 +33,25 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DownloadIcon from "@mui/icons-material/Download";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import RefreshIcon from "@mui/icons-material/Refresh";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CheckIcon from "@mui/icons-material/Check";
+import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
 import "./ValidationPage.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-const DEFAULT_SHACL_TEMPLATE = `@prefix sh: <http://www.w3.org/ns/shacl#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix cmpo: <https://tucid/cpmo/> .
-@prefix inst: <https://tucid/cpmo/instance/> .
+const STEPS = [
+  "Define Questions",
+  "Finalize Questions",
+  "SHACL Shapes",
+  "Validate & Report"
+];
 
-# Default validation shapes for CMP parameters
-cmpo:PressureShape a sh:NodeShape ;
-    sh:targetClass cmpo:Pressure ;
-    rdfs:label "Pressure Parameter Validation" ;
-    sh:property [
-        sh:path cmpo:hasNumericValue ;
-        sh:minCount 1 ;
-        sh:datatype xsd:float ;
-        sh:minInclusive 0.0 ;
-        sh:message "Pressure parameter value must be a positive float." ;
-    ] ;
-    sh:property [
-        sh:path cmpo:hasUnit ;
-        sh:hasValue "psi" ;
-        sh:message "Pressure values must be measured in 'psi' units." ;
-    ] .
-
-cmpo:CMPProcessShape a sh:NodeShape ;
-    sh:targetClass cmpo:CMPProcess ;
-    rdfs:label "CMP Process Run Validation" ;
-    sh:property [
-        sh:path cmpo:hasTimestamp ;
-        sh:minCount 1 ;
-        sh:datatype xsd:dateTime ;
-        sh:message "Every CMP Process run must have a valid measurement timestamp (xsd:dateTime)." ;
-    ] ;
-    sh:property [
-        sh:path cmpo:actsOn ;
-        sh:minCount 1 ;
-        sh:message "Every CMP Process must act on at least one Wafer." ;
-    ] .
-`;
-
-const SAMPLE_INSTANCES_TEMPLATE = `@prefix cmpo: <https://tucid/cpmo/> .
+const SAMPLE_INSTANCES = `@prefix cmpo: <https://tucid/cpmo/> .
 @prefix inst: <https://tucid/cpmo/instance/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -102,28 +75,21 @@ inst:Wafer_2981014422 a cmpo:Wafer ;
 `;
 
 export default function ValidationPage({ user: propUser, onOpenAuth }) {
-  const [activeTab, setActiveTab] = useState(0);
   const [user, setUser] = useState(null);
 
-  // Sync user with propUser, fallback to localStorage
   useEffect(() => {
     if (propUser) {
       setUser(propUser);
     } else {
       const storedUser = localStorage.getItem("kgp_user");
       if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch (e) {
-          console.error(e);
-        }
+        try { setUser(JSON.parse(storedUser)); } catch (e) { console.error(e); }
       } else {
         setUser(null);
       }
     }
   }, [propUser]);
 
-  // Open login dialog automatically if not authenticated
   useEffect(() => {
     if (!propUser && !localStorage.getItem("kgp_user")) {
       onOpenAuth?.();
@@ -132,196 +98,221 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
   const getAuthConfig = () => {
     const token = localStorage.getItem("token");
-    return {
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-      },
-    };
+    return { headers: { Authorization: token ? `Bearer ${token}` : "" } };
   };
 
-  // --- TAB 0: Workspace Validation States ---
-  const [schemas, setSchemas] = useState([]);
-  const [selectedSchema, setSelectedSchema] = useState("");
-  const [shaclShapes, setShaclShapes] = useState(DEFAULT_SHACL_TEMPLATE);
-  const [workspaceLoading, setWorkspaceLoading] = useState(false);
-  const [workspaceReport, setWorkspaceReport] = useState(null);
-  const [workspaceError, setWorkspaceError] = useState("");
+  // ── Core state ──
+  const [activeStep, setActiveStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [infoDialog, setInfoDialog] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchUserSchemas();
-    }
-  }, [user]);
+  // ── Step 0 ──
+  const [inputMode, setInputMode] = useState("ai");
+  const [schemaFile, setSchemaFile] = useState(null);
+  const [instanceFile, setInstanceFile] = useState(null);
+  const [combinedFile, setCombinedFile] = useState(null);
+  const [schemaFileText, setSchemaFileText] = useState("");
+  const [instanceFileText, setInstanceFileText] = useState("");
+  const [aiContextPrompt, setAiContextPrompt] = useState("");
+  const [manualQuestionsText, setManualQuestionsText] = useState("");
 
-  const fetchUserSchemas = async () => {
-    try {
-      const res = await axios.get(`${API}/workspace/schemas`, getAuthConfig());
-      if (res.data && res.data.schemas) {
-        setSchemas(res.data.schemas);
-        if (res.data.schemas.length > 0) {
-          setSelectedSchema(res.data.schemas[0].schema_id);
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching schemas", err);
-    }
-  };
+  // ── Step 1 ──
+  const [questions, setQuestions] = useState([]);
+  const [newQuestionText, setNewQuestionText] = useState("");
+  const [moreLoading, setMoreLoading] = useState(false);
 
-  const handleWorkspaceValidate = async () => {
-    if (!selectedSchema) return;
-    setWorkspaceLoading(true);
-    setWorkspaceError("");
-    setWorkspaceReport(null);
+  // ── Step 2 ──
+  const [shaclCode, setShaclCode] = useState("");
+  const [copied, setCopied] = useState(false);
 
-    const formData = new FormData();
-    formData.append("schema_id", selectedSchema);
-    formData.append("shacl_ttl", shaclShapes);
-
-    try {
-      const res = await axios.post(`${API}/validation/run-workspace`, formData, getAuthConfig());
-      if (res.data && res.data.report) {
-        setWorkspaceReport(res.data.report);
-      } else {
-        setWorkspaceError("Invalid response format from server.");
-      }
-    } catch (err) {
-      console.error(err);
-      setWorkspaceError(
-        err.response?.data?.detail || "An error occurred while validating the workspace."
-      );
-    } finally {
-      setWorkspaceLoading(false);
-    }
-  };
-
-  const handleDownloadPDF = async (reportData) => {
-    if (!reportData) return;
-    try {
-      const formData = new FormData();
-      formData.append("report_data", JSON.stringify(reportData));
-      
-      const res = await axios.post(`${API}/validation/export-pdf`, formData, {
-        ...getAuthConfig(),
-        responseType: "blob"
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "validation_report.pdf");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (err) {
-      console.error("Error downloading PDF", err);
-      alert("Failed to export PDF report.");
-    }
-  };
-
-  // --- TAB 1: AI Assistant & Playground States ---
-  const [step, setStep] = useState(0);
-  const [assistantLoading, setAssistantLoading] = useState(false);
-  const [explanation, setExplanation] = useState("");
-  const [playgroundSchemaFile, setPlaygroundSchemaFile] = useState(null);
-  const [playgroundSchemaName, setPlaygroundSchemaName] = useState("");
-  
-  const [suggestedRules, setSuggestedRules] = useState([]);
-  const [selectedRules, setSelectedRules] = useState({});
-  const [customRules, setCustomRules] = useState("");
-
-  const [compiledSHACL, setCompiledSHACL] = useState("");
-
+  // ── Step 3 ──
   const [playgroundSchemaText, setPlaygroundSchemaText] = useState("");
-  const [playgroundInstancesText, setPlaygroundInstancesText] = useState(SAMPLE_INSTANCES_TEMPLATE);
+  const [playgroundInstancesText, setPlaygroundInstancesText] = useState(SAMPLE_INSTANCES);
   const [playgroundShaclText, setPlaygroundShaclText] = useState("");
-  
   const [playgroundReport, setPlaygroundReport] = useState(null);
-  const [playgroundError, setPlaygroundError] = useState("");
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPlaygroundSchemaFile(file);
-      setPlaygroundSchemaName(file.name);
-      
+  // Refs
+  const schemaInputRef = useRef(null);
+  const instanceInputRef = useRef(null);
+  const combinedInputRef = useRef(null);
+
+  // ── File helpers ──
+  const readFileAsText = (file) =>
+    new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setPlaygroundSchemaText(event.target.result);
-      };
+      reader.onload = (e) => resolve(e.target.result);
       reader.readAsText(file);
-    }
+    });
+
+  const handleSchemaFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSchemaFile(file);
+    setSchemaFileText(await readFileAsText(file));
+    if (combinedFile) setCombinedFile(null);
+    e.target.value = "";
   };
 
-  const handleSuggestRules = async () => {
-    setAssistantLoading(true);
-    setPlaygroundError("");
+  const handleInstanceFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setInstanceFile(file);
+    setInstanceFileText(await readFileAsText(file));
+    if (combinedFile) setCombinedFile(null);
+    e.target.value = "";
+  };
+
+  const handleCombinedFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCombinedFile(file);
+    const text = await readFileAsText(file);
+    setSchemaFileText(text);
+    setInstanceFileText(text);
+    setSchemaFile(null);
+    setInstanceFile(null);
+    e.target.value = "";
+  };
+
+  // ── Step 0 → 1: AI generation ──
+  const handleGenerateQuestions = async () => {
+    setLoading(true);
+    setError(null);
+
     const formData = new FormData();
-    if (explanation) formData.append("user_explanation", explanation);
-    if (playgroundSchemaFile) {
-      formData.append("schema_file", playgroundSchemaFile);
-    } else if (selectedSchema) {
-      formData.append("schema_id", selectedSchema);
+    if (aiContextPrompt) formData.append("user_explanation", aiContextPrompt);
+
+    if (combinedFile) {
+      formData.append("schema_file", combinedFile);
+      formData.append("instance_file", combinedFile);
+    } else {
+      if (schemaFile) formData.append("schema_file", schemaFile);
+      if (instanceFile) formData.append("instance_file", instanceFile);
     }
 
     try {
       const res = await axios.post(`${API}/validation/suggest-rules`, formData, getAuthConfig());
-      if (res.data && res.data.rules) {
-        setSuggestedRules(res.data.rules);
-        const ruleChecks = {};
-        res.data.rules.forEach((_, idx) => {
-          ruleChecks[idx] = true;
-        });
-        setSelectedRules(ruleChecks);
-        setStep(1);
+      if (res.data?.rules) {
+        setQuestions(res.data.rules.map((r) => ({ text: r, selected: true })));
+        setSuccess("AI generated 10 validation questions from your files.");
+        setActiveStep(1);
       }
     } catch (err) {
-      console.error(err);
-      alert("Failed to suggest validation rules. Please check connection.");
+      setError(err.response?.data?.detail || "Failed to generate questions. Please check your connection.");
     } finally {
-      setAssistantLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleCompileSHACL = async () => {
-    setAssistantLoading(true);
-    const activeRules = suggestedRules.filter((_, idx) => selectedRules[idx]);
-    if (customRules) {
-      const lines = customRules.split("\n").filter(l => l.trim() !== "");
-      activeRules.push(...lines);
-    }
+  // ── Step 0 → 1: Manual submission ──
+  const handleManualSubmit = () => {
+    const lines = manualQuestionsText.split("\n").map(l => l.trim()).filter(l => l);
+    if (lines.length === 0) return;
+    setQuestions(lines.map((r) => ({ text: r, selected: true })));
+    setActiveStep(1);
+  };
 
+  // ── Step 1: Ask AI for more ──
+  const handleAskForMore = async () => {
+    setMoreLoading(true);
+    const formData = new FormData();
+    formData.append("existing_rules", JSON.stringify(questions.map(q => q.text)));
+    if (schemaFileText) formData.append("schema_content", schemaFileText);
+    if (instanceFileText) formData.append("instance_content", instanceFileText);
+
+    try {
+      const res = await axios.post(`${API}/validation/suggest-more-rules`, formData, getAuthConfig());
+      if (res.data?.rules) {
+        setQuestions(prev => [...prev, ...res.data.rules.map((r) => ({ text: r, selected: true }))]);
+        setSuccess(`AI generated ${res.data.rules.length} additional questions.`);
+      }
+    } catch (err) {
+      setError("Failed to generate more questions.");
+    } finally {
+      setMoreLoading(false);
+    }
+  };
+
+  // ── Step 1: question management ──
+  const handleAddQuestion = () => {
+    if (!newQuestionText.trim()) return;
+    setQuestions(prev => [...prev, { text: newQuestionText.trim(), selected: true }]);
+    setNewQuestionText("");
+  };
+
+  const toggleQuestion = (idx) =>
+    setQuestions(prev => prev.map((q, i) => i === idx ? { ...q, selected: !q.selected } : q));
+
+  const editQuestion = (idx, newText) =>
+    setQuestions(prev => prev.map((q, i) => i === idx ? { ...q, text: newText } : q));
+
+  const deleteQuestion = (idx) =>
+    setQuestions(prev => prev.filter((_, i) => i !== idx));
+
+  const selectedCount = questions.filter(q => q.selected).length;
+
+  // ── Step 1 → 2: Generate SHACL ──
+  const handleGenerateSHACL = async () => {
+    const activeRules = questions.filter(q => q.selected).map(q => q.text);
     if (activeRules.length === 0) {
-      alert("Please select or add at least one validation rule.");
-      setAssistantLoading(false);
+      setError("Please select at least one question.");
       return;
     }
 
+    setLoading(true);
+    setError(null);
+
     const formData = new FormData();
     formData.append("rules", JSON.stringify(activeRules));
-    if (playgroundSchemaFile) {
-      formData.append("schema_file", playgroundSchemaFile);
-    } else if (selectedSchema) {
-      formData.append("schema_id", selectedSchema);
-    }
+    if (combinedFile) formData.append("schema_file", combinedFile);
+    else if (schemaFile) formData.append("schema_file", schemaFile);
 
     try {
       const res = await axios.post(`${API}/validation/generate-shacl`, formData, getAuthConfig());
-      if (res.data && res.data.shacl_ttl) {
-        setCompiledSHACL(res.data.shacl_ttl);
+      if (res.data?.shacl_ttl) {
+        setShaclCode(res.data.shacl_ttl);
         setPlaygroundShaclText(res.data.shacl_ttl);
-        setStep(2);
+        setSuccess("SHACL shapes generated successfully!");
+        setActiveStep(2);
       }
     } catch (err) {
-      console.error(err);
-      alert("Failed to generate SHACL shapes.");
+      setError("Failed to generate SHACL shapes. Please try again.");
     } finally {
-      setAssistantLoading(false);
+      setLoading(false);
     }
   };
 
+  // ── Step 2: Copy ──
+  const handleCopyShacl = async () => {
+    try {
+      await navigator.clipboard.writeText(shaclCode);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = shaclCode;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // ── Step 2 → 3: Proceed ──
+  const handleProceedToPlayground = () => {
+    if (schemaFileText) setPlaygroundSchemaText(schemaFileText);
+    if (instanceFileText && instanceFileText !== schemaFileText) setPlaygroundInstancesText(instanceFileText);
+    setPlaygroundShaclText(shaclCode);
+    setSuccess(null);
+    setActiveStep(3);
+  };
+
+  // ── Step 3: Validate ──
   const handlePlaygroundValidate = async () => {
-    setAssistantLoading(true);
-    setPlaygroundError("");
+    setLoading(true);
+    setError(null);
     setPlaygroundReport(null);
 
     const formData = new FormData();
@@ -331,628 +322,573 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
     try {
       const res = await axios.post(`${API}/validation/run-playground`, formData, getAuthConfig());
-      if (res.data && res.data.report) {
+      if (res.data?.report) {
         setPlaygroundReport(res.data.report);
+        setSuccess("Validation complete!");
       } else {
-        setPlaygroundError("Invalid playground validation report.");
+        setError("Invalid playground validation report.");
       }
     } catch (err) {
-      console.error(err);
-      setPlaygroundError(
-        err.response?.data?.detail || "An error occurred during playground validation."
-      );
+      setError(err.response?.data?.detail || "An error occurred during validation.");
     } finally {
-      setAssistantLoading(false);
+      setLoading(false);
     }
   };
 
+  // ── Step 3: Download PDF ──
+  const handleDownloadPDF = async (reportData) => {
+    if (!reportData) return;
+    try {
+      const formData = new FormData();
+      formData.append("report_data", JSON.stringify(reportData));
+      const res = await axios.post(`${API}/validation/export-pdf`, formData, {
+        ...getAuthConfig(),
+        responseType: "blob"
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "validation_report.pdf");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      setError("Failed to export PDF report.");
+    }
+  };
+
+  // ── Back / Reset ──
+  const handleBack = () => {
+    if (activeStep > 0) {
+      setActiveStep(activeStep - 1);
+      setError(null);
+      setSuccess(null);
+    }
+  };
+
+  const handleReset = () => {
+    setActiveStep(0);
+    setQuestions([]);
+    setShaclCode("");
+    setPlaygroundReport(null);
+    setError(null);
+    setSuccess(null);
+  };
+
+  // ── Auth gate ──
   if (!user) {
     return (
-      <Box className="validation-workspace" sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+      <div className="validation-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
         <Box className="validation-auth-gate">
           <Box className="validation-auth-icon">
             <AutoAwesomeIcon sx={{ fontSize: 40 }} />
           </Box>
-          <Typography className="validation-auth-title">
-            Sign In Required
-          </Typography>
+          <Typography className="validation-auth-title">Sign In Required</Typography>
           <Typography className="validation-auth-message">
-            Please log in to access the Graph Validation tab and validation playground options.
+            Please log in to access the AI-powered SHACL Validation tool.
           </Typography>
-          <Button
-            variant="contained"
-            className="validation-primary-btn"
-            onClick={onOpenAuth}
-            sx={{ mt: 2 }}
-          >
-            Sign In
-          </Button>
+          <Button variant="contained" onClick={onOpenAuth} sx={{ mt: 2 }}>Sign In</Button>
         </Box>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box className="validation-workspace">
-      {/* Title */}
-      <Box className="validation-header">
-        <Typography className="validation-title">
-          Data Quality Validation
-        </Typography>
-        <Typography className="validation-subtitle">
-          Validate your RDF datasets against SHACL shapes rules, compile rules using AI, and export PDF compliance reports.
-        </Typography>
-      </Box>
+    <div className="validation-container">
+      <div className="validation-card">
 
-      {/* Tabs Header */}
-      <Box className="validation-tabs-container">
-        <Tabs value={activeTab} onChange={(_, val) => setActiveTab(val)} textColor="primary" indicatorColor="primary">
-          <Tab label="Workspace Validator" sx={{ textTransform: "none", fontWeight: 600 }} />
-          <Tab label="Interactive AI Assistant & Playground" sx={{ textTransform: "none", fontWeight: 600 }} />
-        </Tabs>
-      </Box>
+        {/* ── Header ── */}
+        <div className="validation-header">
+          <div className="validation-header-left">
+            <h2 className="validation-title">AI-Powered SHACL Validation</h2>
+            <p className="validation-subtitle">
+              Generate validation questions with AI, compile them into SHACL shapes, and run compliance checks with downloadable reports.
+            </p>
+          </div>
+          <Tooltip title="How it works">
+            <IconButton onClick={() => setInfoDialog(true)} size="small" sx={{ color: 'var(--accent-primary)' }}>
+              <InfoOutlinedIcon />
+            </IconButton>
+          </Tooltip>
+        </div>
 
-      {/* --- TAB 0: Workspace Validator --- */}
-      {activeTab === 0 && (
-        <Grid container spacing={3}>
-          {/* Config column */}
-          <Grid item xs={12} md={5}>
-            <Box className="validation-card">
-              <Typography className="validation-card-title">
-                Configure Validation Run
-              </Typography>
-              
-              <FormControl fullWidth sx={{ mb: 3 }}>
-                <InputLabel id="workspace-schema-select-label">Select Workspace Schema</InputLabel>
-                <Select
-                  labelId="workspace-schema-select-label"
-                  value={selectedSchema}
-                  label="Select Workspace Schema"
-                  onChange={(e) => setSelectedSchema(e.target.value)}
-                >
-                  {schemas.map((s) => (
-                    <MenuItem key={s.schema_id} value={s.schema_id}>
-                      {s.name} ({s.upload_mode})
-                    </MenuItem>
-                  ))}
-                  {schemas.length === 0 && (
-                    <MenuItem disabled value="">
-                      No workspaces initialized
-                    </MenuItem>
-                  )}
-                </Select>
-              </FormControl>
+        {/* ── Info Dialog ── */}
+        <Dialog open={infoDialog} onClose={() => setInfoDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>How SHACL Validation Works</DialogTitle>
+          <DialogContent dividers>
+            <ol style={{ paddingLeft: '20px', margin: 0, lineHeight: 1.8 }}>
+              <li><strong>Upload files</strong> — Provide your RDF schema (.ttl) and/or instance data, or a combined file. Optionally describe what you want to validate.</li>
+              <li><strong>Generate questions</strong> — AI analyzes your files and suggests 10 validation questions in plain English. You can also enter questions manually.</li>
+              <li><strong>Finalize & compile</strong> — Edit, add, or remove questions, then compile them into SHACL shapes (Turtle format).</li>
+              <li><strong>Validate & report</strong> — Run the SHACL shapes against your data in the built-in playground and download a PDF compliance report.</li>
+            </ol>
+            <Alert severity="info" sx={{ mt: 2 }}>
+              You can copy the generated SHACL shapes and paste them into an external SHACL playground like Zazuko for additional testing.
+            </Alert>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setInfoDialog(false)}>Got it</Button>
+          </DialogActions>
+        </Dialog>
 
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                SHACL Validation Shapes (Turtle format)
-              </Typography>
-              <TextField
-                multiline
-                rows={12}
-                fullWidth
-                variant="outlined"
-                value={shaclShapes}
-                onChange={(e) => setShaclShapes(e.target.value)}
-                InputProps={{ className: "validation-code-area" }}
-                sx={{ mb: 3 }}
-              />
+        <div className="validation-content">
 
-              <Button
-                variant="contained"
-                className="validation-primary-btn"
-                startIcon={workspaceLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-                disabled={workspaceLoading || !selectedSchema}
-                onClick={handleWorkspaceValidate}
-                fullWidth
-              >
-                Validate Active Workspace
-              </Button>
+          {/* ── Custom Stepper ── */}
+          <div className="validation-stepper">
+            <div className="validation-stepper-steps">
+              {STEPS.map((label, idx) => (
+                <div key={label} className={`validation-stepper-step ${activeStep === idx ? "active" : ""} ${activeStep > idx ? "completed" : ""}`}>
+                  <div className="validation-stepper-circle">{idx + 1}</div>
+                  <p className="validation-stepper-label">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-              {workspaceError && (
-                <Alert severity="error" sx={{ mt: 2, borderRadius: "8px" }}>
-                  {workspaceError}
-                </Alert>
-              )}
-            </Box>
-          </Grid>
+          {/* ── Body ── */}
+          <div className="validation-body">
 
-          {/* Report column */}
-          <Grid item xs={12} md={7}>
-            {workspaceLoading ? (
-              <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "50vh" }}>
-                <CircularProgress size={45} color="primary" sx={{ mb: 2 }} />
-                <Typography color="text.secondary">Running SHACL validator with RDFS inference...</Typography>
-              </Box>
-            ) : workspaceReport ? (
-              <Box>
-                {/* Result header card */}
-                <Box className="validation-card" sx={{ mb: 3 }}>
-                  <Box className="validation-results-summary">
-                    <Box>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        VALIDATION STATUS
-                      </Typography>
-                      <Box sx={{ display: "flex", alignItems: "center", mt: 0.5 }}>
-                        {workspaceReport.conforms ? (
-                          <Box className="validation-status-badge pass">
-                            <CheckCircleIcon sx={{ fontSize: 20 }} /> CONFORMS
-                          </Box>
-                        ) : (
-                          <Box className="validation-status-badge fail">
-                            <CancelIcon sx={{ fontSize: 20 }} /> FAILED
-                          </Box>
-                        )}
-                      </Box>
-                    </Box>
-                    <Box sx={{ display: "flex", gap: 3, alignItems: "center" }}>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Violations: <b>{workspaceReport.total_violations}</b>
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Triples: <b>{workspaceReport.total_triples}</b>
-                        </Typography>
-                      </Box>
-                      <Button
-                        variant="outlined"
-                        className="validation-secondary-btn"
-                        startIcon={<DownloadIcon />}
-                        onClick={() => handleDownloadPDF(workspaceReport)}
-                        sx={{ height: "40px !important" }}
-                      >
-                        Download PDF Report
-                      </Button>
-                    </Box>
-                  </Box>
-                </Box>
-
-                {/* Rules Table */}
-                <Box className="validation-card" sx={{ mb: 3 }}>
-                  <Typography className="validation-card-title">
-                    Rules Evaluated
-                  </Typography>
-                  <TableContainer className="validation-table-container">
-                    <Table size="small">
-                      <TableHead className="validation-table-head">
-                        <TableRow>
-                          <TableCell className="validation-table-cell-header">Rule/Shape</TableCell>
-                          <TableCell className="validation-table-cell-header">Target Class</TableCell>
-                          <TableCell className="validation-table-cell-header" align="center">Status</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {workspaceReport.rules?.map((r, i) => (
-                          <TableRow key={i} className="validation-table-row">
-                            <TableCell className="validation-table-cell">{r.label}</TableCell>
-                            <TableCell className="validation-table-cell">{r.target_class_short}</TableCell>
-                            <TableCell className="validation-table-cell" align="center">
-                              {r.status === "Pass" ? (
-                                <Box sx={{ color: "var(--accent-success)", fontWeight: 700 }}>Pass</Box>
-                              ) : (
-                                <Box sx={{ color: "var(--accent-error)", fontWeight: 700 }}>Fail</Box>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
-
-                {/* Violations Table */}
-                {workspaceReport.violations && workspaceReport.violations.length > 0 && (
-                  <Box className="validation-card">
-                    <Typography className="validation-card-title" sx={{ color: "var(--accent-error) !important" }}>
-                      Violations Log
-                    </Typography>
-                    <TableContainer className="validation-table-container">
-                      <Table size="small">
-                        <TableHead className="validation-table-head">
-                          <TableRow>
-                            <TableCell className="validation-table-cell-header">Focus Node</TableCell>
-                            <TableCell className="validation-table-cell-header">Property Path</TableCell>
-                            <TableCell className="validation-table-cell-header">Message</TableCell>
-                            <TableCell className="validation-table-cell-header">Value</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {workspaceReport.violations.map((v, i) => (
-                            <TableRow key={i} className="validation-table-row">
-                              <TableCell className="validation-table-cell validation-table-cell-mono">{v.focus_node_short}</TableCell>
-                              <TableCell className="validation-table-cell validation-table-cell-mono">{v.path_short}</TableCell>
-                              <TableCell className="validation-table-cell">{v.message}</TableCell>
-                              <TableCell className="validation-table-cell">{v.value}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Box>
-                )}
-              </Box>
-            ) : (
-              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh", border: "2px dashed var(--border-medium)", borderRadius: "var(--radius-xl)", backgroundColor: "var(--bg-secondary)" }}>
-                <Typography color="text.secondary" sx={{ textAlign: "center", p: 3 }}>
-                  Select a workspace schema and click "Validate Active Workspace" to view validation results.
-                </Typography>
-              </Box>
+            {/* Alerts */}
+            {error && (
+              <Alert severity="error" onClose={() => setError(null)}>
+                <AlertTitle>Error</AlertTitle>
+                {error}
+              </Alert>
             )}
-          </Grid>
-        </Grid>
-      )}
+            {success && (
+              <Alert severity="success" onClose={() => setSuccess(null)}>
+                <AlertTitle>Success</AlertTitle>
+                {success}
+              </Alert>
+            )}
 
-      {/* --- TAB 1: Interactive AI Assistant & Playground --- */}
-      {activeTab === 1 && (
-        <Box>
-          <Stepper activeStep={step} className="validation-stepper">
-            <Step><StepLabel>Rule Criteria (AI)</StepLabel></Step>
-            <Step><StepLabel>Refine Rules</StepLabel></Step>
-            <Step><StepLabel>SHACL Shapes</StepLabel></Step>
-            <Step><StepLabel>Playground Test</StepLabel></Step>
-          </Stepper>
+            {/* ════════ STEP 0: Define Questions ════════ */}
+            {activeStep === 0 && (
+              <Box>
+                <Typography variant="h6" gutterBottom>Define Your Validation Questions</Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+                  Choose how to create your validation questions — let AI generate them from your data files, or enter them manually in plain English.
+                </Typography>
 
-          {/* Step 0: Input Criteria & Upload Schema */}
-          {step === 0 && (
-            <Box className="validation-card" sx={{ maxWidth: 800, margin: "0 auto" }}>
-              <Typography className="validation-card-title">
-                Explain Your Validation Situation
-              </Typography>
-              
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Tell the AI validation assistant what data properties you want to check (e.g., sensor bounds, positive pressures, presence of links). Upload an ontology schema (.ttl, .rdf) or choose your active workspace schema to ground the recommendations.
-              </Typography>
-
-              <TextField
-                label="Situation Description (English)"
-                multiline
-                rows={4}
-                fullWidth
-                value={explanation}
-                onChange={(e) => setExplanation(e.target.value)}
-                placeholder="I want to validate my CMP process data. WAFER pressure must be positive, rotation speeds must be at least 10rpm, and every run must link to a copper wafer..."
-                sx={{ mb: 3 }}
-              />
-
-              <Grid container spacing={3} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel id="playground-schema-select">Select Active Schema Context</InputLabel>
-                    <Select
-                      labelId="playground-schema-select"
-                      value={selectedSchema}
-                      label="Select Active Schema Context"
-                      onChange={(e) => setSelectedSchema(e.target.value)}
-                    >
-                      {schemas.map((s) => (
-                        <MenuItem key={s.schema_id} value={s.schema_id}>
-                          {s.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={6} sx={{ display: "flex", alignItems: "center" }}>
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    startIcon={<CloudUploadIcon />}
-                    fullWidth
-                    sx={{ py: 1.5, textTransform: "none", borderStyle: "dashed" }}
+                {/* Mode Toggle */}
+                <Box className="validation-mode-toggle">
+                  <button
+                    className={`validation-mode-toggle-btn ${inputMode === "ai" ? "active" : ""}`}
+                    onClick={() => setInputMode("ai")}
                   >
-                    {playgroundSchemaName ? `Uploaded: ${playgroundSchemaName}` : "Or Upload Custom Schema (.ttl)"}
-                    <input type="file" hidden accept=".ttl,.rdf,.owl" onChange={handleFileUpload} />
-                  </Button>
-                </Grid>
-              </Grid>
+                    <AutoAwesomeIcon sx={{ fontSize: 18 }} /> Generate with AI
+                  </button>
+                  <button
+                    className={`validation-mode-toggle-btn ${inputMode === "manual" ? "active" : ""}`}
+                    onClick={() => setInputMode("manual")}
+                  >
+                    <EditIcon sx={{ fontSize: 18 }} /> Enter Manually
+                  </button>
+                </Box>
 
-              <Button
-                variant="contained"
-                className="validation-primary-btn"
-                startIcon={assistantLoading ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
-                disabled={assistantLoading}
-                onClick={handleSuggestRules}
-                fullWidth
-              >
-                {assistantLoading ? "AI Analyzing Schema & Generating Rules..." : "Ask AI to Suggest 10 Validation Questions"}
-              </Button>
-            </Box>
-          )}
-
-          {/* Step 1: Select & Refine Recommendations */}
-          {step === 1 && (
-            <Box className="validation-card" sx={{ maxWidth: 850, margin: "0 auto" }}>
-              <Typography className="validation-card-title">
-                Select and Refine Recommended Rules
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                AI recommended the following 10 validation questions. You can toggle checkboxes to choose which ones to compile, edit their text directly, or write custom rules in the textbox below.
-              </Typography>
-
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mb: 3 }}>
-                {suggestedRules.map((rule, idx) => (
-                  <Box key={idx} className="validation-rule-wrapper">
-                    <Checkbox
-                      checked={!!selectedRules[idx]}
-                      onChange={(e) => setSelectedRules({ ...selectedRules, [idx]: e.target.checked })}
-                    />
-                    <TextField
-                      variant="standard"
-                      fullWidth
-                      value={rule}
-                      onChange={(e) => {
-                        const newRules = [...suggestedRules];
-                        newRules[idx] = e.target.value;
-                        setSuggestedRules(newRules);
-                      }}
-                      InputProps={{ disableUnderline: true }}
-                      sx={{ ml: 1, fontWeight: 500 }}
-                    />
-                  </Box>
-                ))}
-              </Box>
-
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                Add Custom Rules (One per line)
-              </Typography>
-              <TextField
-                multiline
-                rows={3}
-                fullWidth
-                variant="outlined"
-                value={customRules}
-                onChange={(e) => setCustomRules(e.target.value)}
-                placeholder="Wafer material category must be 'Metal' or 'Dielectric'"
-                sx={{ mb: 3 }}
-              />
-
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Button variant="outlined" className="validation-secondary-btn" onClick={() => setStep(0)}>
-                  Back
-                </Button>
-                <Button
-                  variant="contained"
-                  className="validation-primary-btn"
-                  disabled={assistantLoading}
-                  onClick={handleCompileSHACL}
-                  startIcon={assistantLoading && <CircularProgress size={20} color="inherit" />}
-                >
-                  Compile rules into SHACL (.ttl)
-                </Button>
-              </Box>
-            </Box>
-          )}
-
-          {/* Step 2: Review Generated SHACL shapes code */}
-          {step === 2 && (
-            <Box className="validation-card" sx={{ maxWidth: 850, margin: "0 auto" }}>
-              <Typography className="validation-card-title">
-                Review Generated SHACL Shapes Code
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                The AI has compiled your selected rules into SHACL constraint syntax. You can edit the code directly here before testing it in the playground.
-              </Typography>
-
-              <TextField
-                multiline
-                rows={15}
-                fullWidth
-                variant="outlined"
-                value={compiledSHACL}
-                onChange={(e) => {
-                  setCompiledSHACL(e.target.value);
-                  setPlaygroundShaclText(e.target.value);
-                }}
-                InputProps={{ className: "validation-code-area" }}
-                sx={{ mb: 3 }}
-              />
-
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Button variant="outlined" className="validation-secondary-btn" onClick={() => setStep(1)}>
-                  Back
-                </Button>
-                <Button
-                  variant="contained"
-                  className="validation-primary-btn"
-                  onClick={() => setStep(3)}
-                >
-                  Proceed to Playground
-                </Button>
-              </Box>
-            </Box>
-          )}
-
-          {/* Step 3: Playground validation editor & output */}
-          {step === 3 && (
-            <Box>
-              <Grid container spacing={3} sx={{ mb: 3 }}>
-                {/* Shapes Column */}
-                <Grid item xs={12} md={4}>
-                  <Box className="validation-card" sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                      SHACL Shapes (.ttl)
-                    </Typography>
-                    <TextField
-                      multiline
-                      rows={14}
-                      fullWidth
-                      variant="outlined"
-                      value={playgroundShaclText}
-                      onChange={(e) => setPlaygroundShaclText(e.target.value)}
-                      InputProps={{ className: "validation-code-area" }}
-                    />
-                  </Box>
-                </Grid>
-
-                {/* Schema Column */}
-                <Grid item xs={12} md={4}>
-                  <Box className="validation-card" sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                      Ontology Schema (.ttl)
-                    </Typography>
-                    <TextField
-                      multiline
-                      rows={14}
-                      fullWidth
-                      variant="outlined"
-                      placeholder="# Optional: Paste or upload schema TTL code..."
-                      value={playgroundSchemaText}
-                      onChange={(e) => setPlaygroundSchemaText(e.target.value)}
-                      InputProps={{ className: "validation-code-area" }}
-                    />
-                  </Box>
-                </Grid>
-
-                {/* Instances Column */}
-                <Grid item xs={12} md={4}>
-                  <Box className="validation-card" sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                      Instances Data (.ttl)
-                    </Typography>
-                    <TextField
-                      multiline
-                      rows={14}
-                      fullWidth
-                      variant="outlined"
-                      value={playgroundInstancesText}
-                      onChange={(e) => setPlaygroundInstancesText(e.target.value)}
-                      InputProps={{ className: "validation-code-area" }}
-                    />
-                  </Box>
-                </Grid>
-              </Grid>
-
-              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 4 }}>
-                <Button variant="outlined" className="validation-secondary-btn" onClick={() => setStep(2)}>
-                  Back to SHACL Shapes
-                </Button>
-                
-                <Button
-                  variant="contained"
-                  className="validation-primary-btn"
-                  disabled={assistantLoading}
-                  startIcon={assistantLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-                  onClick={handlePlaygroundValidate}
-                  sx={{ px: "32px !important" }}
-                >
-                  Run Playground Validation
-                </Button>
-              </Box>
-
-              {playgroundError && (
-                <Alert severity="error" sx={{ mb: 3, borderRadius: "8px" }}>
-                  {playgroundError}
-                </Alert>
-              )}
-
-              {/* Playground validation results */}
-              {playgroundReport && (
-                <Box>
-                  <Box className="validation-card" sx={{ mb: 3 }}>
-                    <Box className="validation-results-summary">
-                      <Box>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          PLAYGROUND STATUS
+                {/* ── AI Mode ── */}
+                {inputMode === "ai" && (
+                  <Stack spacing={3}>
+                    {/* Schema File */}
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle1" gutterBottom>Ontology Schema File</Typography>
+                        <Typography variant="body2" color="textSecondary" gutterBottom>
+                          Your RDF/OWL schema file (.ttl, .rdf, or .owl)
                         </Typography>
-                        <Box sx={{ display: "flex", alignItems: "center", mt: 0.5 }}>
-                          {playgroundReport.conforms ? (
-                            <Box className="validation-status-badge pass">
-                              <CheckCircleIcon sx={{ fontSize: 20 }} /> CONFORMS
-                            </Box>
-                          ) : (
-                            <Box className="validation-status-badge fail">
-                              <CancelIcon sx={{ fontSize: 20 }} /> FAILED
-                            </Box>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
+                          <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => schemaInputRef.current?.click()}>
+                            Choose Schema File
+                          </Button>
+                          {schemaFile && (
+                            <Chip icon={<CheckCircleIcon />} label={schemaFile.name} color="success" variant="outlined" onDelete={() => { setSchemaFile(null); setSchemaFileText(""); }} />
                           )}
                         </Box>
-                      </Box>
-                      <Box sx={{ display: "flex", gap: 3, alignItems: "center" }}>
-                        <Box>
-                          <Typography variant="body2">Violations: <b>{playgroundReport.total_violations}</b></Typography>
-                          <Typography variant="body2">Triples: <b>{playgroundReport.total_triples}</b></Typography>
+                        <input ref={schemaInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleSchemaFileChange} style={{ display: "none" }} />
+                      </CardContent>
+                    </Card>
+
+                    {/* Instance File */}
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle1" gutterBottom>Instance Data File</Typography>
+                        <Typography variant="body2" color="textSecondary" gutterBottom>
+                          Your RDF instance data file (.ttl)
+                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
+                          <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => instanceInputRef.current?.click()}>
+                            Choose Instance File
+                          </Button>
+                          {instanceFile && (
+                            <Chip icon={<CheckCircleIcon />} label={instanceFile.name} color="success" variant="outlined" onDelete={() => { setInstanceFile(null); setInstanceFileText(""); }} />
+                          )}
                         </Box>
-                        <Button
-                          variant="outlined"
-                          className="validation-secondary-btn"
-                          startIcon={<DownloadIcon />}
-                          onClick={() => handleDownloadPDF(playgroundReport)}
-                          sx={{ height: "40px !important" }}
-                        >
-                          Download PDF Report
-                        </Button>
-                      </Box>
-                    </Box>
-                  </Box>
+                        <input ref={instanceInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleInstanceFileChange} style={{ display: "none" }} />
+                      </CardContent>
+                    </Card>
 
-                  {/* Rules table */}
-                  <Box className="validation-card" sx={{ mb: 3 }}>
-                    <Typography className="validation-card-title">
-                      Rules Evaluated
-                    </Typography>
-                    <TableContainer className="validation-table-container">
-                      <Table size="small">
-                        <TableHead className="validation-table-head">
-                          <TableRow>
-                            <TableCell className="validation-table-cell-header">Rule/Shape</TableCell>
-                            <TableCell className="validation-table-cell-header">Target Class</TableCell>
-                            <TableCell className="validation-table-cell-header" align="center">Status</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {playgroundReport.rules?.map((r, i) => (
-                            <TableRow key={i} className="validation-table-row">
-                              <TableCell className="validation-table-cell">{r.label}</TableCell>
-                              <TableCell className="validation-table-cell">{r.target_class_short}</TableCell>
-                              <TableCell className="validation-table-cell" align="center">
-                                {r.status === "Pass" ? (
-                                  <Box sx={{ color: "var(--accent-success)", fontWeight: 700 }}>Pass</Box>
-                                ) : (
-                                  <Box sx={{ color: "var(--accent-error)", fontWeight: 700 }}>Fail</Box>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Box>
+                    {/* Combined File */}
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle1" gutterBottom>Or Upload Combined File</Typography>
+                        <Typography variant="body2" color="textSecondary" gutterBottom>
+                          A single file containing both schema and instance data
+                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
+                          <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => combinedInputRef.current?.click()}>
+                            Choose Combined File
+                          </Button>
+                          {combinedFile && (
+                            <Chip icon={<CheckCircleIcon />} label={combinedFile.name} color="success" variant="outlined" onDelete={() => { setCombinedFile(null); setSchemaFileText(""); setInstanceFileText(""); }} />
+                          )}
+                        </Box>
+                        <input ref={combinedInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleCombinedFileChange} style={{ display: "none" }} />
+                      </CardContent>
+                    </Card>
 
-                  {/* Violations Log table */}
-                  {playgroundReport.violations && playgroundReport.violations.length > 0 && (
-                    <Box className="validation-card">
-                      <Typography className="validation-card-title" sx={{ color: "var(--accent-error) !important" }}>
-                        Violations Log
-                      </Typography>
-                      <TableContainer className="validation-table-container">
-                        <Table size="small">
-                          <TableHead className="validation-table-head">
-                            <TableRow>
-                              <TableCell className="validation-table-cell-header">Focus Node</TableCell>
-                              <TableCell className="validation-table-cell-header">Property Path</TableCell>
-                              <TableCell className="validation-table-cell-header">Message</TableCell>
-                              <TableCell className="validation-table-cell-header">Value</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {playgroundReport.violations.map((v, i) => (
-                              <TableRow key={i} className="validation-table-row">
-                                <TableCell className="validation-table-cell validation-table-cell-mono">{v.focus_node_short}</TableCell>
-                                <TableCell className="validation-table-cell validation-table-cell-mono">{v.path_short}</TableCell>
-                                <TableCell className="validation-table-cell">{v.message}</TableCell>
-                                <TableCell className="validation-table-cell">{v.value}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
+                    {/* Context prompt */}
+                    <TextField
+                      label="Describe what you want to validate (optional)"
+                      multiline
+                      rows={3}
+                      fullWidth
+                      value={aiContextPrompt}
+                      onChange={(e) => setAiContextPrompt(e.target.value)}
+                      placeholder="e.g. I want to check that all pressure values are positive, every CMP process links to a wafer, rotation speeds are within bounds..."
+                    />
+                  </Stack>
+                )}
+
+                {/* ── Manual Mode ── */}
+                {inputMode === "manual" && (
+                  <Stack spacing={3}>
+                    <TextField
+                      label="Enter validation questions (one per line)"
+                      multiline
+                      rows={8}
+                      fullWidth
+                      variant="outlined"
+                      value={manualQuestionsText}
+                      onChange={(e) => setManualQuestionsText(e.target.value)}
+                      placeholder={"Every CMP process must have a measurement timestamp\nPressure values must be positive floats\nEvery CMP process must act on at least one Wafer\nSlurry flow rates should not be negative"}
+                    />
+
+                    <Alert severity="info">
+                      Optionally upload schema/instance files below — they will be used later to generate accurate SHACL shapes from your questions.
+                    </Alert>
+
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center" }}>
+                          <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => schemaInputRef.current?.click()}>
+                            {schemaFile ? `Schema: ${schemaFile.name}` : "Upload Schema (.ttl)"}
+                          </Button>
+                          <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => instanceInputRef.current?.click()}>
+                            {instanceFile ? `Instances: ${instanceFile.name}` : "Upload Instance Data (.ttl)"}
+                          </Button>
+                        </Box>
+                        <input ref={schemaInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleSchemaFileChange} style={{ display: "none" }} />
+                        <input ref={instanceInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleInstanceFileChange} style={{ display: "none" }} />
+                      </CardContent>
+                    </Card>
+                  </Stack>
+                )}
+              </Box>
+            )}
+
+            {/* ════════ STEP 1: Finalize Questions ════════ */}
+            {activeStep === 1 && (
+              <Box>
+                <Typography variant="h6" gutterBottom>Finalize Your Validation Questions</Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                  Review, edit, add, or remove questions. Toggle checkboxes to include/exclude from SHACL generation.
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 3, fontWeight: 600, color: "var(--accent-primary)" }}>
+                  {selectedCount} of {questions.length} questions selected
+                </Typography>
+
+                {/* Questions list */}
+                <Stack spacing={1.5} sx={{ mb: 3 }}>
+                  {questions.map((q, idx) => (
+                    <Box key={idx} className="validation-question-item" sx={{ opacity: q.selected ? 1 : 0.55 }}>
+                      <Checkbox checked={q.selected} onChange={() => toggleQuestion(idx)} size="small" sx={{ mt: -0.5 }} />
+                      <div className="validation-question-number">{idx + 1}</div>
+                      <TextField
+                        variant="standard"
+                        fullWidth
+                        value={q.text}
+                        onChange={(e) => editQuestion(idx, e.target.value)}
+                        InputProps={{ disableUnderline: true }}
+                        sx={{ fontSize: 14 }}
+                      />
+                      <button className="validation-question-delete" onClick={() => deleteQuestion(idx)} title="Remove question">
+                        <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                      </button>
                     </Box>
-                  )}
+                  ))}
+                </Stack>
+
+                {/* Add question */}
+                <Box sx={{ display: "flex", gap: 1.5, mb: 3 }}>
+                  <TextField
+                    size="small"
+                    fullWidth
+                    value={newQuestionText}
+                    onChange={(e) => setNewQuestionText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddQuestion(); } }}
+                    placeholder="Add a custom validation question..."
+                  />
+                  <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddQuestion} disabled={!newQuestionText.trim()}>
+                    Add
+                  </Button>
                 </Box>
-              )}
-            </Box>
-          )}
-        </Box>
-      )}
-    </Box>
+
+                {/* Ask AI for more */}
+                <Button
+                  variant="outlined"
+                  startIcon={moreLoading ? <CircularProgress size={18} /> : <AutoAwesomeIcon />}
+                  onClick={handleAskForMore}
+                  disabled={moreLoading}
+                >
+                  {moreLoading ? "Generating..." : "Ask AI for 5 More Questions"}
+                </Button>
+              </Box>
+            )}
+
+            {/* ════════ STEP 2: SHACL Shapes ════════ */}
+            {activeStep === 2 && (
+              <Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1 }}>
+                  <Typography variant="h6">Generated SHACL Shapes</Typography>
+                  <button className={`validation-copy-btn ${copied ? "copied" : ""}`} onClick={handleCopyShacl}>
+                    {copied ? <><CheckIcon sx={{ fontSize: 16 }} /> Copied!</> : <><ContentCopyIcon sx={{ fontSize: 16 }} /> Copy to Clipboard</>}
+                  </button>
+                </Box>
+
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                  AI has compiled your questions into SHACL shapes (Turtle format). You can edit the code, copy it to an external SHACL playground, or proceed to validate in-app.
+                </Typography>
+
+                <TextField
+                  multiline
+                  rows={16}
+                  fullWidth
+                  variant="outlined"
+                  value={shaclCode}
+                  onChange={(e) => { setShaclCode(e.target.value); setPlaygroundShaclText(e.target.value); }}
+                  InputProps={{ className: "validation-code-area" }}
+                  sx={{ mb: 2 }}
+                />
+
+                <Alert severity="info">
+                  <strong>Tip:</strong> Copy the SHACL shapes above and paste them into{" "}
+                  <a href="https://shacl-playground.zazuko.com/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)" }}>SHACL Playground (Zazuko)</a>
+                  {" "}for external testing.
+                </Alert>
+              </Box>
+            )}
+
+            {/* ════════ STEP 3: Validate & Report ════════ */}
+            {activeStep === 3 && (
+              <Box>
+                <Typography variant="h6" gutterBottom>Validation Playground</Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+                  Paste or edit your SHACL shapes, schema, and instance data below. Then run the SHACL validator against the data.
+                </Typography>
+
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} md={4}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>SHACL Shapes (.ttl)</Typography>
+                        <TextField
+                          multiline rows={12} fullWidth variant="outlined"
+                          value={playgroundShaclText}
+                          onChange={(e) => setPlaygroundShaclText(e.target.value)}
+                          InputProps={{ className: "validation-code-area" }}
+                        />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Ontology Schema (.ttl)</Typography>
+                        <TextField
+                          multiline rows={12} fullWidth variant="outlined"
+                          placeholder="# Paste or upload schema TTL code..."
+                          value={playgroundSchemaText}
+                          onChange={(e) => setPlaygroundSchemaText(e.target.value)}
+                          InputProps={{ className: "validation-code-area" }}
+                        />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Instance Data (.ttl)</Typography>
+                        <TextField
+                          multiline rows={12} fullWidth variant="outlined"
+                          value={playgroundInstancesText}
+                          onChange={(e) => setPlaygroundInstancesText(e.target.value)}
+                          InputProps={{ className: "validation-code-area" }}
+                        />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+
+                {/* Validation Results */}
+                {loading && (
+                  <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", py: 4 }}>
+                    <CircularProgress size={40} sx={{ mb: 2 }} />
+                    <Typography color="textSecondary">Running SHACL validator with RDFS inference...</Typography>
+                  </Box>
+                )}
+
+                {playgroundReport && (
+                  <Stack spacing={3} sx={{ mt: 2 }}>
+                    {/* Summary */}
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+                          <Box>
+                            <Typography variant="subtitle2" color="textSecondary">VALIDATION STATUS</Typography>
+                            <Box sx={{ mt: 0.5 }}>
+                              {playgroundReport.conforms ? (
+                                <span className="validation-status-badge pass"><CheckCircleIcon sx={{ fontSize: 20 }} /> CONFORMS</span>
+                              ) : (
+                                <span className="validation-status-badge fail"><CancelIcon sx={{ fontSize: 20 }} /> FAILED</span>
+                              )}
+                            </Box>
+                          </Box>
+                          <Box sx={{ display: "flex", gap: 3, alignItems: "center" }}>
+                            <Box>
+                              <Typography variant="body2">Violations: <b>{playgroundReport.total_violations}</b></Typography>
+                              <Typography variant="body2">Triples: <b>{playgroundReport.total_triples}</b></Typography>
+                            </Box>
+                            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleDownloadPDF(playgroundReport)}>
+                              Download PDF
+                            </Button>
+                          </Box>
+                        </Box>
+                      </CardContent>
+                    </Card>
+
+                    {/* Rules Table */}
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>Rules Evaluated</Typography>
+                        <TableContainer className="validation-table-container">
+                          <Table size="small">
+                            <TableHead className="validation-table-head">
+                              <TableRow>
+                                <TableCell className="validation-table-cell-header">Rule/Shape</TableCell>
+                                <TableCell className="validation-table-cell-header">Target Class</TableCell>
+                                <TableCell className="validation-table-cell-header" align="center">Status</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {playgroundReport.rules?.map((r, i) => (
+                                <TableRow key={i} className="validation-table-row">
+                                  <TableCell className="validation-table-cell">{r.label}</TableCell>
+                                  <TableCell className="validation-table-cell">{r.target_class_short}</TableCell>
+                                  <TableCell className="validation-table-cell" align="center">
+                                    {r.status === "Pass"
+                                      ? <Box sx={{ color: "var(--accent-success)", fontWeight: 700 }}>Pass</Box>
+                                      : <Box sx={{ color: "var(--accent-error)", fontWeight: 700 }}>Fail</Box>
+                                    }
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </CardContent>
+                    </Card>
+
+                    {/* Violations Table */}
+                    {playgroundReport.violations?.length > 0 && (
+                      <Card variant="outlined">
+                        <CardContent>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: "var(--accent-error)" }}>Violations Log</Typography>
+                          <TableContainer className="validation-table-container">
+                            <Table size="small">
+                              <TableHead className="validation-table-head">
+                                <TableRow>
+                                  <TableCell className="validation-table-cell-header">Focus Node</TableCell>
+                                  <TableCell className="validation-table-cell-header">Property Path</TableCell>
+                                  <TableCell className="validation-table-cell-header">Message</TableCell>
+                                  <TableCell className="validation-table-cell-header">Value</TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {playgroundReport.violations.map((v, i) => (
+                                  <TableRow key={i} className="validation-table-row">
+                                    <TableCell className="validation-table-cell validation-table-cell-mono">{v.focus_node_short}</TableCell>
+                                    <TableCell className="validation-table-cell validation-table-cell-mono">{v.path_short}</TableCell>
+                                    <TableCell className="validation-table-cell">{v.message}</TableCell>
+                                    <TableCell className="validation-table-cell">{v.value}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </Stack>
+                )}
+              </Box>
+            )}
+          </div>
+
+          {/* ── Footer Actions (same as instance-gen-actions) ── */}
+          <Box className="validation-actions">
+            <Button disabled={activeStep === 0 || loading} onClick={handleBack} variant="outlined">
+              Back
+            </Button>
+
+            {activeStep === 0 && inputMode === "ai" && (
+              <Button
+                variant="contained"
+                onClick={handleGenerateQuestions}
+                disabled={loading || (!schemaFile && !instanceFile && !combinedFile)}
+              >
+                {loading ? <CircularProgress size={24} /> : "Generate Questions"}
+              </Button>
+            )}
+
+            {activeStep === 0 && inputMode === "manual" && (
+              <Button variant="contained" onClick={handleManualSubmit} disabled={!manualQuestionsText.trim()}>
+                Proceed with Questions
+              </Button>
+            )}
+
+            {activeStep === 1 && (
+              <Button variant="contained" onClick={handleGenerateSHACL} disabled={loading || selectedCount === 0}>
+                {loading ? <CircularProgress size={24} /> : `Generate SHACL (${selectedCount} questions)`}
+              </Button>
+            )}
+
+            {activeStep === 2 && (
+              <Button variant="contained" onClick={handleProceedToPlayground}>
+                Proceed to Playground
+              </Button>
+            )}
+
+            {activeStep === 3 && (
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button variant="outlined" onClick={handleReset}>Start Over</Button>
+                <Button variant="contained" onClick={handlePlaygroundValidate} disabled={loading} startIcon={loading ? <CircularProgress size={20} /> : <PlayArrowIcon />}>
+                  Run Validation
+                </Button>
+              </Box>
+            )}
+          </Box>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -41,9 +41,11 @@ async def api_suggest_rules(
     user_explanation: Optional[str] = Form(None),
     schema_id: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
+    instance_file: Optional[UploadFile] = File(None),
     current_user: Any = Depends(get_current_user)
 ):
     schema_content = None
+    instance_content = None
     if schema_file:
         content_bytes = await schema_file.read()
         schema_content = content_bytes.decode("utf-8")
@@ -52,9 +54,34 @@ async def api_suggest_rules(
             schema_content = _fetch_workspace_schema_ttl(current_user["email"], schema_id)
         except Exception as e:
             print(f"Error fetching workspace schema: {e}")
+    
+    if instance_file:
+        instance_bytes = await instance_file.read()
+        instance_content = instance_bytes.decode("utf-8")
+    elif schema_id:
+        try:
+            instance_content = _fetch_workspace_instances_ttl(current_user["email"], schema_id)
+        except Exception as e:
+            print(f"Error fetching workspace instances: {e}")
             
-    rules = validation_service.suggest_validation_rules(user_explanation, schema_content)
+    rules = validation_service.suggest_validation_rules(user_explanation, schema_content, instance_content)
     return {"status": "ok", "rules": rules}
+
+
+@router.post("/validation/suggest-more-rules")
+async def api_suggest_more_rules(
+    existing_rules: str = Form(...),  # JSON array string of existing rules
+    schema_content: Optional[str] = Form(None),
+    instance_content: Optional[str] = Form(None),
+    current_user: Any = Depends(get_current_user)
+):
+    try:
+        rules_list = json.loads(existing_rules)
+    except Exception:
+        raise HTTPException(400, detail="Invalid JSON array format for 'existing_rules'.")
+    
+    new_rules = validation_service.suggest_more_rules(rules_list, schema_content, instance_content)
+    return {"status": "ok", "rules": new_rules}
 
 
 @router.post("/validation/generate-shacl")
