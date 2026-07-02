@@ -154,6 +154,18 @@ export default function Header({ user, onOpenAuth, onLogout }) {
             <ListItemText secondary="Instance Generator" />
           </Button>
         </ListItem>
+
+        <ListItem className="list-item" disablePadding>
+          <Button
+            component={Link}
+            to="/validate"
+            variant="text"
+            className="navbar__link"
+            sx={{ justifyContent: "flex-start", width: "100%" }}
+          >
+            <ListItemText secondary="Validate" />
+          </Button>
+        </ListItem>
       </List>
 
       {/* Bottom: auth area inside drawer (for mobile) */}
@@ -288,6 +300,15 @@ export default function Header({ user, onOpenAuth, onLogout }) {
                 className="header__links_sub"
               >
                 Instance Generator
+              </Button>
+
+              <Button
+                component={Link}
+                to="/validate"
+                variant="text"
+                className="header__links_sub"
+              >
+                Validate
               </Button>
             </div>
           )}

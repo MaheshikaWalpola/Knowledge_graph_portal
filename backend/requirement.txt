@@ -5,3 +5,5 @@ SPARQLWrapper==2.0.0
 pandas
 rdflib
 pymongo
+pyshacl==0.31.0
+reportlab==5.0.0

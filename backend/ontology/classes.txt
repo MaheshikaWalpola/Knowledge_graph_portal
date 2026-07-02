@@ -1,0 +1,90 @@
+Found 90 classes:
+  Class: <http://purl.obolibrary.org/obo/BFO_0000015> | Label: "None" | Parent: <None>
+  Class: <http://purl.obolibrary.org/obo/BFO_0000019> | Label: "None" | Parent: <None>
+  Class: <http://purl.obolibrary.org/obo/BFO_0000030> | Label: "None" | Parent: <None>
+  Class: <http://purl.obolibrary.org/obo/IAO_0000030> | Label: "None" | Parent: <None>
+  Class: <https://tucid/cpmo/Agent> | Label: "Agent" | Parent: <http://purl.obolibrary.org/obo/BFO_0000030>
+  Class: <https://tucid/cpmo/AverageRemovalRate> | Label: "Average Removal Rate" | Parent: <https://tucid/cpmo/WaferMaterialRemovalRate>
+  Class: <https://tucid/cpmo/BackingFilmUsage> | Label: "Usage Of Backing Film" | Parent: <https://tucid/cpmo/PadLifetime>
+  Class: <https://tucid/cpmo/Bay> | Label: "Bay" | Parent: <http://purl.obolibrary.org/obo/BFO_0000030>
+  Class: <https://tucid/cpmo/CMPExpert> | Label: "CMP Expert" | Parent: <https://tucid/cpmo/Agent>
+  Class: <https://tucid/cpmo/CMPProcess> | Label: "CMP Process" | Parent: <http://purl.obolibrary.org/obo/BFO_0000015>
+  Class: <https://tucid/cpmo/CMPTool> | Label: "CMP Tool" | Parent: <https://tucid/cpmo/Tool>
+  Class: <https://tucid/cpmo/Carrier> | Label: "Carrier" | Parent: <https://tucid/cpmo/ToolComponent>
+  Class: <https://tucid/cpmo/CenterAirBagPressure> | Label: "Center Air Bag Pressure" | Parent: <https://tucid/cpmo/Pressure>
+  Class: <https://tucid/cpmo/Chamber> | Label: "Chamber" | Parent: <https://tucid/cpmo/ToolComponent>
+  Class: <https://tucid/cpmo/Cleaner> | Label: "Cleaner" | Parent: <https://tucid/cpmo/Tool>
+  Class: <https://tucid/cpmo/CleaningRecipe> | Label: "Cleaning Recipe" | Parent: <https://tucid/cpmo/Recipe>
+  Class: <https://tucid/cpmo/CleaningStep> | Label: "Cleaning Step" | Parent: <https://tucid/cpmo/Step>
+  Class: <https://tucid/cpmo/Cleanroom> | Label: "Cleanroom" | Parent: <http://purl.obolibrary.org/obo/BFO_0000030>
+  Class: <https://tucid/cpmo/Conditioner> | Label: "Conditioner" | Parent: <https://tucid/cpmo/ToolComponent>
+  Class: <https://tucid/cpmo/ConditionerPad> | Label: "Conditioner Pad" | Parent: <https://tucid/cpmo/Consumable>
+  Class: <https://tucid/cpmo/Conditioning> | Label: "Conditioning" | Parent: <https://tucid/cpmo/Parameter>
+  Class: <https://tucid/cpmo/Consumable> | Label: "Consumable" | Parent: <https://tucid/cpmo/ToolComponent>
+  Class: <https://tucid/cpmo/ControlWafer> | Label: "Control Wafer" | Parent: <https://tucid/cpmo/Wafer>
+  Class: <https://tucid/cpmo/Dishing> | Label: "Dishing" | Parent: <https://tucid/cpmo/WaferDefect>
+  Class: <https://tucid/cpmo/DresserTableUsage> | Label: "Usage Of Dresser Table" | Parent: <https://tucid/cpmo/PadLifetime>
+  Class: <https://tucid/cpmo/DresserUsage> | Label: "Usage Of Dresser" | Parent: <https://tucid/cpmo/Conditioning>
+  Class: <https://tucid/cpmo/DressingWaterStatus> | Label: "Dressing Water Status" | Parent: <https://tucid/cpmo/Conditioning>
+  Class: <https://tucid/cpmo/DummyWafer> | Label: "Dummy Wafer" | Parent: <https://tucid/cpmo/Wafer>
+  Class: <https://tucid/cpmo/EPDMethod> | Label: "EPD Method" | Parent: <None>
+  Class: <https://tucid/cpmo/EdgeAirBagPressure> | Label: "Edge Air Bag Pressure" | Parent: <https://tucid/cpmo/Pressure>
+  Class: <https://tucid/cpmo/Equipment> | Label: "Equipment" | Parent: <http://purl.obolibrary.org/obo/BFO_0000030>
+  Class: <https://tucid/cpmo/Erosion> | Label: "Erosion" | Parent: <https://tucid/cpmo/WaferDefect>
+  Class: <https://tucid/cpmo/Facility> | Label: "Facility" | Parent: <http://purl.obolibrary.org/obo/BFO_0000030>
+  Class: <https://tucid/cpmo/HeadRotation> | Label: "Head Rotation" | Parent: <https://tucid/cpmo/HeadSpeed>
+  Class: <https://tucid/cpmo/HeadSpeed> | Label: "Head Speed" | Parent: <https://tucid/cpmo/Velocity>
+  Class: <https://tucid/cpmo/IPEC> | Label: "IPEC" | Parent: <https://tucid/cpmo/CMPTool>
+  Class: <https://tucid/cpmo/Layer> | Label: "Layer" | Parent: <http://purl.obolibrary.org/obo/BFO_0000030>
+  Class: <https://tucid/cpmo/Layout> | Label: "Layout" | Parent: <http://purl.obolibrary.org/obo/BFO_0000019>
+  Class: <https://tucid/cpmo/Lot> | Label: "Lot" | Parent: <http://purl.obolibrary.org/obo/BFO_0000030>
+  Class: <https://tucid/cpmo/LotOwner> | Label: "Lot Owner" | Parent: <https://tucid/cpmo/Agent>
+  Class: <https://tucid/cpmo/MIRRA> | Label: "MIRRA" | Parent: <https://tucid/cpmo/CMPTool>
+  Class: <https://tucid/cpmo/MainOuterAirBagPressure> | Label: "Main Outer Air Bag Pressure" | Parent: <https://tucid/cpmo/Pressure>
+  Class: <https://tucid/cpmo/Measurement> | Label: "Measurement" | Parent: <http://purl.obolibrary.org/obo/BFO_0000015>
+  Class: <https://tucid/cpmo/MeasurementTool> | Label: "Measurement Tool" | Parent: <https://tucid/cpmo/Tool>
+  Class: <https://tucid/cpmo/MembraneUsage> | Label: "Usage Of Membrane" | Parent: <https://tucid/cpmo/Parameter>
+  Class: <https://tucid/cpmo/Metrology> | Label: "Metrology" | Parent: <https://tucid/cpmo/Measurement>
+  Class: <https://tucid/cpmo/MotorCurrent> | Label: "Motor Current" | Parent: <https://tucid/cpmo/Parameter>
+  Class: <https://tucid/cpmo/MotorCurrentEPD> | Label: "Motor Current EPD" | Parent: <https://tucid/cpmo/EPDMethod>
+  Class: <https://tucid/cpmo/OpticalEPD> | Label: "Optical EPD" | Parent: <https://tucid/cpmo/EPDMethod>
+  Class: <https://tucid/cpmo/OxideCMPRecipe> | Label: "Oxide CMP Recipe" | Parent: <https://tucid/cpmo/Recipe>
+  Class: <https://tucid/cpmo/PadLifetime> | Label: "Pad Lifetime" | Parent: <https://tucid/cpmo/Parameter>
+  Class: <https://tucid/cpmo/Parameter> | Label: "Parameter" | Parent: <http://purl.obolibrary.org/obo/BFO_0000019>
+  Class: <https://tucid/cpmo/Platen> | Label: "Platen" | Parent: <https://tucid/cpmo/ToolComponent>
+  Class: <https://tucid/cpmo/PlatenSpeed> | Label: "Platen Speed" | Parent: <https://tucid/cpmo/Velocity>
+  Class: <https://tucid/cpmo/PolishingPad> | Label: "Polishing Pad" | Parent: <https://tucid/cpmo/Consumable>
+  Class: <https://tucid/cpmo/PolishingStep> | Label: "Polishing Step" | Parent: <https://tucid/cpmo/Step>
+  Class: <https://tucid/cpmo/PolishingTableUsage> | Label: "Usage Of Polishing Table" | Parent: <https://tucid/cpmo/PadLifetime>
+  Class: <https://tucid/cpmo/Pressure> | Label: "Pressure" | Parent: <https://tucid/cpmo/Parameter>
+  Class: <https://tucid/cpmo/PressurizedChamberPressure> | Label: "Pressurized Chamber Pressure" | Parent: <https://tucid/cpmo/Pressure>
+  Class: <https://tucid/cpmo/PressurizedSheetUsage> | Label: "Usage Of Pressurized Sheet" | Parent: <https://tucid/cpmo/Parameter>
+  Class: <https://tucid/cpmo/ProcessCard> | Label: "Process Card" | Parent: <http://purl.obolibrary.org/obo/IAO_0000030>
+  Class: <https://tucid/cpmo/Project> | Label: "Project" | Parent: <http://purl.obolibrary.org/obo/BFO_0000030>
+  Class: <https://tucid/cpmo/Recipe> | Label: "Recipe" | Parent: <http://purl.obolibrary.org/obo/IAO_0000030>
+  Class: <https://tucid/cpmo/RetainingRing> | Label: "Retaining Ring" | Parent: <https://tucid/cpmo/ToolComponent>
+  Class: <https://tucid/cpmo/RetainingRingPressure> | Label: "Retaining Ring Pressure" | Parent: <https://tucid/cpmo/Pressure>
+  Class: <https://tucid/cpmo/RippleAirBagPressure> | Label: "Ripple Air Bag Pressure" | Parent: <https://tucid/cpmo/Pressure>
+  Class: <https://tucid/cpmo/Scratch> | Label: "Scratch" | Parent: <https://tucid/cpmo/WaferDefect>
+  Class: <https://tucid/cpmo/Slurry> | Label: "Slurry" | Parent: <https://tucid/cpmo/Consumable>
+  Class: <https://tucid/cpmo/SlurryFlow> | Label: "Slurry Flow" | Parent: <https://tucid/cpmo/Parameter>
+  Class: <https://tucid/cpmo/SlurryFlowLineA> | Label: "Slurry Flow Line A" | Parent: <https://tucid/cpmo/SlurryFlow>
+  Class: <https://tucid/cpmo/SlurryFlowLineB> | Label: "Slurry Flow Line B" | Parent: <https://tucid/cpmo/SlurryFlow>
+  Class: <https://tucid/cpmo/SlurryFlowLineC> | Label: "Slurry Flow Line C" | Parent: <https://tucid/cpmo/SlurryFlow>
+  Class: <https://tucid/cpmo/SlurryPipe> | Label: "Slurry Pipe" | Parent: <https://tucid/cpmo/ToolComponent>
+  Class: <https://tucid/cpmo/SlurryType> | Label: "Slurry Type" | Parent: <None>
+  Class: <https://tucid/cpmo/StageRotation> | Label: "Stage Rotation" | Parent: <https://tucid/cpmo/PlatenSpeed>
+  Class: <https://tucid/cpmo/Step> | Label: "Step" | Parent: <http://purl.obolibrary.org/obo/BFO_0000015>
+  Class: <https://tucid/cpmo/StructuredWafer> | Label: "Structured Wafer" | Parent: <https://tucid/cpmo/Wafer>
+  Class: <https://tucid/cpmo/Tool> | Label: "Tool" | Parent: <https://tucid/cpmo/Equipment>
+  Class: <https://tucid/cpmo/ToolBreakIn> | Label: "Tool Break-In" | Parent: <https://tucid/cpmo/Step>
+  Class: <https://tucid/cpmo/ToolBreakInRecipe> | Label: "Tool Break-In Recipe" | Parent: <https://tucid/cpmo/Recipe>
+  Class: <https://tucid/cpmo/ToolComponent> | Label: "Tool Component" | Parent: <https://tucid/cpmo/Equipment>
+  Class: <https://tucid/cpmo/ToolExpert> | Label: "Tool Expert" | Parent: <https://tucid/cpmo/Agent>
+  Class: <https://tucid/cpmo/Velocity> | Label: "Velocity" | Parent: <https://tucid/cpmo/Parameter>
+  Class: <https://tucid/cpmo/Wafer> | Label: "Wafer" | Parent: <http://purl.obolibrary.org/obo/BFO_0000030>
+  Class: <https://tucid/cpmo/WaferDefect> | Label: "Wafer Defect" | Parent: <http://purl.obolibrary.org/obo/BFO_0000019>
+  Class: <https://tucid/cpmo/WaferDiameter> | Label: "Wafer Diameter" | Parent: <http://purl.obolibrary.org/obo/BFO_0000019>
+  Class: <https://tucid/cpmo/WaferMaterial> | Label: "Wafer Material" | Parent: <http://purl.obolibrary.org/obo/BFO_0000019>
+  Class: <https://tucid/cpmo/WaferMaterialRemovalRate> | Label: "Wafer Material Removal Rate" | Parent: <https://tucid/cpmo/Parameter>
+  Class: <https://tucid/cpmo/WaferRotation> | Label: "Wafer Rotation" | Parent: <https://tucid/cpmo/Velocity>
