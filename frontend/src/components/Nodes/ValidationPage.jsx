@@ -489,62 +489,78 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 {/* ── AI Mode ── */}
                 {inputMode === "ai" && (
                   <Stack spacing={3}>
-                    {/* Schema File */}
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle1" gutterBottom>Ontology Schema File</Typography>
-                        <Typography variant="body2" color="textSecondary" gutterBottom>
-                          Your RDF/OWL schema file (.ttl, .rdf, or .owl)
-                        </Typography>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
-                          <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => schemaInputRef.current?.click()}>
-                            Choose Schema File
-                          </Button>
-                          {schemaFile && (
-                            <Chip icon={<CheckCircleIcon />} label={schemaFile.name} color="success" variant="outlined" onDelete={() => { setSchemaFile(null); setSchemaFileText(""); }} />
-                          )}
-                        </Box>
-                        <input ref={schemaInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleSchemaFileChange} style={{ display: "none" }} />
-                      </CardContent>
-                    </Card>
+                    <Grid container spacing={3}>
+                      {/* Option A: Separate Files */}
+                      <Grid item xs={12} md={6}>
+                        <Card variant="outlined" sx={{ height: "100%" }}>
+                          <CardContent sx={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
+                            <Box>
+                              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>Option A: Separate Files</Typography>
+                              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                                Upload your schema (ontology) and instance data separately.
+                              </Typography>
+                            </Box>
 
-                    {/* Instance File */}
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle1" gutterBottom>Instance Data File</Typography>
-                        <Typography variant="body2" color="textSecondary" gutterBottom>
-                          Your RDF instance data file (.ttl)
-                        </Typography>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
-                          <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => instanceInputRef.current?.click()}>
-                            Choose Instance File
-                          </Button>
-                          {instanceFile && (
-                            <Chip icon={<CheckCircleIcon />} label={instanceFile.name} color="success" variant="outlined" onDelete={() => { setInstanceFile(null); setInstanceFileText(""); }} />
-                          )}
-                        </Box>
-                        <input ref={instanceInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleInstanceFileChange} style={{ display: "none" }} />
-                      </CardContent>
-                    </Card>
+                            <Stack spacing={2} sx={{ mt: 1 }}>
+                              {/* Schema Upload */}
+                              <Box>
+                                <Typography variant="body2" gutterBottom sx={{ fontWeight: 500 }}>1. Ontology Schema File (.ttl, .rdf, .owl)</Typography>
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap", mt: 0.5 }}>
+                                  <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />} onClick={() => schemaInputRef.current?.click()}>
+                                    Choose Schema File
+                                  </Button>
+                                  {schemaFile && (
+                                    <Chip icon={<CheckCircleIcon />} label={schemaFile.name} color="success" variant="outlined" size="small" onDelete={() => { setSchemaFile(null); setSchemaFileText(""); }} />
+                                  )}
+                                </Box>
+                                <input ref={schemaInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleSchemaFileChange} style={{ display: "none" }} />
+                              </Box>
 
-                    {/* Combined File */}
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle1" gutterBottom>Or Upload Combined File</Typography>
-                        <Typography variant="body2" color="textSecondary" gutterBottom>
-                          A single file containing both schema and instance data
-                        </Typography>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
-                          <Button variant="outlined" startIcon={<CloudUploadIcon />} onClick={() => combinedInputRef.current?.click()}>
-                            Choose Combined File
-                          </Button>
-                          {combinedFile && (
-                            <Chip icon={<CheckCircleIcon />} label={combinedFile.name} color="success" variant="outlined" onDelete={() => { setCombinedFile(null); setSchemaFileText(""); setInstanceFileText(""); }} />
-                          )}
-                        </Box>
-                        <input ref={combinedInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleCombinedFileChange} style={{ display: "none" }} />
-                      </CardContent>
-                    </Card>
+                              {/* Instance Upload */}
+                              <Box>
+                                <Typography variant="body2" gutterBottom sx={{ fontWeight: 500 }}>2. Instance Data File (.ttl)</Typography>
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap", mt: 0.5 }}>
+                                  <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />} onClick={() => instanceInputRef.current?.click()}>
+                                    Choose Instance File
+                                  </Button>
+                                  {instanceFile && (
+                                    <Chip icon={<CheckCircleIcon />} label={instanceFile.name} color="success" variant="outlined" size="small" onDelete={() => { setInstanceFile(null); setInstanceFileText(""); }} />
+                                  )}
+                                </Box>
+                                <input ref={instanceInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleInstanceFileChange} style={{ display: "none" }} />
+                              </Box>
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+
+                      {/* Option B: Combined File */}
+                      <Grid item xs={12} md={6}>
+                        <Card variant="outlined" sx={{ height: "100%" }}>
+                          <CardContent sx={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
+                            <Box>
+                              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>Option B: Combined File</Typography>
+                              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                                Upload a single file containing both schema and instance definitions.
+                              </Typography>
+                            </Box>
+
+                            <Box sx={{ mt: 3, mb: 1 }}>
+                              <Typography variant="body2" gutterBottom sx={{ fontWeight: 500 }}>Combined File (.ttl, .rdf, .owl)</Typography>
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap", mt: 0.5 }}>
+                                <Button variant="outlined" size="small" startIcon={<CloudUploadIcon />} onClick={() => combinedInputRef.current?.click()}>
+                                  Choose Combined File
+                                </Button>
+                                {combinedFile && (
+                                  <Chip icon={<CheckCircleIcon />} label={combinedFile.name} color="success" variant="outlined" size="small" onDelete={() => { setCombinedFile(null); setSchemaFileText(""); setInstanceFileText(""); }} />
+                                )}
+                              </Box>
+                              <input ref={combinedInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleCombinedFileChange} style={{ display: "none" }} />
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    </Grid>
 
                     {/* Context prompt */}
                     <TextField
