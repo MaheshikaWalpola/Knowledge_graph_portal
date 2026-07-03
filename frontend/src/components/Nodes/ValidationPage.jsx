@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import {
   Box,
@@ -25,7 +25,13 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Collapse,
+  LinearProgress
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -39,6 +45,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import "./ValidationPage.css";
 
@@ -101,6 +110,27 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     return { headers: { Authorization: token ? `Bearer ${token}` : "" } };
   };
 
+  // ── Workspace validation target schemas ──
+  const [schemas, setSchemas] = useState([]);
+  const [validationTarget, setValidationTarget] = useState("uploaded");
+
+  useEffect(() => {
+    if (user) {
+      fetchUserSchemas();
+    }
+  }, [user]);
+
+  const fetchUserSchemas = async () => {
+    try {
+      const res = await axios.get(`${API}/workspace/schemas`, getAuthConfig());
+      if (res.data && res.data.schemas) {
+        setSchemas(res.data.schemas);
+      }
+    } catch (err) {
+      console.error("Error fetching schemas", err);
+    }
+  };
+
   // ── Core state ──
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -131,7 +161,27 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [playgroundSchemaText, setPlaygroundSchemaText] = useState("");
   const [playgroundInstancesText, setPlaygroundInstancesText] = useState(SAMPLE_INSTANCES);
   const [playgroundShaclText, setPlaygroundShaclText] = useState("");
+  const [playgroundSchemaFullText, setPlaygroundSchemaFullText] = useState("");
+  const [playgroundInstancesFullText, setPlaygroundInstancesFullText] = useState("");
   const [playgroundReport, setPlaygroundReport] = useState(null);
+  const [expandedRules, setExpandedRules] = useState({});
+  const [validationSteps, setValidationSteps] = useState([]);
+
+  // Group violations by source shape for the expandable rule cards
+  const violationsByShape = useMemo(() => {
+    if (!playgroundReport?.violations) return {};
+    const map = {};
+    for (const v of playgroundReport.violations) {
+      const key = v.source_shape || "unknown";
+      if (!map[key]) map[key] = [];
+      map[key].push(v);
+    }
+    return map;
+  }, [playgroundReport]);
+
+  const toggleRuleExpand = (shapeIri) => {
+    setExpandedRules(prev => ({ ...prev, [shapeIri]: !prev[shapeIri] }));
+  };
 
   // Refs
   const schemaInputRef = useRef(null);
@@ -300,36 +350,121 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // ── Step 2 → 3: Proceed ──
-  const handleProceedToPlayground = () => {
-    if (schemaFileText) setPlaygroundSchemaText(schemaFileText);
-    if (instanceFileText && instanceFileText !== schemaFileText) setPlaygroundInstancesText(instanceFileText);
-    setPlaygroundShaclText(shaclCode);
-    setSuccess(null);
-    setActiveStep(3);
+  const getDisplayPreview = (text, maxLength = 50000) => {
+    if (!text) return "";
+    if (text.length <= maxLength) return text;
+    const mb = (text.length / (1024 * 1024)).toFixed(2);
+    return text.substring(0, maxLength) + `\n\n... [TRUNCATED - File is too large to edit in browser (${mb} MB)]`;
   };
 
-  // ── Step 3: Validate ──
+  // ── Step 2 → 3: Proceed ──
+  const handleProceedToPlayground = () => {
+    try {
+      console.log("handleProceedToPlayground clicked", {
+        schemaLength: schemaFileText ? schemaFileText.length : 0,
+        instanceLength: instanceFileText ? instanceFileText.length : 0,
+        shaclLength: shaclCode ? shaclCode.length : 0
+      });
+      
+      // Store full contents
+      setPlaygroundSchemaFullText(schemaFileText || "");
+      setPlaygroundInstancesFullText(instanceFileText || "");
+      
+      // Store display previews (to prevent browser crash)
+      setPlaygroundSchemaText(getDisplayPreview(schemaFileText || ""));
+      setPlaygroundInstancesText(getDisplayPreview(instanceFileText || ""));
+      setPlaygroundShaclText(shaclCode || "");
+      
+      setSuccess(null);
+      setError(null);
+      setActiveStep(3);
+    } catch (err) {
+      console.error("Error transitioning to playground step:", err);
+      setError("Failed to transition to playground: " + err.message);
+    }
+  };
+
+  // ── Step 3: Validate (SSE streaming) ──
   const handlePlaygroundValidate = async () => {
     setLoading(true);
     setError(null);
     setPlaygroundReport(null);
+    setValidationSteps([]);
+    setExpandedRules({});
 
-    const formData = new FormData();
-    formData.append("schema_ttl", playgroundSchemaText);
-    formData.append("instances_ttl", playgroundInstancesText);
+    const formData = new URLSearchParams();
     formData.append("shacl_ttl", playgroundShaclText);
 
+    let streamUrl;
+    if (validationTarget === "uploaded") {
+      const activeSchema = playgroundSchemaFullText || playgroundSchemaText;
+      const activeInstances = playgroundInstancesFullText || playgroundInstancesText;
+      if (!activeSchema) {
+        setError("No schema content found. Please upload files in Step 1 or select a workspace schema from the dropdown.");
+        setLoading(false);
+        return;
+      }
+      formData.append("schema_ttl", activeSchema);
+      formData.append("instances_ttl", activeInstances);
+      streamUrl = `${API}/validation/run-playground-stream`;
+    } else {
+      formData.append("schema_id", validationTarget);
+      streamUrl = `${API}/validation/run-workspace-stream`;
+    }
+
     try {
-      const res = await axios.post(`${API}/validation/run-playground`, formData, getAuthConfig());
-      if (res.data?.report) {
-        setPlaygroundReport(res.data.report);
-        setSuccess("Validation complete!");
-      } else {
-        setError("Invalid playground validation report.");
+      const token = localStorage.getItem("token");
+      const response = await fetch(streamUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: formData.toString()
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `Server error ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith("data:")) {
+            try {
+              const event = JSON.parse(line.slice(5).trim());
+
+              if (event.error) {
+                setError(event.message);
+                setValidationSteps(prev => [...prev, { ...event, status: "error" }]);
+                setLoading(false);
+                return;
+              }
+
+              if (event.report) {
+                setPlaygroundReport(event.report);
+                setValidationSteps(prev => [...prev, { step: "done", message: "Validation complete!", status: "done" }]);
+                setSuccess("Validation complete!");
+              } else {
+                setValidationSteps(prev => [...prev, { ...event, status: "done" }]);
+              }
+            } catch { /* skip non-JSON lines */ }
+          }
+        }
       }
     } catch (err) {
-      setError(err.response?.data?.detail || "An error occurred during validation.");
+      setError(err.message || "An error occurred during validation.");
     } finally {
       setLoading(false);
     }
@@ -712,148 +847,273 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   Paste or edit your SHACL shapes, schema, and instance data below. Then run the SHACL validator against the data.
                 </Typography>
 
-                <Grid container spacing={2} sx={{ mb: 3 }}>
-                  <Grid item xs={12} md={4}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>SHACL Shapes (.ttl)</Typography>
-                        <TextField
-                          multiline rows={12} fullWidth variant="outlined"
-                          value={playgroundShaclText}
-                          onChange={(e) => setPlaygroundShaclText(e.target.value)}
-                          InputProps={{ className: "validation-code-area" }}
-                        />
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Ontology Schema (.ttl)</Typography>
-                        <TextField
-                          multiline rows={12} fullWidth variant="outlined"
-                          placeholder="# Paste or upload schema TTL code..."
-                          value={playgroundSchemaText}
-                          onChange={(e) => setPlaygroundSchemaText(e.target.value)}
-                          InputProps={{ className: "validation-code-area" }}
-                        />
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Instance Data (.ttl)</Typography>
-                        <TextField
-                          multiline rows={12} fullWidth variant="outlined"
-                          value={playgroundInstancesText}
-                          onChange={(e) => setPlaygroundInstancesText(e.target.value)}
-                          InputProps={{ className: "validation-code-area" }}
-                        />
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
+                {/* SHACL Shapes — Full Width Code Editor */}
+                <Card variant="outlined" sx={{ mb: 2 }}>
+                  <CardContent sx={{ pb: '16px !important' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                      SHACL Shapes (.ttl)
+                    </Typography>
+                    <TextField
+                      multiline
+                      rows={18}
+                      fullWidth
+                      variant="outlined"
+                      value={playgroundShaclText}
+                      onChange={(e) => setPlaygroundShaclText(e.target.value)}
+                      InputProps={{ className: "validation-code-area" }}
+                    />
+                  </CardContent>
+                </Card>
 
-                {/* Validation Results */}
-                {loading && (
-                  <Box sx={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", py: 4 }}>
-                    <CircularProgress size={40} sx={{ mb: 2 }} />
-                    <Typography color="textSecondary">Running SHACL validator with RDFS inference...</Typography>
+                {/* Compact Validation Target Bar */}
+                <Box className="validation-target-bar" sx={{ mb: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                      Validate Against:
+                    </Typography>
+                    <FormControl variant="outlined" size="small" sx={{ minWidth: 220 }}>
+                      <Select
+                        value={validationTarget}
+                        onChange={(e) => setValidationTarget(e.target.value)}
+                        displayEmpty
+                      >
+                        <MenuItem value="uploaded" disabled={!schemaFile && !instanceFile && !combinedFile}>
+                          {schemaFile || instanceFile || combinedFile 
+                            ? "Uploaded Files" 
+                            : "No Uploaded Files"}
+                        </MenuItem>
+                        {schemas.map((s) => (
+                          <MenuItem key={s.schema_id} value={s.schema_id}>
+                            {s.name} ({s.upload_mode})
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <Typography variant="caption" color="textSecondary" sx={{ flex: 1 }}>
+                      {validationTarget === "uploaded" 
+                        ? `${schemaFile?.name || combinedFile?.name || "—"} ${schemaFileText ? `(${(schemaFileText.length / 1024).toFixed(1)} KB)` : ""}  •  ${instanceFile?.name || combinedFile?.name || "—"} ${instanceFileText ? `(${(instanceFileText.length / (1024 * 1024)).toFixed(2)} MB)` : ""}`
+                        : "GraphDB workspace graphs"
+                      }
+                    </Typography>
                   </Box>
+                </Box>
+
+                {/* Live Validation Progress Steps */}
+                {(loading || validationSteps.length > 0) && !playgroundReport && (
+                  <Card variant="outlined" sx={{ mb: 2 }}>
+                    <CardContent sx={{ pb: '16px !important' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
+                        {loading ? "Validation Progress" : "Validation Status"}
+                      </Typography>
+                      <Stack spacing={0.75}>
+                        {validationSteps.map((step, i) => (
+                          <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                            {step.status === "error" 
+                              ? <CancelIcon sx={{ fontSize: 18, color: "var(--accent-error)" }} />
+                              : step.status === "done" && step.step === "done"
+                                ? <CheckCircleIcon sx={{ fontSize: 18, color: "var(--accent-success)" }} />
+                                : <CheckCircleIcon sx={{ fontSize: 18, color: "var(--accent-success)", opacity: 0.7 }} />
+                            }
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontSize: 13,
+                                color: step.status === "error" ? "var(--accent-error)" : "var(--text-secondary)",
+                                fontWeight: step.status === "error" ? 600 : 400
+                              }}
+                            >
+                              {step.message}
+                            </Typography>
+                          </Box>
+                        ))}
+                        {loading && (
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                            <CircularProgress size={16} />
+                            <Typography variant="body2" sx={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                              Processing...
+                            </Typography>
+                          </Box>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
                 )}
 
+                {/* ── Validation Results ── */}
                 {playgroundReport && (
-                  <Stack spacing={3} sx={{ mt: 2 }}>
-                    {/* Summary */}
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
+                  <Stack spacing={2.5} sx={{ mt: 2 }}>
+
+                    {/* ── Summary Banner ── */}
+                    <Box className={`validation-summary-banner ${playgroundReport.conforms ? "pass" : "fail"}`}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                          {playgroundReport.conforms 
+                            ? <CheckCircleIcon sx={{ fontSize: 32 }} />
+                            : <CancelIcon sx={{ fontSize: 32 }} />
+                          }
                           <Box>
-                            <Typography variant="subtitle2" color="textSecondary">VALIDATION STATUS</Typography>
-                            <Box sx={{ mt: 0.5 }}>
-                              {playgroundReport.conforms ? (
-                                <span className="validation-status-badge pass"><CheckCircleIcon sx={{ fontSize: 20 }} /> CONFORMS</span>
-                              ) : (
-                                <span className="validation-status-badge fail"><CancelIcon sx={{ fontSize: 20 }} /> FAILED</span>
-                              )}
-                            </Box>
-                          </Box>
-                          <Box sx={{ display: "flex", gap: 3, alignItems: "center" }}>
-                            <Box>
-                              <Typography variant="body2">Violations: <b>{playgroundReport.total_violations}</b></Typography>
-                              <Typography variant="body2">Triples: <b>{playgroundReport.total_triples}</b></Typography>
-                            </Box>
-                            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleDownloadPDF(playgroundReport)}>
-                              Download PDF
-                            </Button>
+                            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+                              {playgroundReport.conforms ? "All Shapes Conform" : "Validation Failed"}
+                            </Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.85 }}>
+                              {playgroundReport.conforms 
+                                ? "Your data passes all SHACL constraints."
+                                : `${playgroundReport.total_violations} violation${playgroundReport.total_violations !== 1 ? "s" : ""} found across ${playgroundReport.rules?.filter(r => r.status !== "Pass").length || 0} rule${(playgroundReport.rules?.filter(r => r.status !== "Pass").length || 0) !== 1 ? "s" : ""}`
+                              }
+                            </Typography>
                           </Box>
                         </Box>
-                      </CardContent>
-                    </Card>
+                        <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 2 }}>
+                          <Box sx={{ textAlign: "right" }}>
+                            <Typography variant="body2" sx={{ opacity: 0.8 }}>{playgroundReport.total_triples} triples evaluated</Typography>
+                          </Box>
+                          <Button 
+                            variant="outlined" 
+                            size="small"
+                            startIcon={<DownloadIcon />} 
+                            onClick={() => handleDownloadPDF(playgroundReport)}
+                            sx={{ 
+                              borderColor: 'rgba(255,255,255,0.4)', 
+                              color: 'inherit', 
+                              '&:hover': { borderColor: 'rgba(255,255,255,0.7)', bgcolor: 'rgba(255,255,255,0.1)' }
+                            }}
+                          >
+                            PDF Report
+                          </Button>
+                        </Box>
+                      </Box>
 
-                    {/* Rules Table */}
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>Rules Evaluated</Typography>
-                        <TableContainer className="validation-table-container">
-                          <Table size="small">
-                            <TableHead className="validation-table-head">
-                              <TableRow>
-                                <TableCell className="validation-table-cell-header">Rule/Shape</TableCell>
-                                <TableCell className="validation-table-cell-header">Target Class</TableCell>
-                                <TableCell className="validation-table-cell-header" align="center">Status</TableCell>
-                              </TableRow>
-                            </TableHead>
-                            <TableBody>
-                              {playgroundReport.rules?.map((r, i) => (
-                                <TableRow key={i} className="validation-table-row">
-                                  <TableCell className="validation-table-cell">{r.label}</TableCell>
-                                  <TableCell className="validation-table-cell">{r.target_class_short}</TableCell>
-                                  <TableCell className="validation-table-cell" align="center">
-                                    {r.status === "Pass"
-                                      ? <Box sx={{ color: "var(--accent-success)", fontWeight: 700 }}>Pass</Box>
-                                      : <Box sx={{ color: "var(--accent-error)", fontWeight: 700 }}>Fail</Box>
-                                    }
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </TableContainer>
-                      </CardContent>
-                    </Card>
+                      {/* Progress bar showing pass ratio */}
+                      {playgroundReport.rules?.length > 0 && (
+                        <Box sx={{ mt: 2 }}>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                              {playgroundReport.rules.filter(r => r.status === "Pass").length} / {playgroundReport.rules.length} rules passed
+                            </Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                              {Math.round((playgroundReport.rules.filter(r => r.status === "Pass").length / playgroundReport.rules.length) * 100)}%
+                            </Typography>
+                          </Box>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={(playgroundReport.rules.filter(r => r.status === "Pass").length / playgroundReport.rules.length) * 100}
+                            sx={{ 
+                              height: 6, 
+                              borderRadius: 3, 
+                              bgcolor: 'rgba(255,255,255,0.2)',
+                              '& .MuiLinearProgress-bar': { 
+                                borderRadius: 3,
+                                bgcolor: playgroundReport.conforms ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.7)' 
+                              }
+                            }}
+                          />
+                        </Box>
+                      )}
+                    </Box>
 
-                    {/* Violations Table */}
-                    {playgroundReport.violations?.length > 0 && (
-                      <Card variant="outlined">
-                        <CardContent>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: "var(--accent-error)" }}>Violations Log</Typography>
-                          <TableContainer className="validation-table-container">
-                            <Table size="small">
-                              <TableHead className="validation-table-head">
-                                <TableRow>
-                                  <TableCell className="validation-table-cell-header">Focus Node</TableCell>
-                                  <TableCell className="validation-table-cell-header">Property Path</TableCell>
-                                  <TableCell className="validation-table-cell-header">Message</TableCell>
-                                  <TableCell className="validation-table-cell-header">Value</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {playgroundReport.violations.map((v, i) => (
-                                  <TableRow key={i} className="validation-table-row">
-                                    <TableCell className="validation-table-cell validation-table-cell-mono">{v.focus_node_short}</TableCell>
-                                    <TableCell className="validation-table-cell validation-table-cell-mono">{v.path_short}</TableCell>
-                                    <TableCell className="validation-table-cell">{v.message}</TableCell>
-                                    <TableCell className="validation-table-cell">{v.value}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                        </CardContent>
-                      </Card>
-                    )}
+                    {/* ── Rules List with Expandable Violations ── */}
+                    <Box>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>Rules Evaluated</Typography>
+                      <Stack spacing={1}>
+                        {playgroundReport.rules?.map((rule, i) => {
+                          const ruleViolations = violationsByShape[rule.shape_iri] || [];
+                          const isFail = rule.status !== "Pass";
+                          const isExpanded = expandedRules[rule.shape_iri];
+
+                          return (
+                            <Box key={i} className={`validation-rule-card ${isFail ? "fail" : "pass"}`}>
+                              {/* Rule Header Row */}
+                              <Box 
+                                className="validation-rule-header"
+                                onClick={() => isFail && ruleViolations.length > 0 && toggleRuleExpand(rule.shape_iri)}
+                                sx={{ cursor: isFail && ruleViolations.length > 0 ? "pointer" : "default" }}
+                              >
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1, minWidth: 0 }}>
+                                  {isFail 
+                                    ? <CancelIcon sx={{ fontSize: 20, color: "var(--accent-error)", flexShrink: 0 }} />
+                                    : <CheckCircleIcon sx={{ fontSize: 20, color: "var(--accent-success)", flexShrink: 0 }} />
+                                  }
+                                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                                      {rule.label}
+                                    </Typography>
+                                    <Typography variant="caption" color="textSecondary">
+                                      {rule.target_class_short}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+                                  {isFail ? (
+                                    <Chip 
+                                      label={`${ruleViolations.length} violation${ruleViolations.length !== 1 ? "s" : ""}`}
+                                      size="small"
+                                      sx={{ 
+                                        bgcolor: "rgba(239, 68, 68, 0.1)", 
+                                        color: "var(--accent-error)", 
+                                        fontWeight: 600,
+                                        fontSize: 12,
+                                        height: 24
+                                      }}
+                                    />
+                                  ) : (
+                                    <Chip 
+                                      label="Pass" 
+                                      size="small"
+                                      sx={{ 
+                                        bgcolor: "rgba(16, 185, 129, 0.1)", 
+                                        color: "var(--accent-success)", 
+                                        fontWeight: 600,
+                                        fontSize: 12,
+                                        height: 24
+                                      }}
+                                    />
+                                  )}
+                                  {isFail && ruleViolations.length > 0 && (
+                                    isExpanded 
+                                      ? <ExpandLessIcon sx={{ fontSize: 20, color: "var(--text-secondary)" }} />
+                                      : <ExpandMoreIcon sx={{ fontSize: 20, color: "var(--text-secondary)" }} />
+                                  )}
+                                </Box>
+                              </Box>
+
+                              {/* Expandable Violations */}
+                              <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                                <Box className="validation-rule-violations">
+                                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+                                    <WarningAmberIcon sx={{ fontSize: 16, color: "var(--accent-error)" }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 600, color: "var(--accent-error)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                      {ruleViolations.length} Violation{ruleViolations.length !== 1 ? "s" : ""} Details
+                                    </Typography>
+                                  </Box>
+                                  <TableContainer sx={{ borderRadius: "var(--radius-md)", border: "1px solid var(--border-light)", overflow: "hidden" }}>
+                                    <Table size="small">
+                                      <TableHead>
+                                        <TableRow sx={{ bgcolor: "var(--bg-tertiary)" }}>
+                                          <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Focus Node</TableCell>
+                                          <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Property</TableCell>
+                                          <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Message</TableCell>
+                                          <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Value</TableCell>
+                                        </TableRow>
+                                      </TableHead>
+                                      <TableBody>
+                                        {ruleViolations.map((v, vi) => (
+                                          <TableRow key={vi} sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                                            <TableCell sx={{ fontFamily: "var(--font-mono)", fontSize: 11, py: 0.75 }}>{v.focus_node_short}</TableCell>
+                                            <TableCell sx={{ fontFamily: "var(--font-mono)", fontSize: 11, py: 0.75 }}>{v.path_short}</TableCell>
+                                            <TableCell sx={{ fontSize: 12, py: 0.75 }}>{v.message}</TableCell>
+                                            <TableCell sx={{ fontSize: 12, py: 0.75, color: "var(--accent-error)" }}>{v.value || "—"}</TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </TableContainer>
+                                </Box>
+                              </Collapse>
+                            </Box>
+                          );
+                        })}
+                      </Stack>
+                    </Box>
                   </Stack>
                 )}
               </Box>

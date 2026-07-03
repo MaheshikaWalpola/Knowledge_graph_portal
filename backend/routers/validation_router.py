@@ -125,6 +125,29 @@ async def api_run_playground(
     return {"status": "ok", "report": report}
 
 
+@router.post("/validation/run-playground-stream")
+async def api_run_playground_stream(
+    schema_ttl: str = Form(...),
+    instances_ttl: str = Form(...),
+    shacl_ttl: str = Form(...),
+    current_user: Any = Depends(get_current_user)
+):
+    """SSE endpoint that streams validation progress events."""
+    import asyncio
+
+    async def event_generator():
+        for event in validation_service.validate_rdf_stream(
+            data_ttl=instances_ttl,
+            shapes_ttl=shacl_ttl,
+            schema_ttl=schema_ttl
+        ):
+            yield {"data": json.dumps(event)}
+            await asyncio.sleep(0)  # Yield control to flush the event
+
+    from sse_starlette.sse import EventSourceResponse
+    return EventSourceResponse(event_generator())
+
+
 @router.post("/validation/run-workspace")
 async def api_run_workspace(
     schema_id: str = Form(...),
@@ -148,6 +171,38 @@ async def api_run_workspace(
     )
     
     return {"status": "ok", "report": report}
+
+
+@router.post("/validation/run-workspace-stream")
+async def api_run_workspace_stream(
+    schema_id: str = Form(...),
+    shacl_ttl: str = Form(...),
+    current_user: Any = Depends(get_current_user)
+):
+    """SSE endpoint that streams workspace validation progress events."""
+    import asyncio
+    user_email = current_user["email"]
+
+    # Fetch graphs first (fast operation)
+    try:
+        schema_ttl_content = _fetch_workspace_schema_ttl(user_email, schema_id)
+        instances_ttl_content = _fetch_workspace_instances_ttl(user_email, schema_id)
+    except Exception as e:
+        raise HTTPException(500, detail=f"Failed to retrieve workspace graphs: {e}")
+
+    async def event_generator():
+        yield {"data": json.dumps({"step": "fetched_graphs", "message": "Workspace graphs retrieved from GraphDB"})}
+        await asyncio.sleep(0)
+        for event in validation_service.validate_rdf_stream(
+            data_ttl=instances_ttl_content,
+            shapes_ttl=shacl_ttl,
+            schema_ttl=schema_ttl_content
+        ):
+            yield {"data": json.dumps(event)}
+            await asyncio.sleep(0)
+
+    from sse_starlette.sse import EventSourceResponse
+    return EventSourceResponse(event_generator())
 
 
 @router.post("/validation/export-pdf")

@@ -444,6 +444,73 @@
   background: rgba(239, 68, 68, 0.2);
 }
 
+/* ===== Summary Banner ===== */
+.validation-summary-banner {
+  border-radius: var(--radius-lg);
+  padding: clamp(16px, 2vw, 24px);
+  color: white;
+  animation: validationSlideIn 0.35s ease-out;
+}
+
+.validation-summary-banner.pass {
+  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
+}
+
+.validation-summary-banner.fail {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f87171 100%);
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+}
+
+/* ===== Expandable Rule Cards ===== */
+.validation-rule-card {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  animation: validationSlideIn 0.3s ease-out;
+}
+
+.validation-rule-card:hover {
+  border-color: var(--border-medium);
+}
+
+.validation-rule-card.fail {
+  border-left: 3px solid var(--accent-error, #ef4444);
+}
+
+.validation-rule-card.pass {
+  border-left: 3px solid var(--accent-success, #10b981);
+}
+
+.validation-rule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  gap: 12px;
+  background: var(--bg-secondary);
+  transition: background-color var(--transition-fast);
+}
+
+.validation-rule-card.fail .validation-rule-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.validation-rule-violations {
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border-light);
+}
+
+/* ===== Compact Target Bar ===== */
+.validation-target-bar {
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
 /* ===== Animations ===== */
 @keyframes validationSlideIn {
   from { opacity: 0; transform: translateY(10px); }

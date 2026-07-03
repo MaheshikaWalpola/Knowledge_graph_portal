@@ -192,99 +192,157 @@ class ValidationService:
                     return f.read()
             return "@prefix sh: <http://www.w3.org/ns/shacl#> .\n# Failed to generate shapes."
 
-    def validate_rdf(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None) -> Dict[str, Any]:
+    def validate_rdf_stream(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None):
         """
-        Validates the data turtle against the SHACL shapes using pyshacl.
-        Merges schema_ttl into the data graph if provided.
+        Generator that yields JSON progress events for SSE streaming.
+        Each yield is a dict that will be JSON-serialized.
         """
+        import time
+
+        # Step 1: Parse SHACL shapes
+        yield {"step": "parsing_shapes", "message": "Parsing SHACL shapes..."}
+        try:
+            g_shapes = Graph()
+            g_shapes.parse(data=shapes_ttl, format="turtle")
+        except Exception as e:
+            error_str = str(e)
+            # Extract a user-friendly message from the rdflib BadSyntax error
+            friendly = "Invalid SHACL Turtle syntax. "
+            if "Bad syntax" in error_str:
+                friendly += error_str.split("Bad syntax")[-1].split("at ^")[0].strip().strip("(").strip(")")
+                friendly += ". Please check the generated SHACL shapes for syntax errors."
+            else:
+                friendly += f"Parser error: {error_str[:200]}"
+            yield {"step": "error", "message": friendly, "error": True}
+            return
+
+        num_shapes = len(list(g_shapes.subjects(RDF.type, Namespace("http://www.w3.org/ns/shacl#").NodeShape)))
+        yield {"step": "shapes_parsed", "message": f"SHACL shapes parsed successfully ({num_shapes} shapes found)"}
+
+        # Step 2: Parse data graph
+        yield {"step": "parsing_data", "message": "Parsing instance data graph..."}
         try:
             g_data = Graph()
             g_data.parse(data=data_ttl, format="turtle")
-            
-            g_shapes = Graph()
-            g_shapes.parse(data=shapes_ttl, format="turtle")
-            
-            # Combine schema and data for subclass reasoning
-            g_combined = g_data
-            if schema_ttl:
+        except Exception as e:
+            yield {"step": "error", "message": f"Failed to parse instance data: {str(e)[:200]}", "error": True}
+            return
+        yield {"step": "data_parsed", "message": f"Data graph loaded ({len(g_data)} triples)"}
+
+        # Step 3: Parse and merge schema
+        g_combined = g_data
+        if schema_ttl:
+            yield {"step": "parsing_schema", "message": "Parsing and merging schema graph..."}
+            try:
                 g_schema = Graph()
                 g_schema.parse(data=schema_ttl, format="turtle")
                 g_combined = g_data + g_schema
-                
+            except Exception as e:
+                yield {"step": "error", "message": f"Failed to parse schema: {str(e)[:200]}", "error": True}
+                return
+            yield {"step": "schema_merged", "message": f"Schema merged ({len(g_combined)} total triples)"}
+
+        # Step 4: Run SHACL validation
+        yield {"step": "validating", "message": f"Running SHACL validation on {len(g_combined)} triples..."}
+        try:
+            start_time = time.time()
             conforms, results_graph, results_text = validate(
                 g_combined,
                 shacl_graph=g_shapes,
-                inference="rdfs",
+                inference="none",
                 serialize_results_format="turtle"
             )
-            
-            # Parse violations
-            SH = Namespace("http://www.w3.org/ns/shacl#")
-            violations = []
-            
-            # Track which source shapes violated constraints
-            violated_shapes = set()
-            
-            for result_node in results_graph.subjects(RDF.type, SH.ValidationResult):
-                focus_node = results_graph.value(result_node, SH.focusNode)
-                path = results_graph.value(result_node, SH.resultPath)
-                severity = results_graph.value(result_node, SH.resultSeverity)
-                source_shape = results_graph.value(result_node, SH.sourceShape)
-                message = results_graph.value(result_node, SH.resultMessage)
-                val = results_graph.value(result_node, SH.value)
-                
-                if source_shape:
-                    violated_shapes.add(str(source_shape))
-                
-                violations.append({
-                    "focus_node": str(focus_node),
-                    "focus_node_short": self._shorten_iri(focus_node),
-                    "path": str(path) if path else "",
-                    "path_short": self._shorten_iri(path) if path else "",
-                    "severity": str(severity).split("#")[-1] if severity else "Violation",
-                    "source_shape": str(source_shape) if source_shape else "",
-                    "source_shape_short": self._shorten_iri(source_shape) if source_shape else "",
-                    "message": str(message) if message else "Validation constraint violated",
-                    "value": str(val) if val is not None else ""
-                })
-                
-            # Now, attempt to list all shapes and mark them as Passed if not violated
-            all_shapes = []
-            for shape_node in g_shapes.subjects(RDF.type, SH.NodeShape):
-                label = g_shapes.value(shape_node, Namespace("http://www.w3.org/2000/01/rdf-schema#").label)
-                target_cls = g_shapes.value(shape_node, SH.targetClass)
-                
-                shape_str = str(shape_node)
-                passed = shape_str not in violated_shapes
-                
-                all_shapes.append({
-                    "shape_iri": shape_str,
-                    "shape_short": self._shorten_iri(shape_node),
-                    "label": str(label) if label else self._shorten_iri(shape_node),
-                    "target_class": str(target_cls) if target_cls else "",
-                    "target_class_short": self._shorten_iri(target_cls) if target_cls else "",
-                    "status": "Pass" if passed else "Fail"
-                })
-                
-            return {
+            elapsed = round(time.time() - start_time, 1)
+        except Exception as e:
+            yield {"step": "error", "message": f"SHACL validation engine error: {str(e)[:200]}", "error": True}
+            return
+        yield {"step": "validation_done", "message": f"Validation completed in {elapsed}s"}
+
+        # Step 5: Collect results
+        yield {"step": "collecting", "message": "Collecting results..."}
+
+        SH = Namespace("http://www.w3.org/ns/shacl#")
+        violations = []
+        violated_shapes = set()
+
+        for result_node in results_graph.subjects(RDF.type, SH.ValidationResult):
+            focus_node = results_graph.value(result_node, SH.focusNode)
+            path = results_graph.value(result_node, SH.resultPath)
+            severity = results_graph.value(result_node, SH.resultSeverity)
+            source_shape = results_graph.value(result_node, SH.sourceShape)
+            message = results_graph.value(result_node, SH.resultMessage)
+            val = results_graph.value(result_node, SH.value)
+
+            if source_shape:
+                violated_shapes.add(str(source_shape))
+
+            violations.append({
+                "focus_node": str(focus_node),
+                "focus_node_short": self._shorten_iri(focus_node),
+                "path": str(path) if path else "",
+                "path_short": self._shorten_iri(path) if path else "",
+                "severity": str(severity).split("#")[-1] if severity else "Violation",
+                "source_shape": str(source_shape) if source_shape else "",
+                "source_shape_short": self._shorten_iri(source_shape) if source_shape else "",
+                "message": str(message) if message else "Validation constraint violated",
+                "value": str(val) if val is not None else ""
+            })
+
+        all_shapes = []
+        for shape_node in g_shapes.subjects(RDF.type, SH.NodeShape):
+            label = g_shapes.value(shape_node, Namespace("http://www.w3.org/2000/01/rdf-schema#").label)
+            target_cls = g_shapes.value(shape_node, SH.targetClass)
+
+            shape_str = str(shape_node)
+            passed = shape_str not in violated_shapes
+
+            all_shapes.append({
+                "shape_iri": shape_str,
+                "shape_short": self._shorten_iri(shape_node),
+                "label": str(label) if label else self._shorten_iri(shape_node),
+                "target_class": str(target_cls) if target_cls else "",
+                "target_class_short": self._shorten_iri(target_cls) if target_cls else "",
+                "status": "Pass" if passed else "Fail"
+            })
+
+        # Final result
+        yield {
+            "step": "result",
+            "message": "Done",
+            "report": {
                 "conforms": conforms,
                 "total_triples": len(g_data),
                 "total_violations": len(violations),
                 "rules": all_shapes,
                 "violations": violations
             }
-            
-        except Exception as e:
-            print(f"Error in SHACL validation: {e}")
-            import traceback
-            traceback.print_exc()
-            return {
-                "conforms": False,
-                "error": str(e),
-                "total_violations": 0,
-                "rules": [],
-                "violations": []
-            }
+        }
+
+    def validate_rdf(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Non-streaming wrapper: runs the full validation and returns the report dict.
+        """
+        result = None
+        for event in self.validate_rdf_stream(data_ttl, shapes_ttl, schema_ttl):
+            if event.get("error"):
+                return {
+                    "conforms": False,
+                    "error": event["message"],
+                    "total_violations": 0,
+                    "total_triples": 0,
+                    "rules": [],
+                    "violations": []
+                }
+            if event.get("report"):
+                result = event["report"]
+        return result or {
+            "conforms": False,
+            "error": "Validation produced no results",
+            "total_violations": 0,
+            "total_triples": 0,
+            "rules": [],
+            "violations": []
+        }
 
     def generate_pdf_report(self, report_data: Dict[str, Any]) -> bytes:
         """
