@@ -101,51 +101,6 @@ class ValidationService:
                 "Lot size must be a positive integer."
             ]
 
-    def suggest_more_rules(self, existing_rules: List[str], schema_content: Optional[str] = None, instance_content: Optional[str] = None) -> List[str]:
-        """
-        Generates 5 additional unique validation rules that don't duplicate existing ones.
-        """
-        schema_text = schema_content or "No schema provided."
-        existing_text = "\n".join(f"- {r}" for r in existing_rules)
-        
-        instance_section = ""
-        if instance_content:
-            truncated = instance_content[:8000]
-            instance_section = f"\n\nINSTANCE DATA SAMPLE:\n{truncated}"
-        
-        prompt = (
-            "You are a Senior Data Quality and Process Engineer in semiconductor manufacturing. "
-            "The user already has the following validation questions and needs 5 MORE unique ones.\n\n"
-            f"EXISTING QUESTIONS (DO NOT DUPLICATE THESE):\n{existing_text}\n\n"
-            "Guidelines:\n"
-            "- Suggest exactly 5 NEW validation questions that are DIFFERENT from the existing ones.\n"
-            "- Express questions in clear, direct English.\n"
-            "- Tailor the questions to classes and properties in the schema.\n"
-            "- Output EXACTLY a JSON object: {\"rules\": [\"rule 1\", ..., \"rule 5\"]}.\n"
-            "- DO NOT return any explanatory text or markdown code blocks outside of the JSON.\n\n"
-            f"SCHEMA CONTEXT:\n{schema_text}"
-            f"{instance_section}"
-        )
-        
-        messages = [
-            {"role": "system", "content": "You are a SPARQL/SHACL validation rules assistant. You output only structured JSON."},
-            {"role": "user", "content": prompt}
-        ]
-        
-        try:
-            response = self.llm._call_kiste(messages, json_mode=True, temperature=0.3)
-            data = json.loads(response)
-            new_rules = data.get("rules", [])
-            return new_rules[:5]
-        except Exception as e:
-            print(f"Error suggesting more rules: {e}")
-            return [
-                "Every measurement must have a unit of measure.",
-                "CMP tool components must be linked to a valid chamber.",
-                "Wafer diameter must be a standard value (e.g. 200mm or 300mm).",
-                "Process run identifiers must be unique.",
-                "Temperature values must be within a physically plausible range."
-            ]
 
     def generate_shacl_shapes(self, rules: List[str], schema_content: Optional[str] = None) -> str:
         """
@@ -159,7 +114,7 @@ class ValidationService:
             "Turn the following list of plain-English data quality rules into a SHACL shape file in Turtle (.ttl) format "
             "that conforms to the provided RDF/OWL Ontology Schema.\n\n"
             f"Rules to implement:\n{rules_text}\n\n"
-            "Instructions:\n"
+            "Instructions and Constraints:\n"
             "1. Output ONLY valid Turtle syntax. Do NOT write any explanations, markdown code fences, or text before/after the Turtle.\n"
             "2. Define common prefixes: \n"
             "   @prefix sh: <http://www.w3.org/ns/shacl#> .\n"
@@ -167,13 +122,25 @@ class ValidationService:
             "   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
             "   @prefix cmpo: <https://tucid/cpmo/> .\n"
             "   @prefix inst: <https://tucid/cpmo/instance/> .\n"
-            "3. Target correct classes. For example, if a rule applies to pressure parameter values, use sh:targetClass cmpo:Pressure, and check sh:path cmpo:hasNumericValue.\n"
+            "3. Structure your shapes correctly. A `sh:NodeShape` targets a class (e.g. `sh:targetClass cmpo:Pressure`).\n"
+            "   CRITICAL ERROR PREVENTION: A shape defined as a `sh:NodeShape` cannot be the subject of a `sh:path` predicate. "
+            "   Always nest the path and constraint details inside `sh:property [ sh:path ... ]` block. For example:\n"
+            "   ```turtle\n"
+            "   cmpo:PressureShape a sh:NodeShape ;\n"
+            "       sh:targetClass cmpo:Pressure ;\n"
+            "       sh:property [\n"
+            "           sh:path cmpo:hasNumericValue ;\n"
+            "           sh:datatype xsd:float ;\n"
+            "           sh:minInclusive 0.0 ;\n"
+            "           sh:message \"Pressure parameter value must be a positive float.\"\n"
+            "       ] .\n"
+            "   ```\n"
             "4. Add descriptive sh:message strings matching the rule descriptions.\n\n"
             f"ONTOLOGY SCHEMA:\n{schema_text}"
         )
         
         messages = [
-            {"role": "system", "content": "You are a SHACL code generator. You output only valid Turtle (.ttl) code without markdown wrappers or conversational text."},
+            {"role": "system", "content": "You are a SHACL code generator. You output only valid Turtle (.ttl) code. You structure shapes correctly and never place sh:path directly inside a sh:NodeShape."},
             {"role": "user", "content": prompt}
         ]
         
@@ -182,6 +149,9 @@ class ValidationService:
             # Remove any markdown wrappers if the model didn't follow instructions
             clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
             clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
+            print("=== GENERATED SHACL SHAPES ===")
+            print(clean_ttl)
+            print("==============================")
             return clean_ttl.strip()
         except Exception as e:
             print(f"Error generating SHACL shapes: {e}")

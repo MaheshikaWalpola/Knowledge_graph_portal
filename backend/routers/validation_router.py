@@ -68,20 +68,7 @@ async def api_suggest_rules(
     return {"status": "ok", "rules": rules}
 
 
-@router.post("/validation/suggest-more-rules")
-async def api_suggest_more_rules(
-    existing_rules: str = Form(...),  # JSON array string of existing rules
-    schema_content: Optional[str] = Form(None),
-    instance_content: Optional[str] = Form(None),
-    current_user: Any = Depends(get_current_user)
-):
-    try:
-        rules_list = json.loads(existing_rules)
-    except Exception:
-        raise HTTPException(400, detail="Invalid JSON array format for 'existing_rules'.")
-    
-    new_rules = validation_service.suggest_more_rules(rules_list, schema_content, instance_content)
-    return {"status": "ok", "rules": new_rules}
+
 
 
 @router.post("/validation/generate-shacl")

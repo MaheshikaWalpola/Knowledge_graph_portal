@@ -151,7 +151,6 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   // ── Step 1 ──
   const [questions, setQuestions] = useState([]);
   const [newQuestionText, setNewQuestionText] = useState("");
-  const [moreLoading, setMoreLoading] = useState(false);
 
   // ── Step 2 ──
   const [shaclCode, setShaclCode] = useState("");
@@ -264,26 +263,6 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     setActiveStep(1);
   };
 
-  // ── Step 1: Ask AI for more ──
-  const handleAskForMore = async () => {
-    setMoreLoading(true);
-    const formData = new FormData();
-    formData.append("existing_rules", JSON.stringify(questions.map(q => q.text)));
-    if (schemaFileText) formData.append("schema_content", schemaFileText);
-    if (instanceFileText) formData.append("instance_content", instanceFileText);
-
-    try {
-      const res = await axios.post(`${API}/validation/suggest-more-rules`, formData, getAuthConfig());
-      if (res.data?.rules) {
-        setQuestions(prev => [...prev, ...res.data.rules.map((r) => ({ text: r, selected: true }))]);
-        setSuccess(`AI generated ${res.data.rules.length} additional questions.`);
-      }
-    } catch (err) {
-      setError("Failed to generate more questions.");
-    } finally {
-      setMoreLoading(false);
-    }
-  };
 
   // ── Step 1: question management ──
   const handleAddQuestion = () => {
@@ -794,15 +773,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   </Button>
                 </Box>
 
-                {/* Ask AI for more */}
-                <Button
-                  variant="outlined"
-                  startIcon={moreLoading ? <CircularProgress size={18} /> : <AutoAwesomeIcon />}
-                  onClick={handleAskForMore}
-                  disabled={moreLoading}
-                >
-                  {moreLoading ? "Generating..." : "Ask AI for 5 More Questions"}
-                </Button>
+
               </Box>
             )}
 
