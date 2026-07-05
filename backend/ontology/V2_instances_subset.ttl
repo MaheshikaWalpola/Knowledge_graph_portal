@@ -1,0 +1,2586 @@
+@prefix cmpo: <https://tucid/cpmo/> .
+@prefix inst: <https://tucid/cpmo/instance/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+inst:parameter_-4224160592_A_00282_AVG_REMOVAL_RATE a cmpo:AverageRemovalRate ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "56.1786"^^xsd:float ;
+    cmpo:hasParameterName "AVG_REMOVAL_RATE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_CENTER_AIR_BAG_PRESSURE a cmpo:CenterAirBagPressure ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "CENTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_ContactPressure_kPa a cmpo:PressureMeasurement ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "43.46"^^xsd:float ;
+    cmpo:hasParameterName "ContactPressure_kPa" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "kPa" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_DRESSING_WATER_STATUS a cmpo:DressingWaterStatus ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "1.0"^^xsd:float ;
+    cmpo:hasParameterName "DRESSING_WATER_STATUS" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "status" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_EDGE_AIR_BAG_PRESSURE a cmpo:EdgeAirBagPressure ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "EDGE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_HEAD_ROTATION a cmpo:HeadRotation ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "160.0"^^xsd:float ;
+    cmpo:hasParameterName "HEAD_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_MAIN_OUTER_AIR_BAG_PRESSURE a cmpo:MainOuterAirBagPressure ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "MAIN_OUTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_PRESSURIZED_CHAMBER_PRESSURE a cmpo:PressurizedChamberPressure ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "PRESSURIZED_CHAMBER_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_RETAINER_RING_PRESSURE a cmpo:RetainingRingPressure ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RETAINER_RING_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_RIPPLE_AIR_BAG_PRESSURE a cmpo:RippleAirBagPressure ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RIPPLE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_RelativeVelocity_mps a cmpo:RelativeVelocityParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "2.337"^^xsd:float ;
+    cmpo:hasParameterName "RelativeVelocity_mps" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "m/s" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_SLURRY_FLOW_LINE_A a cmpo:SlurryFlowLineA ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "2.222222222"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_A" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_SLURRY_FLOW_LINE_B a cmpo:SlurryFlowLineB ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.909090909"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_B" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_SLURRY_FLOW_LINE_C a cmpo:SlurryFlowLineC ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_STAGE_ROTATION a cmpo:StageRotation ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "STAGE_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_USAGE_OF_BACKING_FILM a cmpo:BackingFilmUsage ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "9326.666667"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_BACKING_FILM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_USAGE_OF_DRESSER a cmpo:DresserUsage ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "535.1851852"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_USAGE_OF_DRESSER_TABLE a cmpo:DresserTableUsage ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "2667.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_USAGE_OF_MEMBRANE a cmpo:MembraneUsage ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "110.5928854"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_MEMBRANE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_USAGE_OF_POLISHING_TABLE a cmpo:PolishingTableUsage ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "314.0740741"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_POLISHING_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_USAGE_OF_PRESSURIZED_SHEET a cmpo:PressurizedSheetUsage ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "2798.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_PRESSURIZED_SHEET" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_WAFER_ROTATION a cmpo:WaferRotation ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "WAFER_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_actualRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "actualRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_additiveConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.306"^^xsd:float ;
+    cmpo:hasParameterName "additiveConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_cleanroomHumidity_percent a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "46.01"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomHumidity_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_cleanroomTemperature_C a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "21.31"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomTemperature_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_conditioningMode a cmpo:Conditioning ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasParameterName "conditioningMode" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasValue "InSitu" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_conditioningRatio a cmpo:Conditioning ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.727"^^xsd:float ;
+    cmpo:hasParameterName "conditioningRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_discConditioningForce_N a cmpo:Conditioning ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "76.89"^^xsd:float ;
+    cmpo:hasParameterName "discConditioningForce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_hasConditioningSweepRate_spm a cmpo:Conditioning ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "59.1"^^xsd:float ;
+    cmpo:hasParameterName "hasConditioningSweepRate_spm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "spm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_hasDownforce_N a cmpo:PressureParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "92.05"^^xsd:float ;
+    cmpo:hasParameterName "hasDownforce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_hasMaxValue a cmpo:Parameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "hasMaxValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_hasMeasuredValue a cmpo:Parameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasMeasuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_hasMinValue a cmpo:Parameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "hasMinValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_hasSetPoint a cmpo:PressureSetPoint ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "41.29"^^xsd:float ;
+    cmpo:hasParameterName "hasSetPoint" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_hasValue a cmpo:Parameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_ionicStrength_mM a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "10.89"^^xsd:float ;
+    cmpo:hasParameterName "ionicStrength_mM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mM" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_lowerControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "101.04"^^xsd:float ;
+    cmpo:hasParameterName "lowerControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_lowerSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "lowerSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_measuredValue a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "measuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_padLifetimeMinutes a cmpo:PadLifetime ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "3042.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeMinutes" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_padLifetimeWaferCount a cmpo:PadLifetime ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "2081.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeWaferCount" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "count" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_particleConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "9.43"^^xsd:float ;
+    cmpo:hasParameterName "particleConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_particleSize_nm a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "67.75"^^xsd:float ;
+    cmpo:hasParameterName "particleSize_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_slurryDilutionRatio a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasParameterName "slurryDilutionRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ratio" ;
+    cmpo:hasValue "2:1" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_slurryFlowRateValue a cmpo:SlurryFlowRate ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "208.88"^^xsd:float ;
+    cmpo:hasParameterName "slurryFlowRateValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_slurryPH a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "10.17"^^xsd:float ;
+    cmpo:hasParameterName "slurryPH" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "pH" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_slurryViscosity_cP a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "1.26"^^xsd:float ;
+    cmpo:hasParameterName "slurryViscosity_cP" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "cP" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_solidContent_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "11.26"^^xsd:float ;
+    cmpo:hasParameterName "solidContent_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_targetRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_targetValue a cmpo:Parameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_temperatureInC a cmpo:TemperatureParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "24.43"^^xsd:float ;
+    cmpo:hasParameterName "temperatureInC" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_upperControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "113.94"^^xsd:float ;
+    cmpo:hasParameterName "upperControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_upperSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "upperSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00282_zetaPotential_mV a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:hasNumericValue "-31.67"^^xsd:float ;
+    cmpo:hasParameterName "zetaPotential_mV" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mV" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00282 .
+
+inst:parameter_-4224160592_A_00283_AVG_REMOVAL_RATE a cmpo:AverageRemovalRate ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "56.1786"^^xsd:float ;
+    cmpo:hasParameterName "AVG_REMOVAL_RATE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_CENTER_AIR_BAG_PRESSURE a cmpo:CenterAirBagPressure ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "CENTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_ContactPressure_kPa a cmpo:PressureMeasurement ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "43.46"^^xsd:float ;
+    cmpo:hasParameterName "ContactPressure_kPa" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "kPa" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_DRESSING_WATER_STATUS a cmpo:DressingWaterStatus ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "1.0"^^xsd:float ;
+    cmpo:hasParameterName "DRESSING_WATER_STATUS" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "status" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_EDGE_AIR_BAG_PRESSURE a cmpo:EdgeAirBagPressure ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "EDGE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_HEAD_ROTATION a cmpo:HeadRotation ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "160.0"^^xsd:float ;
+    cmpo:hasParameterName "HEAD_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_MAIN_OUTER_AIR_BAG_PRESSURE a cmpo:MainOuterAirBagPressure ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "MAIN_OUTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_PRESSURIZED_CHAMBER_PRESSURE a cmpo:PressurizedChamberPressure ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "PRESSURIZED_CHAMBER_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_RETAINER_RING_PRESSURE a cmpo:RetainingRingPressure ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RETAINER_RING_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_RIPPLE_AIR_BAG_PRESSURE a cmpo:RippleAirBagPressure ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RIPPLE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_RelativeVelocity_mps a cmpo:RelativeVelocityParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "2.337"^^xsd:float ;
+    cmpo:hasParameterName "RelativeVelocity_mps" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "m/s" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_SLURRY_FLOW_LINE_A a cmpo:SlurryFlowLineA ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "3.472222222"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_A" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_SLURRY_FLOW_LINE_B a cmpo:SlurryFlowLineB ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.909090909"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_B" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_SLURRY_FLOW_LINE_C a cmpo:SlurryFlowLineC ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "53.2"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_STAGE_ROTATION a cmpo:StageRotation ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "STAGE_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_USAGE_OF_BACKING_FILM a cmpo:BackingFilmUsage ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "9326.666667"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_BACKING_FILM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_USAGE_OF_DRESSER a cmpo:DresserUsage ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "535.1851852"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_USAGE_OF_DRESSER_TABLE a cmpo:DresserTableUsage ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "2667.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_USAGE_OF_MEMBRANE a cmpo:MembraneUsage ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "110.5928854"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_MEMBRANE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_USAGE_OF_POLISHING_TABLE a cmpo:PolishingTableUsage ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "314.0740741"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_POLISHING_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_USAGE_OF_PRESSURIZED_SHEET a cmpo:PressurizedSheetUsage ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "2798.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_PRESSURIZED_SHEET" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_WAFER_ROTATION a cmpo:WaferRotation ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "WAFER_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_actualRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "actualRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_additiveConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.306"^^xsd:float ;
+    cmpo:hasParameterName "additiveConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_cleanroomHumidity_percent a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "46.01"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomHumidity_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_cleanroomTemperature_C a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "21.31"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomTemperature_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_conditioningMode a cmpo:Conditioning ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasParameterName "conditioningMode" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasValue "InSitu" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_conditioningRatio a cmpo:Conditioning ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.727"^^xsd:float ;
+    cmpo:hasParameterName "conditioningRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_discConditioningForce_N a cmpo:Conditioning ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "76.89"^^xsd:float ;
+    cmpo:hasParameterName "discConditioningForce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_hasConditioningSweepRate_spm a cmpo:Conditioning ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "59.1"^^xsd:float ;
+    cmpo:hasParameterName "hasConditioningSweepRate_spm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "spm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_hasDownforce_N a cmpo:PressureParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "92.05"^^xsd:float ;
+    cmpo:hasParameterName "hasDownforce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_hasMaxValue a cmpo:Parameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "hasMaxValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_hasMeasuredValue a cmpo:Parameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasMeasuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_hasMinValue a cmpo:Parameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "hasMinValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_hasSetPoint a cmpo:PressureSetPoint ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "41.29"^^xsd:float ;
+    cmpo:hasParameterName "hasSetPoint" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_hasValue a cmpo:Parameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_ionicStrength_mM a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "10.89"^^xsd:float ;
+    cmpo:hasParameterName "ionicStrength_mM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mM" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_lowerControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "101.04"^^xsd:float ;
+    cmpo:hasParameterName "lowerControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_lowerSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "lowerSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_measuredValue a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "measuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_padLifetimeMinutes a cmpo:PadLifetime ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "3042.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeMinutes" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_padLifetimeWaferCount a cmpo:PadLifetime ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "2081.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeWaferCount" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "count" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_particleConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "9.43"^^xsd:float ;
+    cmpo:hasParameterName "particleConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_particleSize_nm a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "67.75"^^xsd:float ;
+    cmpo:hasParameterName "particleSize_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_slurryDilutionRatio a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasParameterName "slurryDilutionRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ratio" ;
+    cmpo:hasValue "2:1" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_slurryFlowRateValue a cmpo:SlurryFlowRate ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "208.88"^^xsd:float ;
+    cmpo:hasParameterName "slurryFlowRateValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_slurryPH a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "10.17"^^xsd:float ;
+    cmpo:hasParameterName "slurryPH" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "pH" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_slurryViscosity_cP a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "1.26"^^xsd:float ;
+    cmpo:hasParameterName "slurryViscosity_cP" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "cP" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_solidContent_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "11.26"^^xsd:float ;
+    cmpo:hasParameterName "solidContent_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_targetRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_targetValue a cmpo:Parameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_temperatureInC a cmpo:TemperatureParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "24.43"^^xsd:float ;
+    cmpo:hasParameterName "temperatureInC" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_upperControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "113.94"^^xsd:float ;
+    cmpo:hasParameterName "upperControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_upperSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "upperSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00283_zetaPotential_mV a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:hasNumericValue "-31.67"^^xsd:float ;
+    cmpo:hasParameterName "zetaPotential_mV" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mV" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00283 .
+
+inst:parameter_-4224160592_A_00284_AVG_REMOVAL_RATE a cmpo:AverageRemovalRate ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "56.1786"^^xsd:float ;
+    cmpo:hasParameterName "AVG_REMOVAL_RATE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_CENTER_AIR_BAG_PRESSURE a cmpo:CenterAirBagPressure ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "CENTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_ContactPressure_kPa a cmpo:PressureMeasurement ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "43.46"^^xsd:float ;
+    cmpo:hasParameterName "ContactPressure_kPa" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "kPa" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_DRESSING_WATER_STATUS a cmpo:DressingWaterStatus ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "1.0"^^xsd:float ;
+    cmpo:hasParameterName "DRESSING_WATER_STATUS" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "status" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_EDGE_AIR_BAG_PRESSURE a cmpo:EdgeAirBagPressure ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "EDGE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_HEAD_ROTATION a cmpo:HeadRotation ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "160.0"^^xsd:float ;
+    cmpo:hasParameterName "HEAD_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_MAIN_OUTER_AIR_BAG_PRESSURE a cmpo:MainOuterAirBagPressure ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "MAIN_OUTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_PRESSURIZED_CHAMBER_PRESSURE a cmpo:PressurizedChamberPressure ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "PRESSURIZED_CHAMBER_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_RETAINER_RING_PRESSURE a cmpo:RetainingRingPressure ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RETAINER_RING_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_RIPPLE_AIR_BAG_PRESSURE a cmpo:RippleAirBagPressure ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RIPPLE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_RelativeVelocity_mps a cmpo:RelativeVelocityParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "2.337"^^xsd:float ;
+    cmpo:hasParameterName "RelativeVelocity_mps" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "m/s" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_SLURRY_FLOW_LINE_A a cmpo:SlurryFlowLineA ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "13.88888889"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_A" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_SLURRY_FLOW_LINE_B a cmpo:SlurryFlowLineB ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.909090909"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_B" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_SLURRY_FLOW_LINE_C a cmpo:SlurryFlowLineC ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "240.8"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_STAGE_ROTATION a cmpo:StageRotation ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "STAGE_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_USAGE_OF_BACKING_FILM a cmpo:BackingFilmUsage ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "9326.666667"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_BACKING_FILM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_USAGE_OF_DRESSER a cmpo:DresserUsage ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "535.1851852"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_USAGE_OF_DRESSER_TABLE a cmpo:DresserTableUsage ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "2667.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_USAGE_OF_MEMBRANE a cmpo:MembraneUsage ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "110.5928854"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_MEMBRANE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_USAGE_OF_POLISHING_TABLE a cmpo:PolishingTableUsage ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "314.0740741"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_POLISHING_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_USAGE_OF_PRESSURIZED_SHEET a cmpo:PressurizedSheetUsage ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "2798.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_PRESSURIZED_SHEET" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_WAFER_ROTATION a cmpo:WaferRotation ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "WAFER_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_actualRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "actualRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_additiveConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.306"^^xsd:float ;
+    cmpo:hasParameterName "additiveConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_cleanroomHumidity_percent a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "46.01"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomHumidity_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_cleanroomTemperature_C a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "21.31"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomTemperature_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_conditioningMode a cmpo:Conditioning ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasParameterName "conditioningMode" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasValue "InSitu" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_conditioningRatio a cmpo:Conditioning ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "0.727"^^xsd:float ;
+    cmpo:hasParameterName "conditioningRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_discConditioningForce_N a cmpo:Conditioning ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "76.89"^^xsd:float ;
+    cmpo:hasParameterName "discConditioningForce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_hasConditioningSweepRate_spm a cmpo:Conditioning ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "59.1"^^xsd:float ;
+    cmpo:hasParameterName "hasConditioningSweepRate_spm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "spm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_hasDownforce_N a cmpo:PressureParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "92.05"^^xsd:float ;
+    cmpo:hasParameterName "hasDownforce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_hasMaxValue a cmpo:Parameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "hasMaxValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_hasMeasuredValue a cmpo:Parameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasMeasuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_hasMinValue a cmpo:Parameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "hasMinValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_hasSetPoint a cmpo:PressureSetPoint ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "41.29"^^xsd:float ;
+    cmpo:hasParameterName "hasSetPoint" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_hasValue a cmpo:Parameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_ionicStrength_mM a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "10.89"^^xsd:float ;
+    cmpo:hasParameterName "ionicStrength_mM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mM" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_lowerControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "101.04"^^xsd:float ;
+    cmpo:hasParameterName "lowerControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_lowerSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "lowerSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_measuredValue a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "measuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_padLifetimeMinutes a cmpo:PadLifetime ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "3042.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeMinutes" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_padLifetimeWaferCount a cmpo:PadLifetime ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "2081.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeWaferCount" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "count" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_particleConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "9.43"^^xsd:float ;
+    cmpo:hasParameterName "particleConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_particleSize_nm a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "67.75"^^xsd:float ;
+    cmpo:hasParameterName "particleSize_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_slurryDilutionRatio a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasParameterName "slurryDilutionRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ratio" ;
+    cmpo:hasValue "2:1" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_slurryFlowRateValue a cmpo:SlurryFlowRate ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "208.88"^^xsd:float ;
+    cmpo:hasParameterName "slurryFlowRateValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_slurryPH a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "10.17"^^xsd:float ;
+    cmpo:hasParameterName "slurryPH" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "pH" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_slurryViscosity_cP a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "1.26"^^xsd:float ;
+    cmpo:hasParameterName "slurryViscosity_cP" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "cP" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_solidContent_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "11.26"^^xsd:float ;
+    cmpo:hasParameterName "solidContent_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_targetRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_targetValue a cmpo:Parameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_temperatureInC a cmpo:TemperatureParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "24.43"^^xsd:float ;
+    cmpo:hasParameterName "temperatureInC" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_upperControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "113.94"^^xsd:float ;
+    cmpo:hasParameterName "upperControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_upperSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "upperSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00284_zetaPotential_mV a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:hasNumericValue "-31.67"^^xsd:float ;
+    cmpo:hasParameterName "zetaPotential_mV" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mV" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00284 .
+
+inst:parameter_-4224160592_A_00285_AVG_REMOVAL_RATE a cmpo:AverageRemovalRate ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "56.1786"^^xsd:float ;
+    cmpo:hasParameterName "AVG_REMOVAL_RATE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_CENTER_AIR_BAG_PRESSURE a cmpo:CenterAirBagPressure ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "CENTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_ContactPressure_kPa a cmpo:PressureMeasurement ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "43.46"^^xsd:float ;
+    cmpo:hasParameterName "ContactPressure_kPa" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "kPa" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_DRESSING_WATER_STATUS a cmpo:DressingWaterStatus ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "1.0"^^xsd:float ;
+    cmpo:hasParameterName "DRESSING_WATER_STATUS" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "status" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_EDGE_AIR_BAG_PRESSURE a cmpo:EdgeAirBagPressure ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "EDGE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_HEAD_ROTATION a cmpo:HeadRotation ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "160.0"^^xsd:float ;
+    cmpo:hasParameterName "HEAD_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_MAIN_OUTER_AIR_BAG_PRESSURE a cmpo:MainOuterAirBagPressure ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "MAIN_OUTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_PRESSURIZED_CHAMBER_PRESSURE a cmpo:PressurizedChamberPressure ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "PRESSURIZED_CHAMBER_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_RETAINER_RING_PRESSURE a cmpo:RetainingRingPressure ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RETAINER_RING_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_RIPPLE_AIR_BAG_PRESSURE a cmpo:RippleAirBagPressure ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RIPPLE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_RelativeVelocity_mps a cmpo:RelativeVelocityParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "2.337"^^xsd:float ;
+    cmpo:hasParameterName "RelativeVelocity_mps" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "m/s" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_SLURRY_FLOW_LINE_A a cmpo:SlurryFlowLineA ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "17.08333333"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_A" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_SLURRY_FLOW_LINE_B a cmpo:SlurryFlowLineB ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.909090909"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_B" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_SLURRY_FLOW_LINE_C a cmpo:SlurryFlowLineC ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "302.4"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_STAGE_ROTATION a cmpo:StageRotation ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "STAGE_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_USAGE_OF_BACKING_FILM a cmpo:BackingFilmUsage ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "9326.666667"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_BACKING_FILM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_USAGE_OF_DRESSER a cmpo:DresserUsage ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "535.1851852"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_USAGE_OF_DRESSER_TABLE a cmpo:DresserTableUsage ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "2667.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_USAGE_OF_MEMBRANE a cmpo:MembraneUsage ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "110.5928854"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_MEMBRANE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_USAGE_OF_POLISHING_TABLE a cmpo:PolishingTableUsage ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "314.0740741"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_POLISHING_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_USAGE_OF_PRESSURIZED_SHEET a cmpo:PressurizedSheetUsage ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "2798.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_PRESSURIZED_SHEET" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_WAFER_ROTATION a cmpo:WaferRotation ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "WAFER_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_actualRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "actualRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_additiveConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.306"^^xsd:float ;
+    cmpo:hasParameterName "additiveConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_cleanroomHumidity_percent a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "46.01"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomHumidity_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_cleanroomTemperature_C a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "21.31"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomTemperature_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_conditioningMode a cmpo:Conditioning ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasParameterName "conditioningMode" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasValue "InSitu" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_conditioningRatio a cmpo:Conditioning ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.727"^^xsd:float ;
+    cmpo:hasParameterName "conditioningRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_discConditioningForce_N a cmpo:Conditioning ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "76.89"^^xsd:float ;
+    cmpo:hasParameterName "discConditioningForce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_hasConditioningSweepRate_spm a cmpo:Conditioning ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "59.1"^^xsd:float ;
+    cmpo:hasParameterName "hasConditioningSweepRate_spm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "spm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_hasDownforce_N a cmpo:PressureParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "92.05"^^xsd:float ;
+    cmpo:hasParameterName "hasDownforce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_hasMaxValue a cmpo:Parameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "hasMaxValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_hasMeasuredValue a cmpo:Parameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasMeasuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_hasMinValue a cmpo:Parameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "hasMinValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_hasSetPoint a cmpo:PressureSetPoint ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "41.29"^^xsd:float ;
+    cmpo:hasParameterName "hasSetPoint" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_hasValue a cmpo:Parameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_ionicStrength_mM a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "10.89"^^xsd:float ;
+    cmpo:hasParameterName "ionicStrength_mM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mM" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_lowerControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "101.04"^^xsd:float ;
+    cmpo:hasParameterName "lowerControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_lowerSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "lowerSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_measuredValue a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "measuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_padLifetimeMinutes a cmpo:PadLifetime ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "3042.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeMinutes" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_padLifetimeWaferCount a cmpo:PadLifetime ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "2081.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeWaferCount" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "count" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_particleConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "9.43"^^xsd:float ;
+    cmpo:hasParameterName "particleConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_particleSize_nm a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "67.75"^^xsd:float ;
+    cmpo:hasParameterName "particleSize_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_slurryDilutionRatio a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasParameterName "slurryDilutionRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ratio" ;
+    cmpo:hasValue "2:1" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_slurryFlowRateValue a cmpo:SlurryFlowRate ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "208.88"^^xsd:float ;
+    cmpo:hasParameterName "slurryFlowRateValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_slurryPH a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "10.17"^^xsd:float ;
+    cmpo:hasParameterName "slurryPH" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "pH" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_slurryViscosity_cP a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "1.26"^^xsd:float ;
+    cmpo:hasParameterName "slurryViscosity_cP" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "cP" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_solidContent_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "11.26"^^xsd:float ;
+    cmpo:hasParameterName "solidContent_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_targetRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_targetValue a cmpo:Parameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_temperatureInC a cmpo:TemperatureParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "24.43"^^xsd:float ;
+    cmpo:hasParameterName "temperatureInC" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_upperControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "113.94"^^xsd:float ;
+    cmpo:hasParameterName "upperControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_upperSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "upperSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00285_zetaPotential_mV a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:hasNumericValue "-31.67"^^xsd:float ;
+    cmpo:hasParameterName "zetaPotential_mV" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mV" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00285 .
+
+inst:parameter_-4224160592_A_00286_AVG_REMOVAL_RATE a cmpo:AverageRemovalRate ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "56.1786"^^xsd:float ;
+    cmpo:hasParameterName "AVG_REMOVAL_RATE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_CENTER_AIR_BAG_PRESSURE a cmpo:CenterAirBagPressure ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "CENTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_ContactPressure_kPa a cmpo:PressureMeasurement ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "43.46"^^xsd:float ;
+    cmpo:hasParameterName "ContactPressure_kPa" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "kPa" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_DRESSING_WATER_STATUS a cmpo:DressingWaterStatus ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "1.0"^^xsd:float ;
+    cmpo:hasParameterName "DRESSING_WATER_STATUS" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "status" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_EDGE_AIR_BAG_PRESSURE a cmpo:EdgeAirBagPressure ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "EDGE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_HEAD_ROTATION a cmpo:HeadRotation ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "160.0"^^xsd:float ;
+    cmpo:hasParameterName "HEAD_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_MAIN_OUTER_AIR_BAG_PRESSURE a cmpo:MainOuterAirBagPressure ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "MAIN_OUTER_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_PRESSURIZED_CHAMBER_PRESSURE a cmpo:PressurizedChamberPressure ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "PRESSURIZED_CHAMBER_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_RETAINER_RING_PRESSURE a cmpo:RetainingRingPressure ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RETAINER_RING_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_RIPPLE_AIR_BAG_PRESSURE a cmpo:RippleAirBagPressure ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "RIPPLE_AIR_BAG_PRESSURE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "psi" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_RelativeVelocity_mps a cmpo:RelativeVelocityParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "2.337"^^xsd:float ;
+    cmpo:hasParameterName "RelativeVelocity_mps" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "m/s" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_SLURRY_FLOW_LINE_A a cmpo:SlurryFlowLineA ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "19.44444444"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_A" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_SLURRY_FLOW_LINE_B a cmpo:SlurryFlowLineB ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.909090909"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_B" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_SLURRY_FLOW_LINE_C a cmpo:SlurryFlowLineC ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "366.8"^^xsd:float ;
+    cmpo:hasParameterName "SLURRY_FLOW_LINE_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_STAGE_ROTATION a cmpo:StageRotation ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "STAGE_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_USAGE_OF_BACKING_FILM a cmpo:BackingFilmUsage ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "9326.666667"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_BACKING_FILM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_USAGE_OF_DRESSER a cmpo:DresserUsage ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "535.1851852"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_USAGE_OF_DRESSER_TABLE a cmpo:DresserTableUsage ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "2667.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_DRESSER_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_USAGE_OF_MEMBRANE a cmpo:MembraneUsage ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "110.5928854"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_MEMBRANE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_USAGE_OF_POLISHING_TABLE a cmpo:PolishingTableUsage ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "314.0740741"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_POLISHING_TABLE" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_USAGE_OF_PRESSURIZED_SHEET a cmpo:PressurizedSheetUsage ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "2798.0"^^xsd:float ;
+    cmpo:hasParameterName "USAGE_OF_PRESSURIZED_SHEET" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_WAFER_ROTATION a cmpo:WaferRotation ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.0"^^xsd:float ;
+    cmpo:hasParameterName "WAFER_ROTATION" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "rpm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_actualRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "actualRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_additiveConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.306"^^xsd:float ;
+    cmpo:hasParameterName "additiveConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_cleanroomHumidity_percent a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "46.01"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomHumidity_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_cleanroomTemperature_C a cmpo:CleanroomParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "21.31"^^xsd:float ;
+    cmpo:hasParameterName "cleanroomTemperature_C" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_conditioningMode a cmpo:Conditioning ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasParameterName "conditioningMode" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasValue "InSitu" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_conditioningRatio a cmpo:Conditioning ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "0.727"^^xsd:float ;
+    cmpo:hasParameterName "conditioningRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_discConditioningForce_N a cmpo:Conditioning ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "76.89"^^xsd:float ;
+    cmpo:hasParameterName "discConditioningForce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_hasConditioningSweepRate_spm a cmpo:Conditioning ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "59.1"^^xsd:float ;
+    cmpo:hasParameterName "hasConditioningSweepRate_spm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "spm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_hasDownforce_N a cmpo:PressureParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "92.05"^^xsd:float ;
+    cmpo:hasParameterName "hasDownforce_N" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "N" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_hasMaxValue a cmpo:Parameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "hasMaxValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_hasMeasuredValue a cmpo:Parameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasMeasuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_hasMinValue a cmpo:Parameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "hasMinValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_hasSetPoint a cmpo:PressureSetPoint ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "41.29"^^xsd:float ;
+    cmpo:hasParameterName "hasSetPoint" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_hasValue a cmpo:Parameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "hasValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_ionicStrength_mM a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "10.89"^^xsd:float ;
+    cmpo:hasParameterName "ionicStrength_mM" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mM" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_lowerControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "101.04"^^xsd:float ;
+    cmpo:hasParameterName "lowerControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_lowerSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "96.74"^^xsd:float ;
+    cmpo:hasParameterName "lowerSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_measuredValue a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.65"^^xsd:float ;
+    cmpo:hasParameterName "measuredValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_padLifetimeMinutes a cmpo:PadLifetime ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "3042.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeMinutes" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_padLifetimeWaferCount a cmpo:PadLifetime ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "2081.0"^^xsd:float ;
+    cmpo:hasParameterName "padLifetimeWaferCount" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "count" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_particleConcentration_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "9.43"^^xsd:float ;
+    cmpo:hasParameterName "particleConcentration_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_particleSize_nm a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "67.75"^^xsd:float ;
+    cmpo:hasParameterName "particleSize_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_slurryDilutionRatio a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasParameterName "slurryDilutionRatio" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ratio" ;
+    cmpo:hasValue "2:1" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_slurryFlowRateValue a cmpo:SlurryFlowRate ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "208.88"^^xsd:float ;
+    cmpo:hasParameterName "slurryFlowRateValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "ml/min" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_slurryPH a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "10.17"^^xsd:float ;
+    cmpo:hasParameterName "slurryPH" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "pH" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_slurryViscosity_cP a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "1.26"^^xsd:float ;
+    cmpo:hasParameterName "slurryViscosity_cP" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "cP" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_solidContent_percent a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "11.26"^^xsd:float ;
+    cmpo:hasParameterName "solidContent_percent" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "%" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_targetRemovalAmount_nm a cmpo:MaterialRemovalRate ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetRemovalAmount_nm" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "nm" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_targetValue a cmpo:Parameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "107.49"^^xsd:float ;
+    cmpo:hasParameterName "targetValue" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_temperatureInC a cmpo:TemperatureParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "24.43"^^xsd:float ;
+    cmpo:hasParameterName "temperatureInC" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "degC" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_upperControlLimit a cmpo:Parameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "113.94"^^xsd:float ;
+    cmpo:hasParameterName "upperControlLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_upperSpecLimit a cmpo:Parameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "118.24"^^xsd:float ;
+    cmpo:hasParameterName "upperSpecLimit" ;
+    cmpo:hasStage "A" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:parameter_-4224160592_A_00286_zetaPotential_mV a cmpo:SlurryChemistryParameter ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:hasNumericValue "-31.67"^^xsd:float ;
+    cmpo:hasParameterName "zetaPotential_mV" ;
+    cmpo:hasStage "A" ;
+    cmpo:hasUnit "mV" ;
+    cmpo:isMeasurementOf inst:cmp_run_-4224160592_A_00286 .
+
+inst:CHAMBER_3 a cmpo:Chamber .
+
+inst:CMP_TOOL_03 a cmpo:Tool .
+
+inst:CeriaAbrasive a cmpo:CeriaAbrasive .
+
+inst:Clearing a cmpo:Clearing .
+
+inst:Complexant a cmpo:Complexant .
+
+inst:DiWater a cmpo:DiWater .
+
+inst:DummyWafer a cmpo:DummyWafer .
+
+inst:FrontSide a cmpo:FrontSide .
+
+inst:ImpedanceEPD a cmpo:ImpedanceEPD .
+
+inst:PAD_03 a cmpo:PolishingPad .
+
+inst:RECIPE_CMP_A_03 a cmpo:Recipe .
+
+inst:SLURRYCHEM_03 a cmpo:SlurryChemistry .
+
+inst:SLURRYPIPE_C a cmpo:SlurryPipe .
+
+inst:SpiralGroove a cmpo:SpiralGroove .
+
+inst:WAFER_-4224160592 a cmpo:Wafer .
+
+inst:wafer_-4224160592 a cmpo:Wafer .
+
+inst:cmp_run_-4224160592_A_00282 a cmpo:Measurement ;
+    cmpo:ToolID 2 ;
+    cmpo:atTime "481638013.3"^^xsd:float ;
+    cmpo:executedOn inst:CHAMBER_3,
+        4 ;
+    cmpo:hasChemistry inst:SLURRYCHEM_03 ;
+    cmpo:hasComponent inst:COMP_03,
+        inst:CeriaAbrasive,
+        inst:Clearing,
+        inst:Complexant,
+        inst:DiWater,
+        inst:DummyWafer,
+        inst:FrontSide,
+        inst:ImpedanceEPD,
+        inst:SpiralGroove ;
+    cmpo:hasIndexValue 4 ;
+    cmpo:hasInput inst:WAFER_-4224160592,
+        inst:wafer_-4224160592 ;
+    cmpo:hasMeasurement inst:parameter_-4224160592_A_00282_AVG_REMOVAL_RATE,
+        inst:parameter_-4224160592_A_00282_CENTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00282_ContactPressure_kPa,
+        inst:parameter_-4224160592_A_00282_DRESSING_WATER_STATUS,
+        inst:parameter_-4224160592_A_00282_EDGE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00282_HEAD_ROTATION,
+        inst:parameter_-4224160592_A_00282_MAIN_OUTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00282_PRESSURIZED_CHAMBER_PRESSURE,
+        inst:parameter_-4224160592_A_00282_RETAINER_RING_PRESSURE,
+        inst:parameter_-4224160592_A_00282_RIPPLE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00282_RelativeVelocity_mps,
+        inst:parameter_-4224160592_A_00282_SLURRY_FLOW_LINE_A,
+        inst:parameter_-4224160592_A_00282_SLURRY_FLOW_LINE_B,
+        inst:parameter_-4224160592_A_00282_SLURRY_FLOW_LINE_C,
+        inst:parameter_-4224160592_A_00282_STAGE_ROTATION,
+        inst:parameter_-4224160592_A_00282_USAGE_OF_BACKING_FILM,
+        inst:parameter_-4224160592_A_00282_USAGE_OF_DRESSER,
+        inst:parameter_-4224160592_A_00282_USAGE_OF_DRESSER_TABLE,
+        inst:parameter_-4224160592_A_00282_USAGE_OF_MEMBRANE,
+        inst:parameter_-4224160592_A_00282_USAGE_OF_POLISHING_TABLE,
+        inst:parameter_-4224160592_A_00282_USAGE_OF_PRESSURIZED_SHEET,
+        inst:parameter_-4224160592_A_00282_WAFER_ROTATION,
+        inst:parameter_-4224160592_A_00282_actualRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00282_additiveConcentration_percent,
+        inst:parameter_-4224160592_A_00282_cleanroomHumidity_percent,
+        inst:parameter_-4224160592_A_00282_cleanroomTemperature_C,
+        inst:parameter_-4224160592_A_00282_conditioningMode,
+        inst:parameter_-4224160592_A_00282_conditioningRatio,
+        inst:parameter_-4224160592_A_00282_discConditioningForce_N,
+        inst:parameter_-4224160592_A_00282_hasConditioningSweepRate_spm,
+        inst:parameter_-4224160592_A_00282_hasDownforce_N,
+        inst:parameter_-4224160592_A_00282_hasMaxValue,
+        inst:parameter_-4224160592_A_00282_hasMeasuredValue,
+        inst:parameter_-4224160592_A_00282_hasMinValue,
+        inst:parameter_-4224160592_A_00282_hasSetPoint,
+        inst:parameter_-4224160592_A_00282_hasValue,
+        inst:parameter_-4224160592_A_00282_ionicStrength_mM,
+        inst:parameter_-4224160592_A_00282_lowerControlLimit,
+        inst:parameter_-4224160592_A_00282_lowerSpecLimit,
+        inst:parameter_-4224160592_A_00282_measuredValue,
+        inst:parameter_-4224160592_A_00282_padLifetimeMinutes,
+        inst:parameter_-4224160592_A_00282_padLifetimeWaferCount,
+        inst:parameter_-4224160592_A_00282_particleConcentration_percent,
+        inst:parameter_-4224160592_A_00282_particleSize_nm,
+        inst:parameter_-4224160592_A_00282_slurryDilutionRatio,
+        inst:parameter_-4224160592_A_00282_slurryFlowRateValue,
+        inst:parameter_-4224160592_A_00282_slurryPH,
+        inst:parameter_-4224160592_A_00282_slurryViscosity_cP,
+        inst:parameter_-4224160592_A_00282_solidContent_percent,
+        inst:parameter_-4224160592_A_00282_targetRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00282_targetValue,
+        inst:parameter_-4224160592_A_00282_temperatureInC,
+        inst:parameter_-4224160592_A_00282_upperControlLimit,
+        inst:parameter_-4224160592_A_00282_upperSpecLimit,
+        inst:parameter_-4224160592_A_00282_zetaPotential_mV ;
+    cmpo:hasOutput inst:WAFER_-4224160592_POSTCMP ;
+    cmpo:hasPolishingPad inst:PAD_03 ;
+    cmpo:hasPressureZone inst:EdgeAirBagZone ;
+    cmpo:hasStage "A" ;
+    cmpo:hasToolComponent inst:COMP_03 ;
+    cmpo:isDeliveredBy inst:SLURRYPIPE_C ;
+    cmpo:usedSlurry inst:SLURRY_03 ;
+    cmpo:usesRecipe inst:RECIPE_CMP_A_03 ;
+    cmpo:usesTool inst:CMP_TOOL_03 .
+
+inst:cmp_run_-4224160592_A_00283 a cmpo:Measurement ;
+    cmpo:ToolID 2 ;
+    cmpo:atTime "481638014.3"^^xsd:float ;
+    cmpo:executedOn inst:CHAMBER_3,
+        4 ;
+    cmpo:hasChemistry inst:SLURRYCHEM_03 ;
+    cmpo:hasComponent inst:COMP_03,
+        inst:CeriaAbrasive,
+        inst:Clearing,
+        inst:Complexant,
+        inst:DiWater,
+        inst:DummyWafer,
+        inst:FrontSide,
+        inst:ImpedanceEPD,
+        inst:SpiralGroove ;
+    cmpo:hasIndexValue 4 ;
+    cmpo:hasInput inst:WAFER_-4224160592,
+        inst:wafer_-4224160592 ;
+    cmpo:hasMeasurement inst:parameter_-4224160592_A_00283_AVG_REMOVAL_RATE,
+        inst:parameter_-4224160592_A_00283_CENTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00283_ContactPressure_kPa,
+        inst:parameter_-4224160592_A_00283_DRESSING_WATER_STATUS,
+        inst:parameter_-4224160592_A_00283_EDGE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00283_HEAD_ROTATION,
+        inst:parameter_-4224160592_A_00283_MAIN_OUTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00283_PRESSURIZED_CHAMBER_PRESSURE,
+        inst:parameter_-4224160592_A_00283_RETAINER_RING_PRESSURE,
+        inst:parameter_-4224160592_A_00283_RIPPLE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00283_RelativeVelocity_mps,
+        inst:parameter_-4224160592_A_00283_SLURRY_FLOW_LINE_A,
+        inst:parameter_-4224160592_A_00283_SLURRY_FLOW_LINE_B,
+        inst:parameter_-4224160592_A_00283_SLURRY_FLOW_LINE_C,
+        inst:parameter_-4224160592_A_00283_STAGE_ROTATION,
+        inst:parameter_-4224160592_A_00283_USAGE_OF_BACKING_FILM,
+        inst:parameter_-4224160592_A_00283_USAGE_OF_DRESSER,
+        inst:parameter_-4224160592_A_00283_USAGE_OF_DRESSER_TABLE,
+        inst:parameter_-4224160592_A_00283_USAGE_OF_MEMBRANE,
+        inst:parameter_-4224160592_A_00283_USAGE_OF_POLISHING_TABLE,
+        inst:parameter_-4224160592_A_00283_USAGE_OF_PRESSURIZED_SHEET,
+        inst:parameter_-4224160592_A_00283_WAFER_ROTATION,
+        inst:parameter_-4224160592_A_00283_actualRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00283_additiveConcentration_percent,
+        inst:parameter_-4224160592_A_00283_cleanroomHumidity_percent,
+        inst:parameter_-4224160592_A_00283_cleanroomTemperature_C,
+        inst:parameter_-4224160592_A_00283_conditioningMode,
+        inst:parameter_-4224160592_A_00283_conditioningRatio,
+        inst:parameter_-4224160592_A_00283_discConditioningForce_N,
+        inst:parameter_-4224160592_A_00283_hasConditioningSweepRate_spm,
+        inst:parameter_-4224160592_A_00283_hasDownforce_N,
+        inst:parameter_-4224160592_A_00283_hasMaxValue,
+        inst:parameter_-4224160592_A_00283_hasMeasuredValue,
+        inst:parameter_-4224160592_A_00283_hasMinValue,
+        inst:parameter_-4224160592_A_00283_hasSetPoint,
+        inst:parameter_-4224160592_A_00283_hasValue,
+        inst:parameter_-4224160592_A_00283_ionicStrength_mM,
+        inst:parameter_-4224160592_A_00283_lowerControlLimit,
+        inst:parameter_-4224160592_A_00283_lowerSpecLimit,
+        inst:parameter_-4224160592_A_00283_measuredValue,
+        inst:parameter_-4224160592_A_00283_padLifetimeMinutes,
+        inst:parameter_-4224160592_A_00283_padLifetimeWaferCount,
+        inst:parameter_-4224160592_A_00283_particleConcentration_percent,
+        inst:parameter_-4224160592_A_00283_particleSize_nm,
+        inst:parameter_-4224160592_A_00283_slurryDilutionRatio,
+        inst:parameter_-4224160592_A_00283_slurryFlowRateValue,
+        inst:parameter_-4224160592_A_00283_slurryPH,
+        inst:parameter_-4224160592_A_00283_slurryViscosity_cP,
+        inst:parameter_-4224160592_A_00283_solidContent_percent,
+        inst:parameter_-4224160592_A_00283_targetRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00283_targetValue,
+        inst:parameter_-4224160592_A_00283_temperatureInC,
+        inst:parameter_-4224160592_A_00283_upperControlLimit,
+        inst:parameter_-4224160592_A_00283_upperSpecLimit,
+        inst:parameter_-4224160592_A_00283_zetaPotential_mV ;
+    cmpo:hasOutput inst:WAFER_-4224160592_POSTCMP ;
+    cmpo:hasPolishingPad inst:PAD_03 ;
+    cmpo:hasPressureZone inst:EdgeAirBagZone ;
+    cmpo:hasStage "A" ;
+    cmpo:hasToolComponent inst:COMP_03 ;
+    cmpo:isDeliveredBy inst:SLURRYPIPE_C ;
+    cmpo:usedSlurry inst:SLURRY_03 ;
+    cmpo:usesRecipe inst:RECIPE_CMP_A_03 ;
+    cmpo:usesTool inst:CMP_TOOL_03 .
+
+inst:cmp_run_-4224160592_A_00284 a cmpo:Measurement ;
+    cmpo:ToolID 2 ;
+    cmpo:atTime "481638015.7"^^xsd:float ;
+    cmpo:executedOn inst:CHAMBER_3,
+        4 ;
+    cmpo:hasChemistry inst:SLURRYCHEM_03 ;
+    cmpo:hasComponent inst:COMP_03,
+        inst:CeriaAbrasive,
+        inst:Clearing,
+        inst:Complexant,
+        inst:DiWater,
+        inst:DummyWafer,
+        inst:FrontSide,
+        inst:ImpedanceEPD,
+        inst:SpiralGroove ;
+    cmpo:hasIndexValue 4 ;
+    cmpo:hasInput inst:WAFER_-4224160592,
+        inst:wafer_-4224160592 ;
+    cmpo:hasMeasurement inst:parameter_-4224160592_A_00284_AVG_REMOVAL_RATE,
+        inst:parameter_-4224160592_A_00284_CENTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00284_ContactPressure_kPa,
+        inst:parameter_-4224160592_A_00284_DRESSING_WATER_STATUS,
+        inst:parameter_-4224160592_A_00284_EDGE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00284_HEAD_ROTATION,
+        inst:parameter_-4224160592_A_00284_MAIN_OUTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00284_PRESSURIZED_CHAMBER_PRESSURE,
+        inst:parameter_-4224160592_A_00284_RETAINER_RING_PRESSURE,
+        inst:parameter_-4224160592_A_00284_RIPPLE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00284_RelativeVelocity_mps,
+        inst:parameter_-4224160592_A_00284_SLURRY_FLOW_LINE_A,
+        inst:parameter_-4224160592_A_00284_SLURRY_FLOW_LINE_B,
+        inst:parameter_-4224160592_A_00284_SLURRY_FLOW_LINE_C,
+        inst:parameter_-4224160592_A_00284_STAGE_ROTATION,
+        inst:parameter_-4224160592_A_00284_USAGE_OF_BACKING_FILM,
+        inst:parameter_-4224160592_A_00284_USAGE_OF_DRESSER,
+        inst:parameter_-4224160592_A_00284_USAGE_OF_DRESSER_TABLE,
+        inst:parameter_-4224160592_A_00284_USAGE_OF_MEMBRANE,
+        inst:parameter_-4224160592_A_00284_USAGE_OF_POLISHING_TABLE,
+        inst:parameter_-4224160592_A_00284_USAGE_OF_PRESSURIZED_SHEET,
+        inst:parameter_-4224160592_A_00284_WAFER_ROTATION,
+        inst:parameter_-4224160592_A_00284_actualRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00284_additiveConcentration_percent,
+        inst:parameter_-4224160592_A_00284_cleanroomHumidity_percent,
+        inst:parameter_-4224160592_A_00284_cleanroomTemperature_C,
+        inst:parameter_-4224160592_A_00284_conditioningMode,
+        inst:parameter_-4224160592_A_00284_conditioningRatio,
+        inst:parameter_-4224160592_A_00284_discConditioningForce_N,
+        inst:parameter_-4224160592_A_00284_hasConditioningSweepRate_spm,
+        inst:parameter_-4224160592_A_00284_hasDownforce_N,
+        inst:parameter_-4224160592_A_00284_hasMaxValue,
+        inst:parameter_-4224160592_A_00284_hasMeasuredValue,
+        inst:parameter_-4224160592_A_00284_hasMinValue,
+        inst:parameter_-4224160592_A_00284_hasSetPoint,
+        inst:parameter_-4224160592_A_00284_hasValue,
+        inst:parameter_-4224160592_A_00284_ionicStrength_mM,
+        inst:parameter_-4224160592_A_00284_lowerControlLimit,
+        inst:parameter_-4224160592_A_00284_lowerSpecLimit,
+        inst:parameter_-4224160592_A_00284_measuredValue,
+        inst:parameter_-4224160592_A_00284_padLifetimeMinutes,
+        inst:parameter_-4224160592_A_00284_padLifetimeWaferCount,
+        inst:parameter_-4224160592_A_00284_particleConcentration_percent,
+        inst:parameter_-4224160592_A_00284_particleSize_nm,
+        inst:parameter_-4224160592_A_00284_slurryDilutionRatio,
+        inst:parameter_-4224160592_A_00284_slurryFlowRateValue,
+        inst:parameter_-4224160592_A_00284_slurryPH,
+        inst:parameter_-4224160592_A_00284_slurryViscosity_cP,
+        inst:parameter_-4224160592_A_00284_solidContent_percent,
+        inst:parameter_-4224160592_A_00284_targetRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00284_targetValue,
+        inst:parameter_-4224160592_A_00284_temperatureInC,
+        inst:parameter_-4224160592_A_00284_upperControlLimit,
+        inst:parameter_-4224160592_A_00284_upperSpecLimit,
+        inst:parameter_-4224160592_A_00284_zetaPotential_mV ;
+    cmpo:hasOutput inst:WAFER_-4224160592_POSTCMP ;
+    cmpo:hasPolishingPad inst:PAD_03 ;
+    cmpo:hasPressureZone inst:EdgeAirBagZone ;
+    cmpo:hasStage "A" ;
+    cmpo:hasToolComponent inst:COMP_03 ;
+    cmpo:isDeliveredBy inst:SLURRYPIPE_C ;
+    cmpo:usedSlurry inst:SLURRY_03 ;
+    cmpo:usesRecipe inst:RECIPE_CMP_A_03 ;
+    cmpo:usesTool inst:CMP_TOOL_03 .
+
+inst:cmp_run_-4224160592_A_00285 a cmpo:Measurement ;
+    cmpo:ToolID 2 ;
+    cmpo:atTime "481638016.3"^^xsd:float ;
+    cmpo:executedOn inst:CHAMBER_3,
+        4 ;
+    cmpo:hasChemistry inst:SLURRYCHEM_03 ;
+    cmpo:hasComponent inst:COMP_03,
+        inst:CeriaAbrasive,
+        inst:Clearing,
+        inst:Complexant,
+        inst:DiWater,
+        inst:DummyWafer,
+        inst:FrontSide,
+        inst:ImpedanceEPD,
+        inst:SpiralGroove ;
+    cmpo:hasIndexValue 4 ;
+    cmpo:hasInput inst:WAFER_-4224160592,
+        inst:wafer_-4224160592 ;
+    cmpo:hasMeasurement inst:parameter_-4224160592_A_00285_AVG_REMOVAL_RATE,
+        inst:parameter_-4224160592_A_00285_CENTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00285_ContactPressure_kPa,
+        inst:parameter_-4224160592_A_00285_DRESSING_WATER_STATUS,
+        inst:parameter_-4224160592_A_00285_EDGE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00285_HEAD_ROTATION,
+        inst:parameter_-4224160592_A_00285_MAIN_OUTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00285_PRESSURIZED_CHAMBER_PRESSURE,
+        inst:parameter_-4224160592_A_00285_RETAINER_RING_PRESSURE,
+        inst:parameter_-4224160592_A_00285_RIPPLE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00285_RelativeVelocity_mps,
+        inst:parameter_-4224160592_A_00285_SLURRY_FLOW_LINE_A,
+        inst:parameter_-4224160592_A_00285_SLURRY_FLOW_LINE_B,
+        inst:parameter_-4224160592_A_00285_SLURRY_FLOW_LINE_C,
+        inst:parameter_-4224160592_A_00285_STAGE_ROTATION,
+        inst:parameter_-4224160592_A_00285_USAGE_OF_BACKING_FILM,
+        inst:parameter_-4224160592_A_00285_USAGE_OF_DRESSER,
+        inst:parameter_-4224160592_A_00285_USAGE_OF_DRESSER_TABLE,
+        inst:parameter_-4224160592_A_00285_USAGE_OF_MEMBRANE,
+        inst:parameter_-4224160592_A_00285_USAGE_OF_POLISHING_TABLE,
+        inst:parameter_-4224160592_A_00285_USAGE_OF_PRESSURIZED_SHEET,
+        inst:parameter_-4224160592_A_00285_WAFER_ROTATION,
+        inst:parameter_-4224160592_A_00285_actualRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00285_additiveConcentration_percent,
+        inst:parameter_-4224160592_A_00285_cleanroomHumidity_percent,
+        inst:parameter_-4224160592_A_00285_cleanroomTemperature_C,
+        inst:parameter_-4224160592_A_00285_conditioningMode,
+        inst:parameter_-4224160592_A_00285_conditioningRatio,
+        inst:parameter_-4224160592_A_00285_discConditioningForce_N,
+        inst:parameter_-4224160592_A_00285_hasConditioningSweepRate_spm,
+        inst:parameter_-4224160592_A_00285_hasDownforce_N,
+        inst:parameter_-4224160592_A_00285_hasMaxValue,
+        inst:parameter_-4224160592_A_00285_hasMeasuredValue,
+        inst:parameter_-4224160592_A_00285_hasMinValue,
+        inst:parameter_-4224160592_A_00285_hasSetPoint,
+        inst:parameter_-4224160592_A_00285_hasValue,
+        inst:parameter_-4224160592_A_00285_ionicStrength_mM,
+        inst:parameter_-4224160592_A_00285_lowerControlLimit,
+        inst:parameter_-4224160592_A_00285_lowerSpecLimit,
+        inst:parameter_-4224160592_A_00285_measuredValue,
+        inst:parameter_-4224160592_A_00285_padLifetimeMinutes,
+        inst:parameter_-4224160592_A_00285_padLifetimeWaferCount,
+        inst:parameter_-4224160592_A_00285_particleConcentration_percent,
+        inst:parameter_-4224160592_A_00285_particleSize_nm,
+        inst:parameter_-4224160592_A_00285_slurryDilutionRatio,
+        inst:parameter_-4224160592_A_00285_slurryFlowRateValue,
+        inst:parameter_-4224160592_A_00285_slurryPH,
+        inst:parameter_-4224160592_A_00285_slurryViscosity_cP,
+        inst:parameter_-4224160592_A_00285_solidContent_percent,
+        inst:parameter_-4224160592_A_00285_targetRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00285_targetValue,
+        inst:parameter_-4224160592_A_00285_temperatureInC,
+        inst:parameter_-4224160592_A_00285_upperControlLimit,
+        inst:parameter_-4224160592_A_00285_upperSpecLimit,
+        inst:parameter_-4224160592_A_00285_zetaPotential_mV ;
+    cmpo:hasOutput inst:WAFER_-4224160592_POSTCMP ;
+    cmpo:hasPolishingPad inst:PAD_03 ;
+    cmpo:hasPressureZone inst:EdgeAirBagZone ;
+    cmpo:hasStage "A" ;
+    cmpo:hasToolComponent inst:COMP_03 ;
+    cmpo:isDeliveredBy inst:SLURRYPIPE_C ;
+    cmpo:usedSlurry inst:SLURRY_03 ;
+    cmpo:usesRecipe inst:RECIPE_CMP_A_03 ;
+    cmpo:usesTool inst:CMP_TOOL_03 .
+
+inst:cmp_run_-4224160592_A_00286 a cmpo:Measurement ;
+    cmpo:ToolID 2 ;
+    cmpo:atTime "481638017.3"^^xsd:float ;
+    cmpo:executedOn inst:CHAMBER_3,
+        4 ;
+    cmpo:hasChemistry inst:SLURRYCHEM_03 ;
+    cmpo:hasComponent inst:COMP_03,
+        inst:CeriaAbrasive,
+        inst:Clearing,
+        inst:Complexant,
+        inst:DiWater,
+        inst:DummyWafer,
+        inst:FrontSide,
+        inst:ImpedanceEPD,
+        inst:SpiralGroove ;
+    cmpo:hasIndexValue 4 ;
+    cmpo:hasInput inst:WAFER_-4224160592,
+        inst:wafer_-4224160592 ;
+    cmpo:hasMeasurement inst:parameter_-4224160592_A_00286_AVG_REMOVAL_RATE,
+        inst:parameter_-4224160592_A_00286_CENTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00286_ContactPressure_kPa,
+        inst:parameter_-4224160592_A_00286_DRESSING_WATER_STATUS,
+        inst:parameter_-4224160592_A_00286_EDGE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00286_HEAD_ROTATION,
+        inst:parameter_-4224160592_A_00286_MAIN_OUTER_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00286_PRESSURIZED_CHAMBER_PRESSURE,
+        inst:parameter_-4224160592_A_00286_RETAINER_RING_PRESSURE,
+        inst:parameter_-4224160592_A_00286_RIPPLE_AIR_BAG_PRESSURE,
+        inst:parameter_-4224160592_A_00286_RelativeVelocity_mps,
+        inst:parameter_-4224160592_A_00286_SLURRY_FLOW_LINE_A,
+        inst:parameter_-4224160592_A_00286_SLURRY_FLOW_LINE_B,
+        inst:parameter_-4224160592_A_00286_SLURRY_FLOW_LINE_C,
+        inst:parameter_-4224160592_A_00286_STAGE_ROTATION,
+        inst:parameter_-4224160592_A_00286_USAGE_OF_BACKING_FILM,
+        inst:parameter_-4224160592_A_00286_USAGE_OF_DRESSER,
+        inst:parameter_-4224160592_A_00286_USAGE_OF_DRESSER_TABLE,
+        inst:parameter_-4224160592_A_00286_USAGE_OF_MEMBRANE,
+        inst:parameter_-4224160592_A_00286_USAGE_OF_POLISHING_TABLE,
+        inst:parameter_-4224160592_A_00286_USAGE_OF_PRESSURIZED_SHEET,
+        inst:parameter_-4224160592_A_00286_WAFER_ROTATION,
+        inst:parameter_-4224160592_A_00286_actualRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00286_additiveConcentration_percent,
+        inst:parameter_-4224160592_A_00286_cleanroomHumidity_percent,
+        inst:parameter_-4224160592_A_00286_cleanroomTemperature_C,
+        inst:parameter_-4224160592_A_00286_conditioningMode,
+        inst:parameter_-4224160592_A_00286_conditioningRatio,
+        inst:parameter_-4224160592_A_00286_discConditioningForce_N,
+        inst:parameter_-4224160592_A_00286_hasConditioningSweepRate_spm,
+        inst:parameter_-4224160592_A_00286_hasDownforce_N,
+        inst:parameter_-4224160592_A_00286_hasMaxValue,
+        inst:parameter_-4224160592_A_00286_hasMeasuredValue,
+        inst:parameter_-4224160592_A_00286_hasMinValue,
+        inst:parameter_-4224160592_A_00286_hasSetPoint,
+        inst:parameter_-4224160592_A_00286_hasValue,
+        inst:parameter_-4224160592_A_00286_ionicStrength_mM,
+        inst:parameter_-4224160592_A_00286_lowerControlLimit,
+        inst:parameter_-4224160592_A_00286_lowerSpecLimit,
+        inst:parameter_-4224160592_A_00286_measuredValue,
+        inst:parameter_-4224160592_A_00286_padLifetimeMinutes,
+        inst:parameter_-4224160592_A_00286_padLifetimeWaferCount,
+        inst:parameter_-4224160592_A_00286_particleConcentration_percent,
+        inst:parameter_-4224160592_A_00286_particleSize_nm,
+        inst:parameter_-4224160592_A_00286_slurryDilutionRatio,
+        inst:parameter_-4224160592_A_00286_slurryFlowRateValue,
+        inst:parameter_-4224160592_A_00286_slurryPH,
+        inst:parameter_-4224160592_A_00286_slurryViscosity_cP,
+        inst:parameter_-4224160592_A_00286_solidContent_percent,
+        inst:parameter_-4224160592_A_00286_targetRemovalAmount_nm,
+        inst:parameter_-4224160592_A_00286_targetValue,
+        inst:parameter_-4224160592_A_00286_temperatureInC,
+        inst:parameter_-4224160592_A_00286_upperControlLimit,
+        inst:parameter_-4224160592_A_00286_upperSpecLimit,
+        inst:parameter_-4224160592_A_00286_zetaPotential_mV ;
+    cmpo:hasOutput inst:WAFER_-4224160592_POSTCMP ;
+    cmpo:hasPolishingPad inst:PAD_03 ;
+    cmpo:hasPressureZone inst:EdgeAirBagZone ;
+    cmpo:hasStage "A" ;
+    cmpo:hasToolComponent inst:COMP_03 ;
+    cmpo:isDeliveredBy inst:SLURRYPIPE_C ;
+    cmpo:usedSlurry inst:SLURRY_03 ;
+    cmpo:usesRecipe inst:RECIPE_CMP_A_03 ;
+    cmpo:usesTool inst:CMP_TOOL_03 .
+

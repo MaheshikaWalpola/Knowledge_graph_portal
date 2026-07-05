@@ -1,0 +1,139 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix cmpo: <https://tucid/cpmo/> .
+@prefix inst: <https://tucid/cpmo/instance/> .
+
+# 1. CMP Process Shape
+cmpo:CMPProcessShape a sh:NodeShape ;
+    sh:targetClass cmpo:CMPProcess ;
+    rdfs:label "CMP Process Run Validation" ;
+    sh:property [
+        sh:path cmpo:hasTimestamp ;
+        sh:minCount 1 ;
+        sh:datatype xsd:dateTime ;
+        sh:message "Every CMP Process run must have a valid measurement timestamp (xsd:dateTime)." ;
+    ] ;
+    sh:property [
+        sh:path cmpo:actsOn ;
+        sh:minCount 1 ;
+        sh:message "Every CMP Process must act on at least one Wafer." ;
+    ] ;
+    sh:property [
+        sh:path cmpo:hasCMPToolComponent ;
+        sh:minCount 1 ;
+        sh:message "Every CMP Process must specify the Tool Component (Chamber) used." ;
+    ] .
+
+# 2. Pressure Parameter Shape (Applies to all air bags and retainer ring pressure)
+cmpo:PressureShape a sh:NodeShape ;
+    sh:targetClass cmpo:Pressure ;
+    rdfs:label "Pressure Parameter Validation" ;
+    sh:property [
+        sh:path cmpo:hasNumericValue ;
+        sh:minCount 1 ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:message "Pressure parameter value must be a positive float." ;
+    ] ;
+    sh:property [
+        sh:path cmpo:hasUnit ;
+        sh:hasValue "psi" ;
+        sh:message "Pressure values must be measured in 'psi' units." ;
+    ] .
+
+# 3. Velocity / Rotation Speed Shape
+cmpo:VelocityShape a sh:NodeShape ;
+    sh:targetClass cmpo:Velocity ;
+    rdfs:label "Rotation Speed Validation" ;
+    sh:property [
+        sh:path cmpo:hasNumericValue ;
+        sh:minCount 1 ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:message "Velocity/rotation speed must be a non-negative number." ;
+    ] ;
+    sh:property [
+        sh:path cmpo:hasUnit ;
+        sh:hasValue "rpm" ;
+        sh:message "Velocity/rotation speeds must be measured in 'rpm' units." ;
+    ] .
+
+# 4. Slurry Flow Shape
+cmpo:SlurryFlowShape a sh:NodeShape ;
+    sh:targetClass cmpo:SlurryFlow ;
+    rdfs:label "Slurry Flow Validation" ;
+    sh:property [
+        sh:path cmpo:hasNumericValue ;
+        sh:minCount 1 ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:message "Slurry flow rate must be a non-negative number." ;
+    ] ;
+    sh:property [
+        sh:path cmpo:hasUnit ;
+        sh:hasValue "ml/min" ;
+        sh:message "Slurry flow must be in 'ml/min' units." ;
+    ] .
+
+# 5. Slurry pH Shape
+cmpo:SlurryShape a sh:NodeShape ;
+    sh:targetClass cmpo:Slurry ;
+    rdfs:label "Slurry pH and Concentration Validation" ;
+    sh:property [
+        sh:path cmpo:pH ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1.0 ;
+        sh:maxInclusive 14.0 ;
+        sh:message "Slurry pH must be between 1.0 and 14.0." ;
+    ] ;
+    sh:property [
+        sh:path cmpo:concentration ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 100.0 ;
+        sh:message "Slurry concentration percentage must be between 0.0% and 100.0%." ;
+    ] .
+
+# 6. Polishing Pad Shape
+cmpo:PolishingPadShape a sh:NodeShape ;
+    sh:targetClass cmpo:PolishingPad ;
+    rdfs:label "Polishing Pad Age Validation" ;
+    sh:property [
+        sh:path cmpo:padAge ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "Polishing Pad age must be a non-negative integer." ;
+    ] .
+
+# 7. Wafer Shape
+cmpo:WaferShape a sh:NodeShape ;
+    sh:targetClass cmpo:Wafer ;
+    rdfs:label "Wafer Specifications Validation" ;
+    sh:property [
+        sh:path cmpo:hasMaterial ;
+        sh:minCount 1 ;
+        sh:message "Every Wafer must have an associated top-layer Wafer Material." ;
+    ] ;
+    sh:property [
+        sh:path cmpo:hasDiameter ;
+        sh:minCount 1 ;
+        sh:message "Every Wafer must have a designated diameter specification." ;
+    ] .
+
+# 8. Lot Shape
+cmpo:LotShape a sh:NodeShape ;
+    sh:targetClass cmpo:Lot ;
+    rdfs:label "Lot Size Validation" ;
+    sh:property [
+        sh:path cmpo:lotSize ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "Lot size must be a positive integer." ;
+    ] ;
+    sh:property [
+        sh:path cmpo:waferCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "Wafer count in a Lot must be a positive integer." ;
+    ] .
