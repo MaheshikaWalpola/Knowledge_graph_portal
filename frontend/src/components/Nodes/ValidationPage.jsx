@@ -155,6 +155,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   // ── Step 2 ──
   const [shaclCode, setShaclCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [shaclGenerationSteps, setShaclGenerationSteps] = useState([]);
 
   // ── Step 3 ──
   const [playgroundSchemaText, setPlaygroundSchemaText] = useState("");
@@ -292,6 +293,12 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
     setLoading(true);
     setError(null);
+    setSuccess(null);
+    setShaclCode("");
+    setShaclGenerationSteps(activeRules.map(rule => ({ rule, status: "pending" })));
+
+    // Transition to Step 2 immediately so the user can watch it stream
+    setActiveStep(2);
 
     const formData = new FormData();
     formData.append("rules", JSON.stringify(activeRules));
@@ -299,15 +306,93 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     else if (schemaFile) formData.append("schema_file", schemaFile);
 
     try {
-      const res = await axios.post(`${API}/validation/generate-shacl`, formData, getAuthConfig());
-      if (res.data?.shacl_ttl) {
-        setShaclCode(res.data.shacl_ttl);
-        setPlaygroundShaclText(res.data.shacl_ttl);
-        setSuccess("SHACL shapes generated successfully!");
-        setActiveStep(2);
+      const token = localStorage.getItem("token");
+      const headers = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API}/validation/generate-shacl-stream`, {
+        method: "POST",
+        headers,
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `Server error ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      // Start with initial prefix comments
+      setShaclCode(
+        `@prefix sh: <http://www.w3.org/ns/shacl#> .\n` +
+        `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n` +
+        `@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n` +
+        `@prefix cmpo: <https://tucid/cpmo/> .\n` +
+        `@prefix inst: <https://tucid/cpmo/instance/> .\n\n` +
+        `# Generating SHACL shapes. Please wait...\n`
+      );
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith("data:")) {
+            try {
+              const event = JSON.parse(line.slice(5).trim());
+
+              if (event.status === "start") {
+                // Initialize rule statuses to generating
+                setShaclGenerationSteps(prev => 
+                  prev.map(step => ({ ...step, status: "generating" }))
+                );
+              } else if (event.status === "progress") {
+                // Update rule status
+                setShaclGenerationSteps(prev => 
+                  prev.map((step, idx) => 
+                    idx === event.index 
+                      ? { ...step, status: event.result_status } 
+                      : step
+                  )
+                );
+
+                // Append shape snippet if successful
+                if (event.result_status === "success" && event.shacl) {
+                  setShaclCode(prev => {
+                    const separator = prev.endsWith("\n\n") ? "" : prev.endsWith("\n") ? "\n" : "\n\n";
+                    let nextVal = prev;
+                    if (nextVal.includes("# Generating SHACL shapes.")) {
+                      nextVal = nextVal.replace("# Generating SHACL shapes. Please wait...\n", "");
+                    }
+                    return nextVal + separator + event.shacl + "\n";
+                  });
+                }
+              } else if (event.status === "completed") {
+                // Complete generation, overwrite with final formatted version
+                if (event.shacl_ttl) {
+                  setShaclCode(event.shacl_ttl);
+                  setPlaygroundShaclText(event.shacl_ttl);
+                }
+                setSuccess("SHACL shapes generated successfully!");
+              }
+            } catch (e) {
+              console.error("Failed to parse shape stream chunk", e);
+            }
+          }
+        }
       }
     } catch (err) {
-      setError("Failed to generate SHACL shapes. Please try again.");
+      setError(err.message || "Failed to generate SHACL shapes.");
+      setActiveStep(1);
     } finally {
       setLoading(false);
     }
@@ -780,9 +865,44 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
             {/* ════════ STEP 2: SHACL Shapes ════════ */}
             {activeStep === 2 && (
               <Box>
+                {shaclGenerationSteps.length > 0 && (
+                  <Card variant="outlined" sx={{ mb: 3, border: "1px solid var(--border-light)", bgcolor: "var(--bg-glass-strong)" }}>
+                    <CardContent sx={{ pb: '16px !important' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
+                        {loading ? "Generating SHACL Shapes..." : "Shape Generation Status"}
+                      </Typography>
+                      <Stack spacing={1}>
+                        {shaclGenerationSteps.map((step, idx) => (
+                          <Box key={idx} sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                            {step.status === "pending" && (
+                              <Box sx={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid var(--border-medium)", flexShrink: 0 }} />
+                            )}
+                            {step.status === "generating" && (
+                              <CircularProgress size={18} sx={{ color: "var(--accent-primary)" }} />
+                            )}
+                            {step.status === "success" && (
+                              <CheckCircleIcon sx={{ fontSize: 18, color: "var(--accent-success)", flexShrink: 0 }} />
+                            )}
+                            {step.status === "error" && (
+                              <CancelIcon sx={{ fontSize: 18, color: "var(--accent-error)", flexShrink: 0 }} />
+                            )}
+                            <Typography variant="body2" color={step.status === "pending" ? "textSecondary" : "textPrimary"}>
+                              {step.rule}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1 }}>
                   <Typography variant="h6">Generated SHACL Shapes</Typography>
-                  <button className={`validation-copy-btn ${copied ? "copied" : ""}`} onClick={handleCopyShacl}>
+                  <button 
+                    className={`validation-copy-btn ${copied ? "copied" : ""}`} 
+                    onClick={handleCopyShacl}
+                    disabled={loading}
+                  >
                     {copied ? <><CheckIcon sx={{ fontSize: 16 }} /> Copied!</> : <><ContentCopyIcon sx={{ fontSize: 16 }} /> Copy to Clipboard</>}
                   </button>
                 </Box>
@@ -798,15 +918,12 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   variant="outlined"
                   value={shaclCode}
                   onChange={(e) => { setShaclCode(e.target.value); setPlaygroundShaclText(e.target.value); }}
-                  InputProps={{ className: "validation-code-area" }}
+                  InputProps={{ 
+                    className: "validation-code-area",
+                    readOnly: loading 
+                  }}
                   sx={{ mb: 2 }}
                 />
-
-                <Alert severity="info">
-                  <strong>Tip:</strong> Copy the SHACL shapes above and paste them into{" "}
-                  <a href="https://shacl-playground.zazuko.com/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)" }}>SHACL Playground (Zazuko)</a>
-                  {" "}for external testing.
-                </Alert>
               </Box>
             )}
 
