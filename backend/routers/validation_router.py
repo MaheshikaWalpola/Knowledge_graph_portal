@@ -97,6 +97,39 @@ async def api_generate_shacl(
     return {"status": "ok", "shacl_ttl": shacl_ttl}
 
 
+@router.post("/validation/generate-shacl-stream")
+async def api_generate_shacl_stream(
+    rules: str = Form(...),
+    schema_id: Optional[str] = Form(None),
+    schema_file: Optional[UploadFile] = File(None),
+    current_user: Any = Depends(get_current_user)
+):
+    """SSE endpoint that streams SHACL shape generation rule by rule."""
+    import asyncio
+    try:
+        rules_list = json.loads(rules)
+    except Exception as e:
+        raise HTTPException(400, detail="Invalid JSON array format for 'rules'.")
+        
+    schema_content = None
+    if schema_file:
+        content_bytes = await schema_file.read()
+        schema_content = content_bytes.decode("utf-8")
+    elif schema_id:
+        try:
+            schema_content = _fetch_workspace_schema_ttl(current_user["email"], schema_id)
+        except Exception as e:
+            print(f"Error fetching workspace schema: {e}")
+            
+    async def event_generator():
+        async for event in validation_service.generate_shacl_shapes_stream(rules_list, schema_content):
+            yield {"data": json.dumps(event)}
+            await asyncio.sleep(0)  # Yield control to flush the event
+
+    from sse_starlette.sse import EventSourceResponse
+    return EventSourceResponse(event_generator())
+
+
 @router.post("/validation/run-playground")
 async def api_run_playground(
     schema_ttl: str = Form(...),

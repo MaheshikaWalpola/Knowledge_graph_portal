@@ -162,6 +162,112 @@ class ValidationService:
                     return f.read()
             return "@prefix sh: <http://www.w3.org/ns/shacl#> .\n# Failed to generate shapes."
 
+    async def generate_shacl_shapes_stream(self, rules: List[str], schema_content: Optional[str] = None):
+        """
+        Generates SHACL shapes rule by rule concurrently and streams progress and snippets.
+        """
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+        from rdflib import Graph
+        
+        schema_text = schema_content or "No schema provided."
+        completed_shapes = {}
+        
+        def generate_single_shape(index: int, rule: str) -> dict:
+            prompt = (
+                "You are a Semantic Web and SHACL developer. "
+                "Turn the following plain-English data quality rule into a SHACL shape block in Turtle (.ttl) format "
+                "that conforms to the provided RDF/OWL Ontology Schema.\n\n"
+                f"Rule to implement:\n- {rule}\n\n"
+                "Instructions and Constraints:\n"
+                "1. Output ONLY valid Turtle syntax. Do NOT write any explanations, markdown code fences, or text before/after the Turtle.\n"
+                "2. Define common prefixes (if needed/used in this shape) but focus on producing the NodeShape/PropertyShape details:\n"
+                "   @prefix sh: <http://www.w3.org/ns/shacl#> .\n"
+                "   @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
+                "   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
+                "   @prefix cmpo: <https://tucid/cpmo/> .\n"
+                "   @prefix inst: <https://tucid/cpmo/instance/> .\n"
+                "3. Structure your shapes correctly. A `sh:NodeShape` targets a class (e.g. `sh:targetClass cmpo:Pressure`).\n"
+                "   CRITICAL ERROR PREVENTION: A shape defined as a `sh:NodeShape` cannot be the subject of a `sh:path` predicate. "
+                "   Always nest the path and constraint details inside `sh:property [ sh:path ... ]` block. For example:\n"
+                "   ```turtle\n"
+                "   cmpo:PressureShape a sh:NodeShape ;\n"
+                "       sh:targetClass cmpo:Pressure ;\n"
+                "       sh:property [\n"
+                "           sh:path cmpo:hasNumericValue ;\n"
+                "           sh:datatype xsd:float ;\n"
+                "           sh:minInclusive 0.0 ;\n"
+                "           sh:message \"Pressure parameter value must be a positive float.\"\n"
+                "       ] .\n"
+                "   ```\n"
+                "4. Add a descriptive sh:message matching the rule description.\n\n"
+                f"ONTOLOGY SCHEMA:\n{schema_text}"
+            )
+            messages = [
+                {"role": "system", "content": "You are a SHACL code generator. You output only valid Turtle (.ttl) code. You structure shapes correctly and never place sh:path directly inside a sh:NodeShape."},
+                {"role": "user", "content": prompt}
+            ]
+            try:
+                response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1)
+                # Clean up any wrappers
+                clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
+                clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
+                return {"index": index, "rule": rule, "status": "success", "shacl": clean_ttl.strip()}
+            except Exception as e:
+                print(f"Error generating shape for rule '{rule}': {e}")
+                return {"index": index, "rule": rule, "status": "error", "message": str(e), "shacl": f"# Failed to generate shape for rule: {rule}"}
+
+        loop = asyncio.get_running_loop()
+        
+        yield {"status": "start", "total": len(rules)}
+        
+        with ThreadPoolExecutor(max_workers=min(len(rules), 10)) as executor:
+            tasks = [
+                loop.run_in_executor(executor, generate_single_shape, i, rule)
+                for i, rule in enumerate(rules)
+            ]
+            
+            for future in asyncio.as_completed(tasks):
+                res = await future
+                if res["status"] == "success":
+                    completed_shapes[res["index"]] = res["shacl"]
+                yield {
+                    "status": "progress",
+                    "index": res["index"],
+                    "rule": res["rule"],
+                    "result_status": res["status"],
+                    "shacl": res["shacl"],
+                    "message": f"Generated shape for rule: {res['rule'][:50]}..." if res["status"] == "success" else f"Failed rule: {res['rule'][:50]}..."
+                }
+
+        # Merge all shapes into a final RDF graph to prettify and deduplicate prefixes
+        final_ttl = ""
+        if completed_shapes:
+            g = Graph()
+            # Sort by index to keep ordering consistent
+            for idx in sorted(completed_shapes.keys()):
+                chunk = completed_shapes[idx]
+                try:
+                    g.parse(data=chunk, format="turtle")
+                except Exception as parse_err:
+                    print(f"rdflib failed to parse chunk {idx}: {parse_err}. Using fallback concatenation later if needed.")
+            
+            try:
+                g.bind("sh", Namespace("http://www.w3.org/ns/shacl#"))
+                g.bind("xsd", Namespace("http://www.w3.org/2001/XMLSchema#"))
+                g.bind("rdfs", Namespace("http://www.w3.org/2000/01/rdf-schema#"))
+                g.bind("cmpo", Namespace("https://tucid/cpmo/"))
+                g.bind("inst", Namespace("https://tucid/cpmo/instance/"))
+                
+                final_ttl = g.serialize(format="turtle")
+            except Exception as ser_err:
+                print(f"rdflib serialization failed: {ser_err}")
+                final_ttl = "\n\n".join(completed_shapes[idx] for idx in sorted(completed_shapes.keys()))
+        else:
+            final_ttl = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n# Failed to generate any shapes."
+            
+        yield {"status": "completed", "shacl_ttl": final_ttl.strip()}
+
     def validate_rdf_stream(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None):
         """
         Generator that yields JSON progress events for SSE streaming.
