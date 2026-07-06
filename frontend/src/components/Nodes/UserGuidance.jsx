@@ -6,6 +6,7 @@ const sections = [
   { id: "workspace", label: "Workspace", icon: "grid" },
   { id: "schema-ontology", label: "Schema Ontology", icon: "layers" },
   { id: "instance-generation", label: "Instance Generation", icon: "file-text" },
+  { id: "data-validation", label: "Data Validation", icon: "shield" },
   { id: "ai-assistant", label: "AI Assistant", icon: "cpu" },
   { id: "main-canvas", label: "Main Canvas", icon: "pen-tool" },
   { id: "search", label: "Search Connections", icon: "search" },
@@ -73,6 +74,11 @@ const Icon = ({ name, size = 16, className = "" }) => {
         <line x1="16" y1="13" x2="8" y2="13" />
         <line x1="16" y1="17" x2="8" y2="17" />
         <line x1="10" y1="9" x2="8" y2="9" />
+      </svg>
+    ),
+    shield: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       </svg>
     ),
     user: (
@@ -377,6 +383,57 @@ const UserGuidance = () => {
             <p className="guidance-text">
               Once review is complete, click <strong>Generate Instance</strong>. The service constructs Turtle/RDF records conforming to the correct RDFLib naming conventions, mapping CSV attributes to instances (such as wafer runs and parameter details). You can view generating details (file size, triple count, rows processed) and download the completed .ttl file directly to your device.
             </p>
+          </div>
+        </section>
+
+        {/* Data Validation */}
+        <section id="data-validation" className="guidance-section">
+          <h2 className="guidance-section-title">
+            <span className="guidance-section-icon"><Icon name="shield" /></span>
+            Data Validation
+          </h2>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Overview</h3>
+            <p className="guidance-text">
+              The Data Validation interface allows you to compile human-readable business rules into SHACL (Shapes Constraint Language) shapes and validate RDF graphs against them. The generation is fully streamed and concurrent, ensuring fast processing times.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 1: Upload & Formulate Rules</h3>
+            <Steps items={[
+              "Upload Schema & Instances — Provide your schema (.ttl) and optional instance files to define the validation scope.",
+              "Generate AI Questions — Click \"Generate Questions\" to let the AI suggest 10 data-validation rules in plain English.",
+              "Manual Questions — Switch to the manual input mode to type your own validation rules directly.",
+              "Choose Rules — Select the specific rules you want to turn into SHACL validation shapes."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 2: Generate & Stream SHACL Shapes</h3>
+            <p className="guidance-text">
+              Click <strong>Generate SHACL</strong>. The portal immediately switches to Step 2, running concurrent LLM calls in the background:
+            </p>
+            <Steps items={[
+              "Checklist Progress — A real-time checklist shows the generation status of each rule.",
+              "Streaming Code Editor — Watch the SHACL Turtle shapes stream directly into the code editor.",
+              "Consolidation — Upon completion, the system deduplicates prefixes and presents the final formatted Turtle code. You can copy the code to clipboard or edit it."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 3: Validation Playground</h3>
+            <p className="guidance-text">
+              Click <strong>Proceed to Playground</strong> to execute validation on the data:
+            </p>
+            <Steps items={[
+              "Validate Against Target — Choose whether to validate against your uploaded files or workspace schemas.",
+              "Run Validation — Click \"Run Validation\" to start testing your instance graph against the generated SHACL shapes.",
+              "Step-by-Step Status — Observe the parsing and validation progress steps as they resolve.",
+              "Detailed Results Table — If violations are found, explore the details (Focus Node, Property, Message, Value) directly in the expandable table to locate data quality errors.",
+              "Export PDF — Export the complete validation report as a professional PDF document."
+            ]} />
           </div>
         </section>
 
