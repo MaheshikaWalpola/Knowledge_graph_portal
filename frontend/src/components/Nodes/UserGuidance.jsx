@@ -5,11 +5,11 @@ const sections = [
   { id: "getting-started", label: "Getting Started", icon: "rocket" },
   { id: "workspace", label: "Workspace", icon: "grid" },
   { id: "schema-ontology", label: "Schema Ontology", icon: "layers" },
+  { id: "search", label: "Search Connections", icon: "search" },
+  { id: "main-canvas", label: "Main Canvas", icon: "pen-tool" },
+  { id: "ai-assistant", label: "AI Assistant", icon: "cpu" },
   { id: "instance-generation", label: "Instance Generation", icon: "file-text" },
   { id: "data-validation", label: "Data Validation", icon: "shield" },
-  { id: "ai-assistant", label: "AI Assistant", icon: "cpu" },
-  { id: "main-canvas", label: "Main Canvas", icon: "pen-tool" },
-  { id: "search", label: "Search Connections", icon: "search" },
   { id: "my-ontologies", label: "My Ontologies", icon: "database" },
   { id: "account", label: "Profile & Account", icon: "user" },
 ];
@@ -328,6 +328,121 @@ const UserGuidance = () => {
           </div>
         </section>
 
+        {/* Search Connections */}
+        <section id="search" className="guidance-section">
+          <h2 className="guidance-section-title">
+            <span className="guidance-section-icon"><Icon name="search" /></span>
+            Search Connections
+          </h2>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Overview</h3>
+            <p className="guidance-text">
+              The Search Connections feature lets you query instance-level data in your
+              knowledge graph. Find specific entities, explore their properties and discover
+              connections between different instances.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Running a Search</h3>
+            <Steps items={[
+              "Select an ontology and class from the dropdown menus.",
+              "Enter a search term or filter criteria.",
+              "Click Search to execute the query.",
+              "Browse through the results showing matching instances.",
+              "Click on any result to view its full details and connected entities."
+            ]} />
+          </div>
+        </section>
+
+        {/* Main Canvas */}
+        <section id="main-canvas" className="guidance-section">
+          <h2 className="guidance-section-title">
+            <span className="guidance-section-icon"><Icon name="pen-tool" /></span>
+            Main Canvas
+          </h2>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Overview</h3>
+            <p className="guidance-text">
+              The Main Canvas is a visual modeling workspace where you can create, edit and
+              arrange knowledge graph elements. It provides a drag-and-drop interface for
+              building ontologies visually.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Adding Elements</h3>
+            <Steps items={[
+              "Open the Main Canvas from the navigation bar.",
+              "Use the toolbar to select the type of element you want to add (Class, Property, Instance or Literal).",
+              "Click on the canvas to place the new element.",
+              "Edit the element's label and properties using the property panel on the right.",
+              "To create relationships, drag from one element's connection point to another.",
+              "Adjust positions by clicking and dragging elements on the canvas."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Editing & Deleting</h3>
+            <p className="guidance-text">
+              Click any element on the canvas to select it. The property panel on the right
+              will display its details. You can edit the label, type and other properties.
+              To delete an element, select it and press the <span className="guidance-kbd">Delete</span> key
+              or use the delete button in the property panel.
+            </p>
+          </div>
+        </section>
+
+        {/* AI Assistant */}
+        <section id="ai-assistant" className="guidance-section">
+          <h2 className="guidance-section-title">
+            <span className="guidance-section-icon"><Icon name="cpu" /></span>
+            AI Assistant
+          </h2>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Overview</h3>
+            <p className="guidance-text">
+              The AI Assistant helps you query and explore your knowledge graphs using plain English. 
+              It automatically translates your natural language questions into database queries to search 
+              ontology schemas and instance data.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Using the Assistant</h3>
+            <Steps items={[
+              "Navigate to the AI Assistant from the top navigation bar.",
+              "Type your question in the chat input. Mentioning the specific ontology name (e.g. \"wafer_ontology\") will help the assistant find information faster.",
+              "Submit your question and view the response. If you ask for statistics or comparisons, the assistant can render an interactive bar chart directly inside the chat window.",
+              "Click on any follow-up response buttons under the message to ask related questions automatically."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">What You Can Ask</h3>
+            <Steps items={[
+              <><strong>General Definitions</strong> — Ask about concepts like RDF, SPARQL, OWL, or namespaces (e.g., <em>"What is a triple?"</em>).</>,
+              <><strong>Schema Structures</strong> — Explore classes and relationships (e.g., <em>"What classes are connected to ProcessStep?"</em>).</>,
+              <><strong>Data Statistics & Plots</strong> — Query averages, counts, or limits, and plot values (e.g., <em>"Plot wafer thickness values"</em> or <em>"What is the average run time?"</em>).</>,
+              <><strong>Instance Search</strong> — Find specific records (e.g., <em>"Show me instances of WaferRun"</em>).</>
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Thinking Console & Chat Settings</h3>
+            <p className="guidance-text">
+              To inspect the compiled database query and search steps, click the header of the <strong>Thinking</strong> console while the assistant generates its response. 
+              To manage your conversation history, click the settings gear icon in the chat header to open the sidebar. Here, you can rename or delete past threads.
+            </p>
+            <Callout type="tip">
+              Be specific with entity names in your questions. If the assistant is unsure, it will suggest options to clarify which ontology you are referring to.
+            </Callout>
+          </div>
+        </section>
+
         {/* Instance Generation */}
         <section id="instance-generation" className="guidance-section">
           <h2 className="guidance-section-title">
@@ -433,121 +548,6 @@ const UserGuidance = () => {
               "Step-by-Step Status — Observe the parsing and validation progress steps as they resolve.",
               "Detailed Results Table — If violations are found, explore the details (Focus Node, Property, Message, Value) directly in the expandable table to locate data quality errors.",
               "Export PDF — Export the complete validation report as a professional PDF document."
-            ]} />
-          </div>
-        </section>
-
-        {/* AI Assistant */}
-        <section id="ai-assistant" className="guidance-section">
-          <h2 className="guidance-section-title">
-            <span className="guidance-section-icon"><Icon name="cpu" /></span>
-            AI Assistant
-          </h2>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Overview</h3>
-            <p className="guidance-text">
-              The AI Assistant helps you query and explore your knowledge graphs using plain English. 
-              It automatically translates your natural language questions into database queries to search 
-              ontology schemas and instance data.
-            </p>
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Using the Assistant</h3>
-            <Steps items={[
-              "Navigate to the AI Assistant from the top navigation bar.",
-              "Type your question in the chat input. Mentioning the specific ontology name (e.g. \"wafer_ontology\") will help the assistant find information faster.",
-              "Submit your question and view the response. If you ask for statistics or comparisons, the assistant can render an interactive bar chart directly inside the chat window.",
-              "Click on any follow-up response buttons under the message to ask related questions automatically."
-            ]} />
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">What You Can Ask</h3>
-            <Steps items={[
-              <><strong>General Definitions</strong> — Ask about concepts like RDF, SPARQL, OWL, or namespaces (e.g., <em>"What is a triple?"</em>).</>,
-              <><strong>Schema Structures</strong> — Explore classes and relationships (e.g., <em>"What classes are connected to ProcessStep?"</em>).</>,
-              <><strong>Data Statistics & Plots</strong> — Query averages, counts, or limits, and plot values (e.g., <em>"Plot wafer thickness values"</em> or <em>"What is the average run time?"</em>).</>,
-              <><strong>Instance Search</strong> — Find specific records (e.g., <em>"Show me instances of WaferRun"</em>).</>
-            ]} />
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Thinking Console & Chat Settings</h3>
-            <p className="guidance-text">
-              To inspect the compiled database query and search steps, click the header of the <strong>Thinking</strong> console while the assistant generates its response. 
-              To manage your conversation history, click the settings gear icon in the chat header to open the sidebar. Here, you can rename or delete past threads.
-            </p>
-            <Callout type="tip">
-              Be specific with entity names in your questions. If the assistant is unsure, it will suggest options to clarify which ontology you are referring to.
-            </Callout>
-          </div>
-        </section>
-
-        {/* Main Canvas */}
-        <section id="main-canvas" className="guidance-section">
-          <h2 className="guidance-section-title">
-            <span className="guidance-section-icon"><Icon name="pen-tool" /></span>
-            Main Canvas
-          </h2>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Overview</h3>
-            <p className="guidance-text">
-              The Main Canvas is a visual modeling workspace where you can create, edit and
-              arrange knowledge graph elements. It provides a drag-and-drop interface for
-              building ontologies visually.
-            </p>
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Adding Elements</h3>
-            <Steps items={[
-              "Open the Main Canvas from the navigation bar.",
-              "Use the toolbar to select the type of element you want to add (Class, Property, Instance or Literal).",
-              "Click on the canvas to place the new element.",
-              "Edit the element's label and properties using the property panel on the right.",
-              "To create relationships, drag from one element's connection point to another.",
-              "Adjust positions by clicking and dragging elements on the canvas."
-            ]} />
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Editing & Deleting</h3>
-            <p className="guidance-text">
-              Click any element on the canvas to select it. The property panel on the right
-              will display its details. You can edit the label, type and other properties.
-              To delete an element, select it and press the <span className="guidance-kbd">Delete</span> key
-              or use the delete button in the property panel.
-            </p>
-          </div>
-        </section>
-
-        {/* Search Connections */}
-        <section id="search" className="guidance-section">
-          <h2 className="guidance-section-title">
-            <span className="guidance-section-icon"><Icon name="search" /></span>
-            Search Connections
-          </h2>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Overview</h3>
-            <p className="guidance-text">
-              The Search Connections feature lets you query instance-level data in your
-              knowledge graph. Find specific entities, explore their properties and discover
-              connections between different instances.
-            </p>
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Running a Search</h3>
-            <Steps items={[
-              "Select an ontology and class from the dropdown menus.",
-              "Enter a search term or filter criteria.",
-              "Click Search to execute the query.",
-              "Browse through the results showing matching instances.",
-              "Click on any result to view its full details and connected entities."
             ]} />
           </div>
         </section>
