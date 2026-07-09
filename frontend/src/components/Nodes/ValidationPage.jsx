@@ -110,7 +110,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     return { headers: { Authorization: token ? `Bearer ${token}` : "" } };
   };
 
-  // ── Workspace validation target schemas ──
+  //  Workspace validation target schemas 
   const [schemas, setSchemas] = useState([]);
   const [validationTarget, setValidationTarget] = useState("uploaded");
 
@@ -131,14 +131,14 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     }
   };
 
-  // ── Core state ──
+  //  Core state 
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [infoDialog, setInfoDialog] = useState(false);
 
-  // ── Step 0 ──
+  //  Step 0 
   const [inputMode, setInputMode] = useState("ai");
   const [schemaFile, setSchemaFile] = useState(null);
   const [instanceFile, setInstanceFile] = useState(null);
@@ -148,16 +148,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [aiContextPrompt, setAiContextPrompt] = useState("");
   const [manualQuestionsText, setManualQuestionsText] = useState("");
 
-  // ── Step 1 ──
+  //  Step 1 
   const [questions, setQuestions] = useState([]);
   const [newQuestionText, setNewQuestionText] = useState("");
 
-  // ── Step 2 ──
+  //  Step 2 
   const [shaclCode, setShaclCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [shaclGenerationSteps, setShaclGenerationSteps] = useState([]);
 
-  // ── Step 3 ──
+  //  Step 3 
   const [playgroundSchemaText, setPlaygroundSchemaText] = useState("");
   const [playgroundInstancesText, setPlaygroundInstancesText] = useState(SAMPLE_INSTANCES);
   const [playgroundShaclText, setPlaygroundShaclText] = useState("");
@@ -188,7 +188,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const instanceInputRef = useRef(null);
   const combinedInputRef = useRef(null);
 
-  // ── File helpers ──
+  //  File helpers 
   const readFileAsText = (file) =>
     new Promise((resolve) => {
       const reader = new FileReader();
@@ -226,7 +226,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     e.target.value = "";
   };
 
-  // ── Step 0 → 1: AI generation ──
+  //  Step 0 → 1: AI generation 
   const handleGenerateQuestions = async () => {
     setLoading(true);
     setError(null);
@@ -256,7 +256,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     }
   };
 
-  // ── Step 0 → 1: Manual submission ──
+  //  Step 0 → 1: Manual submission 
   const handleManualSubmit = () => {
     const lines = manualQuestionsText.split("\n").map(l => l.trim()).filter(l => l);
     if (lines.length === 0) return;
@@ -265,7 +265,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   };
 
 
-  // ── Step 1: question management ──
+  //  Step 1: question management 
   const handleAddQuestion = () => {
     if (!newQuestionText.trim()) return;
     setQuestions(prev => [...prev, { text: newQuestionText.trim(), selected: true }]);
@@ -283,7 +283,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
   const selectedCount = questions.filter(q => q.selected).length;
 
-  // ── Step 1 → 2: Generate SHACL ──
+  //  Step 1 → 2: Generate SHACL 
   const handleGenerateSHACL = async () => {
     const activeRules = questions.filter(q => q.selected).map(q => q.text);
     if (activeRules.length === 0) {
@@ -398,7 +398,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     }
   };
 
-  // ── Step 2: Copy ──
+  //  Step 2: Copy 
   const handleCopyShacl = async () => {
     try {
       await navigator.clipboard.writeText(shaclCode);
@@ -421,7 +421,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     return text.substring(0, maxLength) + `\n\n... [TRUNCATED - File is too large to edit in browser (${mb} MB)]`;
   };
 
-  // ── Step 2 → 3: Proceed ──
+  //  Step 2 → 3: Proceed 
   const handleProceedToPlayground = () => {
     try {
       console.log("handleProceedToPlayground clicked", {
@@ -448,7 +448,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     }
   };
 
-  // ── Step 3: Validate (SSE streaming) ──
+  //  Step 3: Validate (SSE streaming) 
   const handlePlaygroundValidate = async () => {
     setLoading(true);
     setError(null);
@@ -534,7 +534,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     }
   };
 
-  // ── Step 3: Download PDF ──
+  //  Step 3: Download PDF 
   const handleDownloadPDF = async (reportData) => {
     if (!reportData) return;
     try {
@@ -556,7 +556,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     }
   };
 
-  // ── Back / Reset ──
+  //  Back / Reset 
   const handleBack = () => {
     if (activeStep > 0) {
       setActiveStep(activeStep - 1);
@@ -574,7 +574,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     setSuccess(null);
   };
 
-  // ── Auth gate ──
+  //  Auth gate 
   if (!user) {
     return (
       <div className="validation-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
@@ -596,7 +596,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     <div className="validation-container">
       <div className="validation-card">
 
-        {/* ── Header ── */}
+        {/*  Header  */}
         <div className="validation-header">
           <div className="validation-header-left">
             <h2 className="validation-title">AI-Powered SHACL Validation</h2>
@@ -611,7 +611,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
           </Tooltip>
         </div>
 
-        {/* ── Info Dialog ── */}
+        {/*  Info Dialog  */}
         <Dialog open={infoDialog} onClose={() => setInfoDialog(false)} maxWidth="sm" fullWidth>
           <DialogTitle>How SHACL Validation Works</DialogTitle>
           <DialogContent dividers>
@@ -632,7 +632,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
         <div className="validation-content">
 
-          {/* ── Custom Stepper ── */}
+          {/*  Custom Stepper  */}
           <div className="validation-stepper">
             <div className="validation-stepper-steps">
               {STEPS.map((label, idx) => (
@@ -644,7 +644,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
             </div>
           </div>
 
-          {/* ── Body ── */}
+          {/*  Body  */}
           <div className="validation-body">
 
             {/* Alerts */}
@@ -685,7 +685,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   </button>
                 </Box>
 
-                {/* ── AI Mode ── */}
+                {/*  AI Mode  */}
                 {inputMode === "ai" && (
                   <Stack spacing={3}>
                     <Grid container spacing={3}>
@@ -774,7 +774,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   </Stack>
                 )}
 
-                {/* ── Manual Mode ── */}
+                {/*  Manual Mode  */}
                 {inputMode === "manual" && (
                   <Stack spacing={3}>
                     <TextField
@@ -1027,11 +1027,11 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   </Card>
                 )}
 
-                {/* ── Validation Results ── */}
+                {/*  Validation Results  */}
                 {playgroundReport && (
                   <Stack spacing={2.5} sx={{ mt: 2 }}>
 
-                    {/* ── Summary Banner ── */}
+                    {/*  Summary Banner  */}
                     <Box className={`validation-summary-banner ${playgroundReport.conforms ? "pass" : "fail"}`}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
@@ -1099,7 +1099,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       )}
                     </Box>
 
-                    {/* ── Rules List with Expandable Violations ── */}
+                    {/*  Rules List with Expandable Violations  */}
                     <Box>
                       <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>Rules Evaluated</Typography>
                       <Stack spacing={1}>
@@ -1208,7 +1208,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
             )}
           </div>
 
-          {/* ── Footer Actions (same as instance-gen-actions) ── */}
+          {/*  Footer Actions (same as instance-gen-actions)  */}
           <Box className="validation-actions">
             <Button disabled={activeStep === 0 || loading} onClick={handleBack} variant="outlined">
               Back
