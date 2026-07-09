@@ -447,40 +447,80 @@ const UserGuidance = () => {
           <div className="guidance-subsection">
             <h3 className="guidance-subsection-title">Overview</h3>
             <p className="guidance-text">
-              The AI Assistant uses large language models to help you interact with your knowledge
-              graph using natural language. You can ask questions about your data, generate
-              SPARQL queries and get explanations of ontology concepts.
+              The AI Assistant is a sophisticated conversational agent designed to help you interact with
+              your knowledge graphs using natural language. Grounded in both the schema ontology and the
+              instance-level RDF database, it translates your questions into database queries, executes
+              them against GraphDB, and presents findings as text, structured lists, or interactive data charts.
             </p>
           </div>
 
-          {/* <div className="guidance-subsection">
+          <div className="guidance-subsection">
             <h3 className="guidance-subsection-title">Using the AI Chat</h3>
             <Steps items={[
-              "Navigate to AI Assistant from the navigation bar.",
-              "Type a question or command in the chat input.",
-              "Press Enter or click Send to submit your query.",
-              "The AI will analyze your ontology and respond with relevant information.",
-              "For SPARQL queries, the AI will generate and optionally execute the query.",
-              "Review the response and continue the conversation for follow-up questions."
+              "Open the AI Assistant from the main navigation bar.",
+              "Start a conversation — by default, you begin with a blank conversation. You can also click \"+ New Conversation\" in the sidebar to start another thread.",
+              "Type your question in the chat input. Mention the name of the ontology you are asking about (e.g. \"wafer_ontology\") so the assistant can automatically load its schema context.",
+              "If your request is ambiguous, the assistant will display a clarification question along with quick-select options for your active schemas.",
+              "Send your message. Watch the system's live reasoning pipeline stream inside the Thinking Console.",
+              "View the generated response. If you asked for statistical summaries or plotting, an interactive chart will render inside the chat bubble.",
+              "Explore follow-up suggestions — click any of the quick-response buttons under the assistant's reply to ask related questions automatically."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Core Capabilities</h3>
+            <p className="guidance-text">
+              The assistant dynamically chooses the best execution path based on your query's intent:
+            </p>
+            <Steps items={[
+              <><strong>General Knowledge & Definition Search</strong> — Ask questions about semantic web concepts (e.g., <em>"What is a namespace?"</em> or <em>"Explain RDF Turtle format"</em>). The assistant responds directly without querying the database.</>,
+              <><strong>Schema Exploration</strong> — Retrieve entities, classes, relationships, and class hierarchies (e.g., <em>"What classes are connected to ProcessStep in wafer_ontology?"</em>).</>,
+              <><strong>Instance Database Queries</strong> — Retrieve instance details and count records (e.g., <em>"Show me instances of WaferRun"</em>).</>,
+              <><strong>Quantitative Statistics & Analytics</strong> — Query minimum, maximum, count, and average values of numeric attributes (e.g., <em>"What is the average thickness of silicon wafers?"</em>).</>,
+              <><strong>Data Visualization</strong> — Ask the assistant to compile and plot values (e.g., <em>"Plot wafer run processing times"</em>) to see a visual bar chart rendered inline.</>
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Reasoning Console ("Thinking Logs")</h3>
+            <p className="guidance-text">
+              Every database query goes through a multi-stage reasoning pipeline. To inspect this pipeline, click the header of the <strong>Thinking</strong> console during generation:
+            </p>
+            <Steps items={[
+              <><strong>NLP & Intent Analysis</strong> — Shows the tokens parsed and classification of your query type (e.g. <code>get_numeric_stat</code>, <code>get_connected_classes</code>, <code>complex_query</code>).</>,
+              <><strong>Ontology & Namespace Binding</strong> — Confirms the exact schema and instance graphs being queried (e.g., matching short schema name to its target IRI).</>,
+              <><strong>Vocabulary Alignment</strong> — Highlights the lookup process as it maps your search terms to actual class/property IRIs inside the ontology schema.</>,
+              <><strong>SPARQL Generation</strong> — Displays the compiled SPARQL query. For simple statistics, a deterministic query builder is used; for complex relational paths, a code-generation LLM writes custom SPARQL.</>,
+              <><strong>GraphDB Execution metrics</strong> — Reports the query dispatch and raw row counts returned from the repository before formatting.</>
             ]} />
             <Callout type="tip">
-              Be specific in your queries for better results. For example, instead of "Show me data" try "List all classes in the Sensordata ontology with their properties."
+              Inspecting the compiled SPARQL queries in the Thinking Console is a great way to verify the grounding of the AI and debug any structural anomalies in your ontology.
             </Callout>
           </div>
 
           <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Capabilities</h3>
+            <h3 className="guidance-subsection-title">Managing Conversations</h3>
             <p className="guidance-text">
-              The AI Assistant can help with:
+              Conversations are fully persistent and managed using MongoDB:
             </p>
             <Steps items={[
-              "Explaining ontology concepts and relationships in natural language.",
-              "Generating SPARQL queries from plain English questions.",
-              "Suggesting improvements to your ontology structure.",
-              "Answering questions about specific entities and their connections.",
-              "Creating new ontology elements based on natural language descriptions."
+              <><strong>Conversations Panel</strong> — Click the settings icon in the chat header to toggle the conversation management sidebar.</>,
+              <><strong>Renaming Threads</strong> — Click the pencil/rename icon next to a conversation in the sidebar, edit the title, and press Enter (or click outside) to save it.</>,
+              <><strong>Deleting Threads</strong> — Click the trash icon next to a conversation to remove it. A verification dialog will prevent accidental deletion.</>
             ]} />
-          </div> */}
+            <Callout type="info">
+              Unsaved conversations will not appear in the sidebar or be synchronized to the database until you send your first message.
+            </Callout>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Grounding Tips for Best Results</h3>
+            <Steps items={[
+              <><strong>Be Specific with Names</strong> — For grounded answers, always specify the ontology name (e.g., <em>"In wafer_ontology, list the subclasses of Equipment"</em>).</>,
+              <><strong>Reference Key Concepts Clearly</strong> — If you are asking for statistics, specify the target property and the class name (e.g., <em>"average duration of ProcessStep"</em>).</>,
+              <><strong>Leverage Autocomplete Clarifications</strong> — When the assistant is unsure, select one of the suggested ontologies from the quick options buttons to resolve the ambiguity instantly.</>
+            ]} />
+          </div>
         </section>
 
         {/* Main Canvas */}
