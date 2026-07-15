@@ -1237,7 +1237,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
             )}
 
             {activeStep === 2 && (
-              <Button variant="contained" onClick={handleProceedToPlayground}>
+              <Button variant="contained" onClick={handleProceedToPlayground} disabled={loading}>
                 Proceed to Playground
               </Button>
             )}
