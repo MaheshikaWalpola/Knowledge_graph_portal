@@ -40,13 +40,14 @@ class ValidationService:
             return iri_str.rsplit("/", 1)[-1]
         return iri_str
 
-    def suggest_validation_rules(self, user_explanation: Optional[str] = None, schema_content: Optional[str] = None, instance_content: Optional[str] = None) -> List[str]:
+    def suggest_validation_rules(self, user_explanation: Optional[str] = None, schema_content: Optional[str] = None, instance_content: Optional[str] = None, num_questions: int = 10) -> List[str]:
         """
-        Uses Kiste LLM to suggest 10 data validation rules in plain English based on the ontology schema
+        Uses Kiste LLM to suggest data validation rules in plain English based on the ontology schema
         and optionally instance data.
         """
         schema_text = schema_content or "No schema provided. Suggest general CMP (Chemical Mechanical Planarization) validation rules."
         explanation = user_explanation or "General CMP data validation."
+        target_count = max(1, min(50, num_questions))
         
         instance_section = ""
         if instance_content:
@@ -56,11 +57,11 @@ class ValidationService:
         
         prompt = (
             "You are a Senior Data Quality and Process Engineer in semiconductor manufacturing. "
-            "Your task is to analyze the provided RDF/OWL Ontology Schema for CMP (Chemical Mechanical Planarization) "
-            "and suggest exactly 10 highly relevant data quality validation questions in plain English.\n\n"
+            f"Your task is to analyze the provided RDF/OWL Ontology Schema for CMP (Chemical Mechanical Planarization) "
+            f"and suggest exactly {target_count} highly relevant data quality validation questions in plain English.\n\n"
             f"User's Goals/Context: {explanation}\n\n"
             "Guidelines:\n"
-            "- Suggest exactly 10 validation questions.\n"
+            f"- Suggest exactly {target_count} validation questions.\n"
             "- Express questions in clear, direct English, like:\n"
             "  'Every CMP process must have a start timestamp'\n"
             "  'Pressure must be a positive float value'\n"
@@ -68,7 +69,7 @@ class ValidationService:
             "  'Polishing pad age must be a positive integer'\n"
             "- Tailor the questions to classes and properties in the schema.\n"
             "- If instance data is provided, also consider patterns and potential issues visible in the data.\n"
-            "- Output EXACTLY a JSON object with this key structure: {\"rules\": [\"rule 1\", ..., \"rule 10\"]}.\n"
+            f"- Output EXACTLY a JSON object with this key structure: {{\"rules\": [\"rule 1\", ..., \"rule {target_count}\"]}}.\n"
             "- DO NOT return any explanatory text or markdown code blocks outside of the JSON.\n\n"
             f"SCHEMA CONTEXT:\n{schema_text}"
             f"{instance_section}"
@@ -79,27 +80,41 @@ class ValidationService:
             {"role": "user", "content": prompt}
         ]
         
+        fallback_rules = [
+            "Every CMP process must have a measurement timestamp.",
+            "Every CMP process must act on at least one Wafer.",
+            "Every CMP process must specify the Chamber used.",
+            "Pressure parameter values must be positive floats.",
+            "Stage/platen rotation speeds must be non-negative.",
+            "Slurry flow rates must be non-negative.",
+            "Slurry pH must be a float between 1.0 and 14.0.",
+            "Polishing pad age must be a non-negative integer.",
+            "Every wafer must have a wafer material specified.",
+            "Lot size must be a positive integer.",
+            "Backing film usage must be a non-negative number.",
+            "Dresser table usage must be a non-negative integer.",
+            "Every CMP process must specify the recipe used.",
+            "Wafer diameter must be specified.",
+            "Abrasive concentration percentage must be between 0 and 100.",
+            "Air exchange rate in cleanroom must be a positive integer.",
+            "Every tool component must belong to a parent tool.",
+            "Downforce value must be a positive float.",
+            "Sweep per minute must be a positive integer.",
+            "Cleanroom area must be a positive float."
+        ]
+        
         try:
             response = self.llm._call_kiste(messages, json_mode=True, temperature=0.2)
             data = json.loads(response)
             rules = data.get("rules", [])
-            if len(rules) < 10:
-                rules.extend(["Pressure value must be a positive float" for _ in range(10 - len(rules))])
-            return rules[:10]
+            if len(rules) < target_count:
+                rules.extend([f"Validation rule #{i+1} must be satisfied." for i in range(len(rules), target_count)])
+            return rules[:target_count]
         except Exception as e:
             print(f"Error suggesting rules: {e}")
-            return [
-                "Every CMP process must have a measurement timestamp.",
-                "Every CMP process must act on at least one Wafer.",
-                "Every CMP process must specify the Chamber used.",
-                "Pressure parameter values must be positive floats.",
-                "Stage/platen rotation speeds must be non-negative.",
-                "Slurry flow rates must be non-negative.",
-                "Slurry pH must be a float between 1.0 and 14.0.",
-                "Polishing pad age must be a non-negative integer.",
-                "Every wafer must have a wafer material specified.",
-                "Lot size must be a positive integer."
-            ]
+            while len(fallback_rules) < target_count:
+                fallback_rules.append(f"Parameter rule #{len(fallback_rules)+1} must be positive.")
+            return fallback_rules[:target_count]
 
 
     def generate_shacl_shapes(self, rules: List[str], schema_content: Optional[str] = None) -> str:

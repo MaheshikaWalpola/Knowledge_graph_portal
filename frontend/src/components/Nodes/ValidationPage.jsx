@@ -146,6 +146,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [schemaFileText, setSchemaFileText] = useState("");
   const [instanceFileText, setInstanceFileText] = useState("");
   const [aiContextPrompt, setAiContextPrompt] = useState("");
+  const [numQuestions, setNumQuestions] = useState(10);
   const [manualQuestionsText, setManualQuestionsText] = useState("");
 
   //  Step 1 
@@ -233,6 +234,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
     const formData = new FormData();
     if (aiContextPrompt) formData.append("user_explanation", aiContextPrompt);
+    formData.append("num_questions", numQuestions);
 
     if (combinedFile) {
       formData.append("schema_file", combinedFile);
@@ -246,7 +248,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
       const res = await axios.post(`${API}/validation/suggest-rules`, formData, getAuthConfig());
       if (res.data?.rules) {
         setQuestions(res.data.rules.map((r) => ({ text: r, selected: true })));
-        setSuccess("AI generated 10 validation questions from your files.");
+        setSuccess(`AI generated ${res.data.rules.length} validation questions from your files.`);
         setActiveStep(1);
       }
     } catch (err) {
@@ -666,7 +668,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
               <Box>
                 <Typography variant="h6" gutterBottom>Define Your Validation Questions</Typography>
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-                  Choose how to create your validation questions — let AI generate them from your data files, or enter them manually in plain English.
+                  Choose how to create your validation questions : let AI generate them from your data files, or enter them manually in plain English.
                 </Typography>
 
                 {/* Mode Toggle */}
@@ -771,6 +773,20 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       onChange={(e) => setAiContextPrompt(e.target.value)}
                       placeholder="e.g. I want to check that all pressure values are positive, every CMP process links to a wafer, rotation speeds are within bounds..."
                     />
+
+                    {/* Number of questions input */}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <TextField
+                        label="Number of questions to generate"
+                        type="number"
+                        size="small"
+                        value={numQuestions}
+                        onChange={(e) => setNumQuestions(Math.max(1, Math.min(50, parseInt(e.target.value) || 10)))}
+                        inputProps={{ min: 1, max: 50 }}
+                        sx={{ width: 250 }}
+                        helperText="Enter how many questions you want AI to suggest (1 - 50)"
+                      />
+                    </Box>
                   </Stack>
                 )}
 

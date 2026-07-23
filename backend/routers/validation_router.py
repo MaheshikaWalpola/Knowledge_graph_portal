@@ -39,6 +39,7 @@ def _fetch_workspace_instances_ttl(user_email: str, schema_id: str) -> str:
 @router.post("/validation/suggest-rules")
 async def api_suggest_rules(
     user_explanation: Optional[str] = Form(None),
+    num_questions: int = Form(10),
     schema_id: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
     instance_file: Optional[UploadFile] = File(None),
@@ -64,7 +65,12 @@ async def api_suggest_rules(
         except Exception as e:
             print(f"Error fetching workspace instances: {e}")
             
-    rules = validation_service.suggest_validation_rules(user_explanation, schema_content, instance_content)
+    rules = validation_service.suggest_validation_rules(
+        user_explanation=user_explanation,
+        schema_content=schema_content,
+        instance_content=instance_content,
+        num_questions=num_questions
+    )
     return {"status": "ok", "rules": rules}
 
 
