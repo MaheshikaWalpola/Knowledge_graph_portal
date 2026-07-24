@@ -189,6 +189,7 @@ class ValidationService:
         completed_shapes = {}
         
         def generate_single_shape(index: int, rule: str) -> dict:
+            clean_rule_str = rule.replace('"', '')
             prompt = (
                 "You are a Semantic Web and SHACL developer. "
                 "Turn the following plain-English data quality rule into a SHACL shape block in Turtle (.ttl) format "
@@ -202,11 +203,14 @@ class ValidationService:
                 "   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
                 "   @prefix cmpo: <https://tucid/cpmo/> .\n"
                 "   @prefix inst: <https://tucid/cpmo/instance/> .\n"
-                "3. Structure your shapes correctly. A `sh:NodeShape` targets a class (e.g. `sh:targetClass cmpo:Pressure`).\n"
+                f"3. Name the shape URI specifically like `inst:Question_{index+1}_Shape` or similar.\n"
+                f"4. Include `rdfs:label \"{clean_rule_str}\" ;` on the shape so the exact plain English rule/question is attached to the shape.\n"
+                "5. Structure your shapes correctly. A `sh:NodeShape` targets a class (e.g. `sh:targetClass cmpo:Pressure`).\n"
                 "   CRITICAL ERROR PREVENTION: A shape defined as a `sh:NodeShape` cannot be the subject of a `sh:path` predicate. "
                 "   Always nest the path and constraint details inside `sh:property [ sh:path ... ]` block. For example:\n"
                 "   ```turtle\n"
-                "   cmpo:PressureShape a sh:NodeShape ;\n"
+                "   inst:Question_1_Shape a sh:NodeShape ;\n"
+                f"       rdfs:label \"{clean_rule_str}\" ;\n"
                 "       sh:targetClass cmpo:Pressure ;\n"
                 "       sh:property [\n"
                 "           sh:path cmpo:hasNumericValue ;\n"
@@ -215,11 +219,11 @@ class ValidationService:
                 "           sh:message \"Pressure parameter value must be a positive float.\"\n"
                 "       ] .\n"
                 "   ```\n"
-                "4. Add a descriptive sh:message matching the rule description.\n\n"
+                "6. Add a descriptive sh:message matching the rule description.\n\n"
                 f"ONTOLOGY SCHEMA:\n{schema_text}"
             )
             messages = [
-                {"role": "system", "content": "You are a SHACL code generator. You output only valid Turtle (.ttl) code. You structure shapes correctly and never place sh:path directly inside a sh:NodeShape."},
+                {"role": "system", "content": "You are a SHACL code generator. You output only valid Turtle (.ttl) code. You structure shapes correctly, attach rdfs:label for each rule, and never place sh:path directly inside a sh:NodeShape."},
                 {"role": "user", "content": prompt}
             ]
             try:
@@ -307,7 +311,17 @@ class ValidationService:
             yield {"step": "error", "message": friendly, "error": True}
             return
 
-        num_shapes = len(list(g_shapes.subjects(RDF.type, Namespace("http://www.w3.org/ns/shacl#").NodeShape)))
+        SH = Namespace("http://www.w3.org/ns/shacl#")
+        RDFS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
+
+        # Collect all shape nodes (NodeShape or PropertyShape or subjects with sh:targetClass)
+        shape_nodes_set = set(g_shapes.subjects(RDF.type, SH.NodeShape)).union(
+            set(g_shapes.subjects(RDF.type, SH.PropertyShape))
+        )
+        for s in g_shapes.subjects(SH.targetClass, None):
+            shape_nodes_set.add(s)
+
+        num_shapes = len(shape_nodes_set)
         yield {"step": "shapes_parsed", "message": f"SHACL shapes parsed successfully ({num_shapes} shapes found)"}
 
         # Step 2: Parse data graph
@@ -352,9 +366,9 @@ class ValidationService:
         # Step 5: Collect results
         yield {"step": "collecting", "message": "Collecting results..."}
 
-        SH = Namespace("http://www.w3.org/ns/shacl#")
         violations = []
         violated_shapes = set()
+        shape_failed_nodes = {}  # shape_iri -> set of focusNode IRIs
 
         for result_node in results_graph.subjects(RDF.type, SH.ValidationResult):
             focus_node = results_graph.value(result_node, SH.focusNode)
@@ -365,7 +379,12 @@ class ValidationService:
             val = results_graph.value(result_node, SH.value)
 
             if source_shape:
-                violated_shapes.add(str(source_shape))
+                src_str = str(source_shape)
+                violated_shapes.add(src_str)
+                if src_str not in shape_failed_nodes:
+                    shape_failed_nodes[src_str] = set()
+                if focus_node:
+                    shape_failed_nodes[src_str].add(str(focus_node))
 
             violations.append({
                 "focus_node": str(focus_node),
@@ -380,12 +399,22 @@ class ValidationService:
             })
 
         all_shapes = []
-        for shape_node in g_shapes.subjects(RDF.type, SH.NodeShape):
-            label = g_shapes.value(shape_node, Namespace("http://www.w3.org/2000/01/rdf-schema#").label)
-            target_cls = g_shapes.value(shape_node, SH.targetClass)
+        for shape_node in shape_nodes_set:
+            label = g_shapes.value(shape_node, RDFS.label)
+            if not label:
+                # Try finding message or label inside property
+                for prop_node in g_shapes.objects(shape_node, SH.property):
+                    msg = g_shapes.value(prop_node, SH.message) or g_shapes.value(prop_node, RDFS.label)
+                    if msg:
+                        label = msg
+                        break
 
+            target_cls = g_shapes.value(shape_node, SH.targetClass)
             shape_str = str(shape_node)
-            passed = shape_str not in violated_shapes
+
+            failed_nodes = shape_failed_nodes.get(shape_str, set())
+            failed_items_count = len(failed_nodes)
+            passed = (failed_items_count == 0) and (shape_str not in violated_shapes)
 
             all_shapes.append({
                 "shape_iri": shape_str,
@@ -393,8 +422,44 @@ class ValidationService:
                 "label": str(label) if label else self._shorten_iri(shape_node),
                 "target_class": str(target_cls) if target_cls else "",
                 "target_class_short": self._shorten_iri(target_cls) if target_cls else "",
-                "status": "Pass" if passed else "Fail"
+                "status": "Pass" if passed else "Fail",
+                "failed_items_count": failed_items_count
             })
+
+        # Sort shapes alphabetically or by IRI for consistent layout
+        all_shapes.sort(key=lambda x: x["label"].lower())
+
+        total_questions = len(all_shapes)
+        passed_questions = sum(1 for r in all_shapes if r["status"] == "Pass")
+        failed_questions = total_questions - passed_questions
+        pass_percentage = round((passed_questions / total_questions * 100), 1) if total_questions > 0 else 0.0
+
+        if total_questions == 0:
+            status_summary = "No shapes evaluated"
+        elif passed_questions == total_questions:
+            status_summary = f"All {total_questions} Questions Passed (100%)"
+        elif passed_questions == 0:
+            status_summary = f"0 of {total_questions} Questions Passed (0%)"
+        else:
+            status_summary = f"{passed_questions} of {total_questions} Questions Passed ({pass_percentage}%)"
+
+        # ── Compute six KPI metrics for compact report cards ──
+        violation_count = sum(1 for v in violations if v.get("severity", "Violation") == "Violation")
+        warning_count = sum(1 for v in violations if v.get("severity", "Violation") == "Warning")
+
+        # Unique focus nodes affected by any violation/warning
+        affected_focus_nodes = len(set(v["focus_node"] for v in violations if v.get("focus_node")))
+
+        execution_status = "Completed"
+        conformance_status = "Conformant" if conforms else "Non-Conformant"
+
+        # Gate decision: Pass only when fully conformant; Conditional if only warnings exist
+        if conforms:
+            gate_decision = "Pass"
+        elif violation_count == 0 and warning_count > 0:
+            gate_decision = "Conditional"
+        else:
+            gate_decision = "Fail"
 
         # Final result
         yield {
@@ -404,6 +469,17 @@ class ValidationService:
                 "conforms": conforms,
                 "total_triples": len(g_data),
                 "total_violations": len(violations),
+                "total_questions": total_questions,
+                "passed_questions": passed_questions,
+                "failed_questions": failed_questions,
+                "pass_percentage": pass_percentage,
+                "status_summary": status_summary,
+                "execution_status": execution_status,
+                "conformance_status": conformance_status,
+                "gate_decision": gate_decision,
+                "violation_count": violation_count,
+                "warning_count": warning_count,
+                "affected_focus_nodes": affected_focus_nodes,
                 "rules": all_shapes,
                 "violations": violations
             }
@@ -421,6 +497,17 @@ class ValidationService:
                     "error": event["message"],
                     "total_violations": 0,
                     "total_triples": 0,
+                    "total_questions": 0,
+                    "passed_questions": 0,
+                    "failed_questions": 0,
+                    "pass_percentage": 0.0,
+                    "status_summary": "Error during validation",
+                    "execution_status": "Error",
+                    "conformance_status": "Error",
+                    "gate_decision": "Fail",
+                    "violation_count": 0,
+                    "warning_count": 0,
+                    "affected_focus_nodes": 0,
                     "rules": [],
                     "violations": []
                 }
@@ -431,6 +518,17 @@ class ValidationService:
             "error": "Validation produced no results",
             "total_violations": 0,
             "total_triples": 0,
+            "total_questions": 0,
+            "passed_questions": 0,
+            "failed_questions": 0,
+            "pass_percentage": 0.0,
+            "status_summary": "Validation produced no results",
+            "execution_status": "No Results",
+            "conformance_status": "Unknown",
+            "gate_decision": "Fail",
+            "violation_count": 0,
+            "warning_count": 0,
+            "affected_focus_nodes": 0,
             "rules": [],
             "violations": []
         }
@@ -451,18 +549,17 @@ class ValidationService:
         
         styles = getSampleStyleSheet()
         
-        # Define clean, curated color palette (no default pure colors)
+        # Define clean, curated color palette
         color_primary = colors.HexColor("#1e293b")  # Dark Slate Blue/Gray
         color_secondary = colors.HexColor("#475569")
         color_success = colors.HexColor("#10b981")  # Mint Green
+        color_warning = colors.HexColor("#f59e0b")  # Amber
         color_danger = colors.HexColor("#ef4444")   # Curated Red
         color_bg_light = colors.HexColor("#f8fafc")  # Cool Light Gray
         
-        # Modify existing styles to avoid adding duplicate styles with same name
         styles['Normal'].textColor = color_secondary
         styles['BodyText'].textColor = color_secondary
         
-        # Create custom paragraph styles
         style_title = ParagraphStyle(
             name='ReportTitle',
             parent=styles['Normal'],
@@ -506,51 +603,120 @@ class ValidationService:
         story.append(Paragraph("Knowledge Graph Portal - Validation Report", style_title))
         story.append(Spacer(1, 10))
         
-        # 2. Executive Summary Block
-        conforms = report_data.get("conforms", False)
-        status_text = "PASSED" if conforms else "FAILED"
-        status_color = color_success if conforms else color_danger
+        # 2. Six KPI Cards Grid (3 columns × 2 rows)
+        rules = report_data.get("rules", [])
+        total_q = report_data.get("total_questions", len(rules))
+        passed_q = report_data.get("passed_questions", sum(1 for r in rules if r.get("status") == "Pass"))
+        failed_q = report_data.get("failed_questions", total_q - passed_q)
         
-        summary_data = [
-            [Paragraph("<b>Validation Status:</b>", style_cell), Paragraph(f"<font color='{status_color}'><b>{status_text}</b></font>", style_cell_bold)],
-            [Paragraph("<b>Total Violations Found:</b>", style_cell), Paragraph(str(report_data.get("total_violations", 0)), style_cell_bold)],
-            [Paragraph("<b>Data Graph Size:</b>", style_cell), Paragraph(f"{report_data.get('total_triples', 0)} triples", style_cell)],
-            [Paragraph("<b>Report Generated On:</b>", style_cell), Paragraph(str(os.popen("date /t").read().strip()), style_cell)]
+        exec_status = report_data.get("execution_status", "Completed")
+        conform_status = report_data.get("conformance_status", "Non-Conformant" if failed_q > 0 else "Conformant")
+        gate_dec = report_data.get("gate_decision", "Pass" if failed_q == 0 else "Fail")
+        violation_cnt = report_data.get("violation_count", report_data.get("total_violations", 0))
+        warning_cnt = report_data.get("warning_count", 0)
+        affected_fn = report_data.get("affected_focus_nodes", 0)
+        
+        # Color helpers
+        gate_color = color_success if gate_dec == "Pass" else (color_warning if gate_dec == "Conditional" else color_danger)
+        conform_color = color_success if conform_status == "Conformant" else color_danger
+        viol_color = color_danger if violation_cnt > 0 else color_success
+        warn_color = color_warning if warning_cnt > 0 else color_success
+        fn_color = color_danger if affected_fn > 0 else color_success
+        
+        style_card_label = ParagraphStyle(
+            name='CardLabel',
+            parent=style_cell,
+            fontName='Helvetica-Bold',
+            fontSize=8,
+            leading=10,
+            textColor=color_secondary,
+            alignment=1  # center
+        )
+        
+        style_card_value = ParagraphStyle(
+            name='CardValue',
+            parent=style_cell_bold,
+            fontName='Helvetica-Bold',
+            fontSize=14,
+            leading=18,
+            alignment=1  # center
+        )
+        
+        def _kpi_cell(label, value, val_color=color_primary):
+            return [
+                Paragraph(f"<font color='{val_color}'><b>{value}</b></font>", style_card_value),
+                Paragraph(label.upper(), style_card_label)
+            ]
+        
+        kpi_row_1 = [
+            _kpi_cell("Execution Status", exec_status, color_success),
+            _kpi_cell("Conformance", conform_status, conform_color),
+            _kpi_cell("Gate Decision", gate_dec, gate_color),
         ]
         
-        summary_table = Table(summary_data, colWidths=[150, 390])
-        summary_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), color_bg_light),
-            ('PADDING', (0, 0), (-1, -1), 8),
+        kpi_row_2 = [
+            _kpi_cell("Violations", str(violation_cnt), viol_color),
+            _kpi_cell("Warnings", str(warning_cnt), warn_color),
+            _kpi_cell("Affected Nodes", str(affected_fn), fn_color),
+        ]
+        
+        # Build nested tables for each cell
+        def _build_cell_table(cell_content):
+            t = Table([cell_content], colWidths=[170])
+            t.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('BACKGROUND', (0, 0), (-1, -1), color_bg_light),
+                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+                ('ROUNDEDCORNERS', [6, 6, 6, 6]),
+            ]))
+            return t
+        
+        kpi_grid_data = [
+            [_build_cell_table(c) for c in kpi_row_1],
+            [_build_cell_table(c) for c in kpi_row_2],
+        ]
+        
+        kpi_table = Table(kpi_grid_data, colWidths=[180, 180, 180])
+        kpi_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
         ]))
         
-        story.append(summary_table)
+        story.append(kpi_table)
         story.append(Spacer(1, 20))
         
         # 3. Rules Evaluation Section
-        story.append(Paragraph("Rules Evaluation List", style_h2))
+        story.append(Paragraph("Questions & Rules Evaluation List", style_h2))
         
-        rules = report_data.get("rules", [])
         if rules:
             rules_header = [
-                Paragraph("<b>Rule / Shape Name</b>", style_cell_bold),
+                Paragraph("<b>Question / Rule Name</b>", style_cell_bold),
                 Paragraph("<b>Target Class</b>", style_cell_bold),
-                Paragraph("<b>Status</b>", style_cell_bold)
+                Paragraph("<b>Status</b>", style_cell_bold),
+                Paragraph("<b>Failed Items</b>", style_cell_bold)
             ]
             rules_rows = [rules_header]
             for r in rules:
                 status_val = r.get("status", "Pass")
-                status_color = color_success if status_val == "Pass" else color_danger
+                r_status_color = color_success if status_val == "Pass" else color_danger
+                failed_items = r.get("failed_items_count", 0)
+                items_str = f"{failed_items} item{'s' if failed_items != 1 else ''}" if status_val != "Pass" else "0 items"
                 
                 rules_rows.append([
                     Paragraph(r.get("label", ""), style_cell),
                     Paragraph(r.get("target_class_short", ""), style_cell),
-                    Paragraph(f"<font color='{status_color}'><b>{status_val}</b></font>", style_cell_bold)
+                    Paragraph(f"<font color='{r_status_color}'><b>{status_val}</b></font>", style_cell_bold),
+                    Paragraph(items_str, style_cell)
                 ])
             
-            rules_table = Table(rules_rows, colWidths=[240, 200, 100])
+            rules_table = Table(rules_rows, colWidths=[220, 150, 80, 90])
             rules_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#cbd5e1")),
                 ('PADDING', (0, 0), (-1, -1), 6),
