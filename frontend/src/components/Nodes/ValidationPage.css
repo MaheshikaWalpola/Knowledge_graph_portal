@@ -97,6 +97,14 @@
   flex: 1;
   min-width: 100px;
   text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--transition-fast);
+}
+
+.validation-stepper-step:hover .validation-stepper-circle {
+  transform: scale(1.08);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
 }
 
 .validation-stepper-circle {

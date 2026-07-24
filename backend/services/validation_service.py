@@ -657,14 +657,31 @@ class ValidationService:
         story.append(Paragraph("Validation & Compliance Audit Report", style_title))
         story.append(Paragraph("Knowledge Graph Quality Assurance Engine • SHACL Constraint Verification", style_subtitle))
 
-        # Metadata Strip Table (Total Printable Width = 534 pt)
+        # Dynamic conformance calculation based on actual rule and violation status
         rules = report_data.get("rules", [])
         violations = report_data.get("violations", [])
         total_q = report_data.get("total_questions", len(rules))
         passed_q = report_data.get("passed_questions", sum(1 for r in rules if r.get("status") == "Pass"))
         failed_q = report_data.get("failed_questions", total_q - passed_q)
         total_triples = report_data.get("total_triples", 0)
+        
+        conforms = report_data.get("conforms", failed_q == 0 and len(violations) == 0)
+        if conforms or (failed_q == 0 and len(violations) == 0):
+            exec_status = "Completed"
+            conform_status = "Conformant"
+            gate_dec = "Pass"
+            violation_cnt = 0
+            warning_cnt = 0
+            affected_fn = 0
+        else:
+            exec_status = report_data.get("execution_status", "Completed")
+            conform_status = "Non-Conformant"
+            violation_cnt = report_data.get("violation_count", len(violations))
+            warning_cnt = report_data.get("warning_count", 0)
+            affected_fn = report_data.get("affected_focus_nodes", len(set(v.get("focus_node", "") for v in violations if v.get("focus_node"))))
+            gate_dec = "Fail" if violation_cnt > 0 or failed_q > 0 else "Conditional"
 
+        pass_rate = round((passed_q / total_q * 100), 1) if total_q > 0 else 100.0
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M UTC")
 
         meta_data = [
@@ -672,7 +689,7 @@ class ValidationService:
                 Paragraph(f"<b>Generated:</b> {now_str}", style_body),
                 Paragraph(f"<b>Triples Evaluated:</b> {total_triples:,}", style_body),
                 Paragraph(f"<b>Rules Tested:</b> {total_q}", style_body),
-                Paragraph(f"<b>Pass Rate:</b> {report_data.get('pass_percentage', 0)}%", style_body)
+                Paragraph(f"<b>Pass Rate:</b> {pass_rate}%", style_body)
             ]
         ]
         meta_table = Table(meta_data, colWidths=[140, 130, 130, 134])
@@ -685,95 +702,33 @@ class ValidationService:
         story.append(meta_table)
         story.append(Spacer(1, 10))
 
-        # 2. Executive KPI Summary Cards (Flat 4-Row Table Grid)
-        exec_status = report_data.get("execution_status", "Completed")
-        conform_status = report_data.get("conformance_status", "Non-Conformant" if failed_q > 0 else "Conformant")
-        gate_dec = report_data.get("gate_decision", "Pass" if failed_q == 0 else "Fail")
-        violation_cnt = report_data.get("violation_count", report_data.get("total_violations", len(violations)))
-        warning_cnt = report_data.get("warning_count", 0)
-        affected_fn = report_data.get("affected_focus_nodes", 0)
+        # 2. Executive Audit Metrics (Row-by-Row Raw List Format)
+        story.append(Paragraph("Executive Audit Metrics", style_h2))
 
         gate_color = c_success if gate_dec == "Pass" else (c_warning if gate_dec == "Conditional" else c_danger)
-        gate_bg = c_success_bg if gate_dec == "Pass" else (c_warning_bg if gate_dec == "Conditional" else c_danger_bg)
-        gate_border = c_success_border if gate_dec == "Pass" else (c_warning_border if gate_dec == "Conditional" else c_danger_border)
-
         conform_color = c_success if conform_status == "Conformant" else c_danger
-        conform_bg = c_success_bg if conform_status == "Conformant" else c_danger_bg
-        conform_border = c_success_border if conform_status == "Conformant" else c_danger_border
-
         viol_color = c_danger if violation_cnt > 0 else c_success
-        viol_bg = c_danger_bg if violation_cnt > 0 else c_success_bg
-        viol_border = c_danger_border if violation_cnt > 0 else c_success_border
-
         warn_color = c_warning if warning_cnt > 0 else c_success
-        warn_bg = c_warning_bg if warning_cnt > 0 else c_success_bg
-        warn_border = c_warning_border if warning_cnt > 0 else c_success_border
-
         fn_color = c_danger if affected_fn > 0 else c_success
-        fn_bg = c_danger_bg if affected_fn > 0 else c_success_bg
-        fn_border = c_danger_border if affected_fn > 0 else c_success_border
 
-        kpi_table_data = [
-            [
-                Paragraph(f"<font color='{c_success.hexval()}'><b>{exec_status}</b></font>", style_kpi_val),
-                Paragraph(f"<font color='{conform_color.hexval()}'><b>{conform_status}</b></font>", style_kpi_val),
-                Paragraph(f"<font color='{gate_color.hexval()}'><b>{gate_dec}</b></font>", style_kpi_val),
-            ],
-            [
-                Paragraph("EXECUTION STATUS", style_kpi_lbl),
-                Paragraph("CONFORMANCE STATUS", style_kpi_lbl),
-                Paragraph("GATE DECISION", style_kpi_lbl),
-            ],
-            [
-                Paragraph(f"<font color='{viol_color.hexval()}'><b>{violation_cnt}</b></font>", style_kpi_val),
-                Paragraph(f"<font color='{warn_color.hexval()}'><b>{warning_cnt}</b></font>", style_kpi_val),
-                Paragraph(f"<font color='{fn_color.hexval()}'><b>{affected_fn}</b></font>", style_kpi_val),
-            ],
-            [
-                Paragraph("VIOLATION COUNT", style_kpi_lbl),
-                Paragraph("WARNING COUNT", style_kpi_lbl),
-                Paragraph("AFFECTED FOCUS-NODES", style_kpi_lbl),
-            ],
+        summary_rows = [
+            [Paragraph("<b>Execution Status:</b>", style_body), Paragraph(f"<font color='{c_success.hexval()}'><b>{exec_status}</b></font>", style_body)],
+            [Paragraph("<b>Conformance Status:</b>", style_body), Paragraph(f"<font color='{conform_color.hexval()}'><b>{conform_status}</b></font>", style_body)],
+            [Paragraph("<b>Gate Decision:</b>", style_body), Paragraph(f"<font color='{gate_color.hexval()}'><b>{gate_dec}</b></font>", style_body)],
+            [Paragraph("<b>Violation Count:</b>", style_body), Paragraph(f"<font color='{viol_color.hexval()}'><b>{violation_cnt:,}</b></font>", style_body)],
+            [Paragraph("<b>Warning Count:</b>", style_body), Paragraph(f"<font color='{warn_color.hexval()}'><b>{warning_cnt:,}</b></font>", style_body)],
+            [Paragraph("<b>Affected Focus-Nodes:</b>", style_body), Paragraph(f"<font color='{fn_color.hexval()}'><b>{affected_fn:,}</b></font>", style_body)],
         ]
 
-        # Total width = 534 pt (178 x 3)
-        kpi_table = Table(kpi_table_data, colWidths=[178, 178, 178])
-        kpi_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        summary_list_table = Table(summary_rows, colWidths=[150, 384])
+        summary_list_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), c_bg_light),
+            ('LINEBELOW', (0, 0), (-1, -2), 0.5, colors.HexColor("#f1f5f9")),
+            ('BOX', (0, 0), (-1, -1), 0.75, c_border),
+            ('PADDING', (0, 0), (-1, -1), 6),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-
-            # Row 0 & 1 Backgrounds & Borders
-            ('BACKGROUND', (0, 0), (0, 1), c_success_bg),
-            ('BOX', (0, 0), (0, 1), 0.75, c_success_border),
-
-            ('BACKGROUND', (1, 0), (1, 1), conform_bg),
-            ('BOX', (1, 0), (1, 1), 0.75, conform_border),
-
-            ('BACKGROUND', (2, 0), (2, 1), gate_bg),
-            ('BOX', (2, 0), (2, 1), 0.75, gate_border),
-
-            # Row 2 & 3 Backgrounds & Borders
-            ('BACKGROUND', (0, 2), (0, 3), viol_bg),
-            ('BOX', (0, 2), (0, 3), 0.75, viol_border),
-
-            ('BACKGROUND', (1, 2), (1, 3), warn_bg),
-            ('BOX', (1, 2), (1, 3), 0.75, warn_border),
-
-            ('BACKGROUND', (2, 2), (2, 3), fn_bg),
-            ('BOX', (2, 2), (2, 3), 0.75, fn_border),
-
-            # Padding setup
-            ('TOPPADDING', (0, 0), (-1, 0), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 1),
-            ('TOPPADDING', (0, 1), (-1, 1), 1),
-            ('BOTTOMPADDING', (0, 1), (-1, 1), 6),
-
-            ('TOPPADDING', (0, 2), (-1, 2), 6),
-            ('BOTTOMPADDING', (0, 2), (-1, 2), 1),
-            ('TOPPADDING', (0, 3), (-1, 3), 1),
-            ('BOTTOMPADDING', (0, 3), (-1, 3), 6),
         ]))
-        story.append(kpi_table)
+        story.append(summary_list_table)
         story.append(Spacer(1, 10))
 
         # 3. Overall Compliance Summary Callout Box

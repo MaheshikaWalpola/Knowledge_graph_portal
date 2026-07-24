@@ -48,6 +48,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 
 import "./ValidationPage.css";
 
@@ -188,6 +189,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const schemaInputRef = useRef(null);
   const instanceInputRef = useRef(null);
   const combinedInputRef = useRef(null);
+  const shaclFileInputRef = useRef(null);
 
   //  File helpers 
   const readFileAsText = (file) =>
@@ -196,6 +198,26 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
       reader.onload = (e) => resolve(e.target.result);
       reader.readAsText(file);
     });
+
+  const handleShaclFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await readFileAsText(file);
+    setPlaygroundShaclText(text);
+    setShaclCode(text);
+    setSuccess(`Loaded SHACL shape file: ${file.name}`);
+    e.target.value = "";
+  };
+
+  const handleStepClick = (stepIdx) => {
+    if (stepIdx === 3) {
+      handleProceedToPlayground();
+    } else {
+      setActiveStep(stepIdx);
+      setError(null);
+      setSuccess(null);
+    }
+  };
 
   const handleSchemaFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -439,7 +461,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
       // Store display previews (to prevent browser crash)
       setPlaygroundSchemaText(getDisplayPreview(schemaFileText || ""));
       setPlaygroundInstancesText(getDisplayPreview(instanceFileText || ""));
-      setPlaygroundShaclText(shaclCode || "");
+      setPlaygroundShaclText(prev => prev || shaclCode || "");
       
       setSuccess(null);
       setError(null);
@@ -638,7 +660,12 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
           <div className="validation-stepper">
             <div className="validation-stepper-steps">
               {STEPS.map((label, idx) => (
-                <div key={label} className={`validation-stepper-step ${activeStep === idx ? "active" : ""} ${activeStep > idx ? "completed" : ""}`}>
+                <div 
+                  key={label} 
+                  className={`validation-stepper-step ${activeStep === idx ? "active" : ""} ${activeStep > idx ? "completed" : ""}`}
+                  onClick={() => handleStepClick(idx)}
+                  title={`Go to ${label}`}
+                >
                   <div className="validation-stepper-circle">{idx + 1}</div>
                   <p className="validation-stepper-label">{label}</p>
                 </div>
@@ -954,9 +981,28 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 {/* SHACL Shapes — Full Width Code Editor */}
                 <Card variant="outlined" sx={{ mb: 2 }}>
                   <CardContent sx={{ pb: '16px !important' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                      SHACL Shapes (.ttl)
-                    </Typography>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        SHACL Shapes (.ttl)
+                      </Typography>
+                      <Box sx={{ display: "flex", gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<CloudUploadIcon />}
+                          onClick={() => shaclFileInputRef.current?.click()}
+                        >
+                          Upload Existing SHACL File (.ttl)
+                        </Button>
+                        <input
+                          ref={shaclFileInputRef}
+                          type="file"
+                          accept=".ttl,.rdf,.owl"
+                          onChange={handleShaclFileUpload}
+                          style={{ display: "none" }}
+                        />
+                      </Box>
+                    </Box>
                     <TextField
                       multiline
                       rows={18}
@@ -965,6 +1011,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       value={playgroundShaclText}
                       onChange={(e) => setPlaygroundShaclText(e.target.value)}
                       InputProps={{ className: "validation-code-area" }}
+                      placeholder="# Upload or paste your existing SHACL shapes (.ttl) here..."
                     />
                   </CardContent>
                 </Card>
@@ -1348,29 +1395,56 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
             </Button>
 
             {activeStep === 0 && inputMode === "ai" && (
-              <Button
-                variant="contained"
-                onClick={handleGenerateQuestions}
-                disabled={loading || (!schemaFile && !instanceFile && !combinedFile)}
-              >
-                {loading ? <CircularProgress size={24} /> : "Generate Questions"}
-              </Button>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  endIcon={<NavigateNextIcon />}
+                  onClick={handleProceedToPlayground}
+                >
+                  Skip to Playground
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleGenerateQuestions}
+                  disabled={loading || (!schemaFile && !instanceFile && !combinedFile)}
+                >
+                  {loading ? <CircularProgress size={24} /> : "Generate Questions"}
+                </Button>
+              </Box>
             )}
 
             {activeStep === 0 && inputMode === "manual" && (
-              <Button variant="contained" onClick={handleManualSubmit} disabled={!manualQuestionsText.trim()}>
-                Proceed with Questions
-              </Button>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  endIcon={<NavigateNextIcon />}
+                  onClick={handleProceedToPlayground}
+                >
+                  Skip to Playground
+                </Button>
+                <Button variant="contained" onClick={handleManualSubmit} disabled={!manualQuestionsText.trim()}>
+                  Proceed with Questions
+                </Button>
+              </Box>
             )}
 
             {activeStep === 1 && (
-              <Button variant="contained" onClick={handleGenerateSHACL} disabled={loading || selectedCount === 0}>
-                {loading ? <CircularProgress size={24} /> : `Generate SHACL (${selectedCount} questions)`}
-              </Button>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  endIcon={<NavigateNextIcon />}
+                  onClick={handleProceedToPlayground}
+                >
+                  Skip to Playground
+                </Button>
+                <Button variant="contained" onClick={handleGenerateSHACL} disabled={loading || selectedCount === 0}>
+                  {loading ? <CircularProgress size={24} /> : `Generate SHACL (${selectedCount} questions)`}
+                </Button>
+              </Box>
             )}
 
             {activeStep === 2 && (
-              <Button variant="contained" onClick={handleProceedToPlayground} disabled={loading}>
+              <Button variant="contained" onClick={handleProceedToPlayground} disabled={loading} endIcon={<NavigateNextIcon />}>
                 Proceed to Playground
               </Button>
             )}
