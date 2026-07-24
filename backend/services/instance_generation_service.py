@@ -256,33 +256,55 @@ def build_instances_from_csvs(
         lot_col = None
         recipe_col = None
 
+        # Priority 1 & 2 for wafer_col: Explicit mapping or exact standard header
         for col in df.columns:
             col_strip = col.strip()
             col_lower = col_strip.lower()
             mapped = (mappings.get(col_strip) if mappings else None) or altlabel_map.get(col_strip) or altlabel_map.get(col_strip.upper()) or ""
             mapped_lower = mapped.lower()
 
-            if "wafer" in col_lower or "wafer" in mapped_lower:
+            if mapped_lower in ("haswaferid", "waferid", "haswafer"):
                 wafer_col = col
-            elif "machine" in col_lower or "tool" in col_lower or "machine" in mapped_lower or "tool" in mapped_lower:
+                break
+            if col_lower in ("wafer_id", "waferid", "wafer"):
+                wafer_col = col
+
+        # Priority 3 for wafer_col: Substring matching excluding fractional/numeric headers like wafer_17.20930233
+        if wafer_col is None:
+            for col in df.columns:
+                col_strip = col.strip()
+                col_lower = col_strip.lower()
+                mapped = (mappings.get(col_strip) if mappings else None) or altlabel_map.get(col_strip) or altlabel_map.get(col_strip.upper()) or ""
+                mapped_lower = mapped.lower()
+
+                if ("wafer_id" in col_lower or "waferid" in col_lower or "wafer" in col_lower or "wafer" in mapped_lower) and not re.search(r"wafer_\d+\.\d+", col_lower):
+                    wafer_col = col
+                    break
+
+        # Other context columns
+        for col in df.columns:
+            col_strip = col.strip()
+            col_lower = col_strip.lower()
+            mapped = (mappings.get(col_strip) if mappings else None) or altlabel_map.get(col_strip) or altlabel_map.get(col_strip.upper()) or ""
+            mapped_lower = mapped.lower()
+
+            if machine_col is None and ("machine" in col_lower or "tool" in col_lower or "machine" in mapped_lower or "tool" in mapped_lower):
                 machine_col = col
-            elif "stage" in col_lower or "stage" in mapped_lower:
+            elif stage_col is None and ("stage" in col_lower or "stage" in mapped_lower):
                 stage_col = col
-            elif "chamber" in col_lower or "chamber" in mapped_lower:
+            elif chamber_col is None and ("chamber" in col_lower or "chamber" in mapped_lower):
                 chamber_col = col
             elif "timestamp" in col_lower or "time" in col_lower or "timestamp" in mapped_lower:
                 if time_col is None or len(col_lower) < len(time_col.lower()):
                     time_col = col
-            elif "lot" in col_lower or "lot" in mapped_lower:
+            elif lot_col is None and ("lot" in col_lower or "lot" in mapped_lower):
                 lot_col = col
-            elif "recipe" in col_lower or "recipe" in mapped_lower:
+            elif recipe_col is None and ("recipe" in col_lower or "recipe" in mapped_lower):
                 recipe_col = col
 
         # Dynamic Mode Detection — Process CSV vs Entity CSV
-        is_entity_file = wafer_col is None and not any(
-            altlabel_map.get(c.strip()) in observable_property_classes or _local_name_from_header(c.strip()) in observable_property_classes
-            for c in df.columns
-        )
+        # Step 3 fix: A CSV without a WAFER_ID column is processed in entity-file mode (not skipped row-by-row)
+        is_entity_file = (wafer_col is None)
         is_process_csv = not is_entity_file
 
         skipped_rows_file = 0
@@ -424,7 +446,8 @@ def build_instances_from_csvs(
                 created_steps.add(step_key)
                 g.add((step_uri, RDF.type, ONT.PolishingStep if "PolishingStep" in classes else ONT.ProcessStep))
                 g.add((step_uri, ONT.stageLabel, Literal(stage, datatype=XSD.string)))
-                g.add((step_uri, ONT.actsOn, wafer_uri))
+                g.add((step_uri, ONT.hasInput, wafer_uri))
+                g.add((step_uri, ONT.hasOutput, wafer_uri))
                 g.add((step_uri, ONT.executedOn, machine_uri))
 
             # Timestamp parsing (Step 7: omit if missing/zero)

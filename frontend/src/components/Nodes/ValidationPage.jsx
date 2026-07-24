@@ -68,7 +68,7 @@ const SAMPLE_INSTANCES = `@prefix cmpo: <https://tucid/cmpo/> .
 
 inst:CMPProcess_2_100 a cmpo:CMPProcess ;
     rdfs:label "CMP Process 2 (row 100)" ;
-    cmpo:actsOn inst:Wafer_2981014422 ;
+    cmpo:hasInput inst:Wafer_2981014422 ;
     cmpo:hasCMPToolComponent inst:Chamber_4 ;
     cmpo:hasTimestamp "1985-05-19T23:01:54.667000"^^xsd:dateTime ;
     cmpo:hasInputParameter inst:Pressure_2_100_CENTER_AIR_BAG_PRESSURE .

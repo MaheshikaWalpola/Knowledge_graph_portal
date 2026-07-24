@@ -15,9 +15,9 @@ cmpo:CMPProcessShape a sh:NodeShape ;
         sh:message "Every CMP Process run must have a valid measurement timestamp (xsd:dateTime)." ;
     ] ;
     sh:property [
-        sh:path cmpo:actsOn ;
+        sh:path cmpo:hasInput ;
         sh:minCount 1 ;
-        sh:message "Every CMP Process must act on at least one Wafer." ;
+        sh:message "Every CMP Process must act on at least one Wafer via hasInput." ;
     ] ;
     sh:property [
         sh:path cmpo:hasCMPToolComponent ;
