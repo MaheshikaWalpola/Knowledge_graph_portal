@@ -64,6 +64,9 @@ class ValidationService:
             return ""
         iri_str = str(iri)
         mappings = {
+            "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/": "inst:",
+            "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#": "cmpo:",
+            "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/": "cmpo:",
             "https://tucid/cmpo/instance/": "inst:",
             "https://tucid/cmpo/": "cmpo:",
             "http://www.w3.org/1999/02/22-rdf-syntax-ns#": "rdf:",
@@ -177,8 +180,8 @@ class ValidationService:
             "   @prefix sh: <http://www.w3.org/ns/shacl#> .\n"
             "   @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
             "   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
-            "   @prefix cmpo: <https://tucid/cmpo/> .\n"
-            "   @prefix inst: <https://tucid/cmpo/instance/> .\n"
+            "   @prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n"
+            "   @prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n"
             "3. Structure your shapes correctly. A `sh:NodeShape` targets a class (e.g. `sh:targetClass cmpo:Pressure`).\n"
             "   CRITICAL ERROR PREVENTION: A shape defined as a `sh:NodeShape` cannot be the subject of a `sh:path` predicate. "
             "   Always nest the path and constraint details inside `sh:property [ sh:path ... ]` block. For example:\n"
@@ -243,8 +246,8 @@ class ValidationService:
                 "   @prefix sh: <http://www.w3.org/ns/shacl#> .\n"
                 "   @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
                 "   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
-                "   @prefix cmpo: <https://tucid/cmpo/> .\n"
-                "   @prefix inst: <https://tucid/cmpo/instance/> .\n"
+                "   @prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n"
+                "   @prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n"
                 f"3. Name the shape URI specifically like `inst:Question_{index+1}_Shape` or similar.\n"
                 f"4. Include `rdfs:label \"{clean_rule_str}\" ;` on the shape so the exact plain English rule/question is attached to the shape.\n"
                 "5. Structure your shapes correctly. A `sh:NodeShape` targets a class (e.g. `sh:targetClass cmpo:Pressure`).\n"
@@ -317,8 +320,8 @@ class ValidationService:
                 g.bind("sh", Namespace("http://www.w3.org/ns/shacl#"))
                 g.bind("xsd", Namespace("http://www.w3.org/2001/XMLSchema#"))
                 g.bind("rdfs", Namespace("http://www.w3.org/2000/01/rdf-schema#"))
-                g.bind("cmpo", Namespace("https://tucid/cmpo/"))
-                g.bind("inst", Namespace("https://tucid/cmpo/instance/"))
+                g.bind("cmpo", Namespace("https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#"))
+                g.bind("inst", Namespace("https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/"))
                 
                 final_ttl = g.serialize(format="turtle")
             except Exception as ser_err:

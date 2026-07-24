@@ -1,8 +1,8 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix cmpo: <https://tucid/cmpo/> .
-@prefix inst: <https://tucid/cmpo/instance/> .
+@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .
+@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .
 
 # 1. CMP Process Shape
 cmpo:CMPProcessShape a sh:NodeShape ;

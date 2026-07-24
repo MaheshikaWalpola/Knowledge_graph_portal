@@ -83,8 +83,8 @@ def _infer_unit(header: str) -> str:
     return ""
 
 
-DEFAULT_CMPO_NS = "https://tucid/cmpo/"
-DEFAULT_INST_NS = "https://tucid/cmpo/instance/"
+DEFAULT_CMPO_NS = "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#"
+DEFAULT_INST_NS = "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/"
 
 WELL_KNOWN_NAMESPACES = {
     "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
