@@ -83,19 +83,87 @@ def _infer_unit(header: str) -> str:
     return ""
 
 
+DEFAULT_CMPO_NS = "https://tucid/cpmo/"
+DEFAULT_INST_NS = "https://tucid/cpmo/instance/"
+
+WELL_KNOWN_NAMESPACES = {
+    "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "http://www.w3.org/2000/01/rdf-schema#",
+    "http://www.w3.org/2002/07/owl#",
+    "http://www.w3.org/2001/XMLSchema#",
+    "http://www.w3.org/ns/shacl#",
+    "http://www.w3.org/2004/02/skos/core#",
+    "http://purl.org/dc/elements/1.1/",
+    "http://purl.org/dc/terms/",
+}
+
+
+def extract_primary_namespace(schema_bytes: bytes) -> tuple[str, str]:
+    """
+    Parse schema RDF, find the primary domain ontology namespace from subject & object URIs.
+    Returns (ontology_ns, instance_ns).
+    """
+    if not schema_bytes:
+        return DEFAULT_CMPO_NS, DEFAULT_INST_NS
+
+    try:
+        g = Graph()
+        try:
+            g.parse(data=schema_bytes, format="turtle")
+        except Exception:
+            g.parse(data=schema_bytes)
+
+        ns_counter = {}
+        for s, p, o in g:
+            for term in (s, o):
+                if hasattr(term, "startswith") and str(term).startswith("http"):
+                    uri = str(term)
+                    if "#" in uri:
+                        ns = uri.rsplit("#", 1)[0] + "#"
+                    elif "/" in uri:
+                        ns = uri.rsplit("/", 1)[0] + "/"
+                    else:
+                        continue
+                    if ns not in WELL_KNOWN_NAMESPACES:
+                        ns_counter[ns] = ns_counter.get(ns, 0) + 1
+
+        if not ns_counter:
+            return DEFAULT_CMPO_NS, DEFAULT_INST_NS
+
+        primary_ns = max(ns_counter, key=ns_counter.get)
+
+        if primary_ns.endswith("#"):
+            base = primary_ns.rstrip("#")
+            instance_ns = base + "/instance/"
+        else:
+            instance_ns = primary_ns.rstrip("/") + "/instance/"
+
+        return primary_ns, instance_ns
+    except Exception as e:
+        print(f"[WARNING] Could not extract namespace from schema: {e}")
+        return DEFAULT_CMPO_NS, DEFAULT_INST_NS
+
+
 def build_instances_from_csvs(
     files: List[bytes],
     filenames: List[str],
     user_key: str,
     schema_id: str,
     mappings: Dict[str, str] = None,
+    schema_bytes: bytes = None,
 ) -> InstanceBuildResult:
     """
     Generate RDF instance file from CSVs matching the style of Instances_v2.ttl.
+    Dynamically extracts ontology and instance namespaces from schema_bytes if provided.
     """
 
-    CMPO = Namespace("https://tucid/cpmo/")
-    INST = Namespace("https://tucid/cpmo/instance/")
+    if schema_bytes:
+        cmpo_ns_str, inst_ns_str = extract_primary_namespace(schema_bytes)
+    else:
+        cmpo_ns_str, inst_ns_str = DEFAULT_CMPO_NS, DEFAULT_INST_NS
+
+    CMPO = Namespace(cmpo_ns_str)
+    INST = Namespace(inst_ns_str)
 
     g = Graph()
     g.bind("cmpo", CMPO)
