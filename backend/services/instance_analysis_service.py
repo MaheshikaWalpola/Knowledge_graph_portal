@@ -3,21 +3,37 @@ Instance Analysis Service
 
 Handles:
 - Extracting schema terms from RDF files
+- Extracting schema structure (classes, properties, SOSA patterns)
 - Analyzing CSV headers
-- Matching CSV headers to schema terms using AI service
+- Matching CSV headers to schema terms using AI service or skos:altLabel
 - Generating matching reports
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Set, Optional
 from io import BytesIO
 import pandas as pd
-from rdflib import Graph, Namespace
+from rdflib import Graph, Namespace, URIRef
+from rdflib.namespace import RDF, RDFS, OWL, XSD, SKOS
 import json
 
 from core.config import settings
 from services.llm_matching_service import get_llm_matching_suggestions
 from services.local_llm_service import LocalLLMService
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Standard W3C namespace URIs used for generic detection
+SOSA = Namespace("http://www.w3.org/ns/sosa/")
+SSN = Namespace("http://www.w3.org/ns/ssn/")
+
+
+def _get_local_name(uri: str) -> str:
+    """Extract the local name from a URI (after # or last /)."""
+    uri_str = str(uri)
+    if "#" in uri_str:
+        return uri_str.rsplit("#", 1)[-1]
+    elif "/" in uri_str:
+        return uri_str.rsplit("/", 1)[-1]
+    return uri_str
 
 
 def extract_schema_terms(rdf_content: bytes) -> List[str]:
@@ -44,6 +60,176 @@ def extract_schema_terms(rdf_content: bytes) -> List[str]:
     return sorted(list(terms))
 
 
+def extract_schema_model(rdf_content: bytes) -> Dict[str, Any]:
+    """
+    Parse any OWL/RDFS schema and extract its full structure.
+    Returns a generic model with no domain-specific assumptions.
+
+    Detects:
+    - classes vs properties (using owl:Class, rdfs:Class, owl:*Property, rdf:Property)
+    - SOSA observation pattern (subClassOf sosa:Observation)
+    - Observable property classes (subClassOf sosa:ObservableProperty)
+    - Feature of interest classes (subClassOf sosa:FeatureOfInterest)
+    - Platform classes (subClassOf sosa:Platform)
+    - skos:altLabel mappings (CSV header -> schema term)
+    - Property domains and ranges
+    - Primary namespace
+    """
+    result = {
+        "namespace": None,
+        "classes": set(),
+        "properties": set(),
+        "object_properties": set(),
+        "datatype_properties": set(),
+        "observation_class": None,
+        "observable_property_classes": set(),
+        "feature_of_interest_classes": set(),
+        "platform_classes": set(),
+        "altlabel_map": {},
+        "property_domains": {},
+        "property_ranges": {},
+        "class_iris": {},
+        "property_iris": {},
+    }
+
+    if not rdf_content:
+        return result
+
+    try:
+        g = Graph()
+        try:
+            g.parse(data=rdf_content, format="turtle")
+        except Exception:
+            g.parse(data=rdf_content)
+    except Exception as e:
+        print(f"[WARNING] Could not parse schema for model extraction: {e}")
+        return result
+
+    # --- Extract primary namespace ---
+    from services.instance_generation_service import extract_primary_namespace, WELL_KNOWN_NAMESPACES
+    ns_str, _ = extract_primary_namespace(rdf_content)
+    result["namespace"] = ns_str
+
+    # --- Classify terms: classes vs properties ---
+    class_types = {OWL.Class, RDFS.Class}
+    property_types = {OWL.ObjectProperty, OWL.DatatypeProperty, RDF.Property}
+
+    for s, p, o in g.triples((None, RDF.type, None)):
+        local = _get_local_name(s)
+        if not local:
+            continue
+
+        if o in class_types:
+            result["classes"].add(local)
+            result["class_iris"][local] = str(s)
+        elif o in property_types:
+            result["properties"].add(local)
+            result["property_iris"][local] = str(s)
+            if o == OWL.ObjectProperty:
+                result["object_properties"].add(local)
+            elif o == OWL.DatatypeProperty:
+                result["datatype_properties"].add(local)
+
+    # --- Walk subClassOf chains to detect SOSA patterns ---
+    # Build a parent map: child_uri -> set of parent_uris (transitive)
+    direct_parents = {}
+    for s, p, o in g.triples((None, RDFS.subClassOf, None)):
+        s_str, o_str = str(s), str(o)
+        if s_str not in direct_parents:
+            direct_parents[s_str] = set()
+        direct_parents[s_str].add(o_str)
+
+    def get_all_ancestors(uri: str, visited: set = None) -> set:
+        """Get all transitive ancestors via rdfs:subClassOf."""
+        if visited is None:
+            visited = set()
+        if uri in visited:
+            return set()
+        visited.add(uri)
+        ancestors = set()
+        for parent in direct_parents.get(uri, set()):
+            ancestors.add(parent)
+            ancestors |= get_all_ancestors(parent, visited)
+        return ancestors
+
+    sosa_observation_uri = str(SOSA.Observation)
+    sosa_observable_prop_uri = str(SOSA.ObservableProperty)
+    sosa_foi_uri = str(SOSA.FeatureOfInterest)
+    sosa_platform_uri = str(SOSA.Platform)
+
+    for local, iri in result["class_iris"].items():
+        ancestors = get_all_ancestors(iri)
+        if sosa_observation_uri in ancestors:
+            # First observation class found becomes the observation class
+            if result["observation_class"] is None:
+                result["observation_class"] = local
+        if sosa_observable_prop_uri in ancestors:
+            result["observable_property_classes"].add(local)
+        if sosa_foi_uri in ancestors:
+            result["feature_of_interest_classes"].add(local)
+        if sosa_platform_uri in ancestors:
+            result["platform_classes"].add(local)
+
+    # --- Extract skos:altLabel mappings ---
+    # Maps altLabel string (e.g., "SLURRY_FLOW_LINE_A") -> schema term local name
+    for s, p, o in g.triples((None, SKOS.altLabel, None)):
+        label_str = str(o).strip()
+        local = _get_local_name(s)
+        if label_str and local:
+            result["altlabel_map"][label_str] = local
+
+    # --- Extract property domains and ranges ---
+    for s, p, o in g.triples((None, RDFS.domain, None)):
+        local = _get_local_name(s)
+        if local:
+            result["property_domains"][local] = _get_local_name(o)
+
+    for s, p, o in g.triples((None, RDFS.range, None)):
+        local = _get_local_name(s)
+        if local:
+            result["property_ranges"][local] = _get_local_name(o)
+
+    # Convert sets to sorted lists for JSON serialization
+    for key in ["classes", "properties", "object_properties", "datatype_properties",
+                "observable_property_classes", "feature_of_interest_classes", "platform_classes"]:
+        result[key] = sorted(result[key])
+
+    print(f"[SCHEMA MODEL] namespace={result['namespace']}")
+    print(f"[SCHEMA MODEL] classes={len(result['classes'])}, properties={len(result['properties'])}")
+    print(f"[SCHEMA MODEL] observation_class={result['observation_class']}")
+    print(f"[SCHEMA MODEL] observable_property_classes={len(result['observable_property_classes'])}")
+    print(f"[SCHEMA MODEL] altlabel_map entries={len(result['altlabel_map'])}")
+
+    return result
+
+
+def extract_altlabel_map(rdf_content: bytes) -> Dict[str, str]:
+    """
+    Extract skos:altLabel -> local term name mappings from any schema.
+    Returns a dict mapping label strings to schema term local names.
+    This is a lightweight version of extract_schema_model for matching only.
+    """
+    if not rdf_content:
+        return {}
+    try:
+        g = Graph()
+        try:
+            g.parse(data=rdf_content, format="turtle")
+        except Exception:
+            g.parse(data=rdf_content)
+
+        altlabel_map = {}
+        for s, p, o in g.triples((None, SKOS.altLabel, None)):
+            label_str = str(o).strip()
+            local = _get_local_name(s)
+            if label_str and local:
+                altlabel_map[label_str] = local
+        return altlabel_map
+    except Exception as e:
+        print(f"[WARNING] Could not extract altLabels: {e}")
+        return {}
+
+
 def extract_csv_headers(csv_files: List[bytes], filenames: List[str]) -> List[str]:
     """
     Extract headers from all CSV files.
@@ -64,9 +250,10 @@ def extract_csv_headers(csv_files: List[bytes], filenames: List[str]) -> List[st
 def match_headers_to_schema(
     data_headers: List[str],
     schema_terms: List[str],
+    altlabel_map: Dict[str, str] = None,
 ) -> Dict[str, Any]:
     """
-    Use AI service to match CSV headers to schema terms.
+    Use skos:altLabel (if available), then AI service to match CSV headers to schema terms.
     Returns a dictionary with:
     - matched_headers: {data_header: schema_term}
     - unmatched_data_headers: [headers without matches]
@@ -84,25 +271,46 @@ def match_headers_to_schema(
     matched = {}
     matching_method = "LLM"
 
-    # Try to use LLM service for intelligent matching
-    try:
-        print("[INFO] Attempting intelligent matching using LLM service...")
-        matched = get_llm_matching_suggestions(data_headers, schema_terms)
-        if not matched:
-            print("[INFO] LLM matching returned empty results. Falling back to simple heuristic matching...")
-            matched = _fallback_simple_matching(data_headers, schema_terms)
+    # Step 0: Check altlabel_map (exact altLabel matches from schema)
+    unmatched_headers = []
+    if altlabel_map:
+        for header in data_headers:
+            header_str = header.strip()
+            if header_str in altlabel_map:
+                matched[header] = altlabel_map[header_str]
+            elif header_str.upper() in altlabel_map:
+                matched[header] = altlabel_map[header_str.upper()]
+            else:
+                unmatched_headers.append(header)
+    else:
+        unmatched_headers = list(data_headers)
+
+    if len(matched) == len(data_headers):
+        matching_method = "skos:altLabel Schema Grounding"
+    elif unmatched_headers:
+        # Try to use LLM service for intelligent matching on remaining unmatched headers
+        try:
+            print(f"[INFO] Attempting intelligent matching using LLM service for {len(unmatched_headers)} headers...")
+            llm_matched = get_llm_matching_suggestions(unmatched_headers, schema_terms)
+            if llm_matched:
+                matched.update(llm_matched)
+                print(f"[INFO] LLM matching succeeded. Matched {len(llm_matched)} headers.")
+                matching_method = "skos:altLabel + LLM" if matched else "LLM"
+            else:
+                print("[INFO] LLM matching returned empty results. Falling back to simple heuristic matching...")
+                fallback_matched = _fallback_simple_matching(unmatched_headers, schema_terms)
+                matched.update(fallback_matched)
+                matching_method = "skos:altLabel + Fallback Heuristics" if matched else "Fallback Heuristics"
+        except Exception as e:
+            # Fallback to simple string matching if LLM fails
+            print(f"[WARNING] LLM matching failed with exception, using fallback: {str(e)}")
+            fallback_matched = _fallback_simple_matching(unmatched_headers, schema_terms)
+            matched.update(fallback_matched)
             matching_method = "Fallback Heuristics"
-        else:
-            print(f"[INFO] LLM matching succeeded. Matched {len(matched)} headers.")
-    except Exception as e:
-        # Fallback to simple string matching if LLM fails
-        print(f"[WARNING] LLM matching failed with exception, using fallback: {str(e)}")
-        matched = _fallback_simple_matching(data_headers, schema_terms)
-        matching_method = "Fallback Heuristics"
 
     # Find unmatched headers
     matched_headers = set(matched.keys())
-    unmatched_data = [h for h in data_headers if h not in matched_headers]
+    final_unmatched_data = [h for h in data_headers if h not in matched_headers]
 
     # Find missing schema terms
     matched_terms = set(matched.values())
@@ -110,7 +318,7 @@ def match_headers_to_schema(
 
     return {
         "matched_headers": matched,
-        "unmatched_data_headers": unmatched_data,
+        "unmatched_data_headers": final_unmatched_data,
         "missing_schema_terms": missing_terms,
         "available_schema_terms": schema_terms,
         "matching_method": matching_method,
@@ -174,13 +382,14 @@ def analyze_schema_and_data(
     Main analysis function that:
     1. Extracts schema terms from RDF
     2. Extracts headers from CSVs
-    3. Matches them using AI
+    3. Matches them using skos:altLabel or AI
     4. Returns full analysis report
     """
 
     try:
-        # Step 1: Extract schema terms
+        # Step 1: Extract schema terms & altlabel map
         schema_terms = extract_schema_terms(schema_content)
+        altlabel_map = extract_altlabel_map(schema_content)
 
         if not schema_terms:
             raise ValueError(
@@ -194,7 +403,7 @@ def analyze_schema_and_data(
             raise ValueError("No CSV headers found in uploaded files")
 
         # Step 3: Match headers to schema
-        matching_report = match_headers_to_schema(data_headers, schema_terms)
+        matching_report = match_headers_to_schema(data_headers, schema_terms, altlabel_map=altlabel_map)
 
         return {
             "success": True,
@@ -260,8 +469,9 @@ def analyze_schema_and_data_stream(
     3. Yields matching updates in real-time, matching concurrently using AI
     """
     try:
-        # Step 1: Extract schema terms
+        # Step 1: Extract schema terms and altlabels
         schema_terms = extract_schema_terms(schema_content)
+        altlabel_map = extract_altlabel_map(schema_content)
         if not schema_terms:
             yield {"type": "error", "message": "No schema terms found in RDF file. Ensure it contains class definitions."}
             return
@@ -282,40 +492,51 @@ def analyze_schema_and_data_stream(
 
         # Step 3: Progressive Match
         matched = {}
-        matching_method = "LLM"
+        matching_method = "skos:altLabel Schema Grounding"
         llm_success = False
 
-        yield {"type": "status", "message": "Attempting intelligent matching using AI...", "method": "LLM"}
-        print(f"\n--- [MATCHING PROCESS START] data_headers={len(data_headers)} schema_terms={len(schema_terms)} ---")
-        print("[INFO] Attempting concurrent AI matching...")
+        # 3a. Check altlabel_map first
+        unmatched_headers = []
+        if altlabel_map:
+            for header in data_headers:
+                h_str = header.strip()
+                term = altlabel_map.get(h_str) or altlabel_map.get(h_str.upper())
+                if term:
+                    matched[header] = term
+                    print(f"[MATCH - skos:altLabel] CSV Header '{header}' -> Schema Term '{term}'")
+                    yield {"type": "match", "header": header, "term": term, "method": "skos:altLabel"}
+                else:
+                    unmatched_headers.append(header)
+        else:
+            unmatched_headers = list(data_headers)
 
-        try:
-            # Match each header in parallel using ThreadPoolExecutor
-            # The matches will stream to the client as soon as each one finishes!
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                # Submit all matching tasks
-                future_to_header = {
-                    executor.submit(get_single_llm_match, header, schema_terms): header
-                    for header in data_headers
-                }
-                
-                # As each task completes, yield the matched pair immediately
-                for future in as_completed(future_to_header):
-                    header = future_to_header[future]
-                    try:
-                        term = future.result()
-                        if term:
-                            matched[header] = term
-                            llm_success = True
-                            print(f"[MATCH - AI/LLM] CSV Header '{header}' -> Schema Term '{term}'")
-                            yield {"type": "match", "header": header, "term": term, "method": "LLM"}
-                    except Exception as e:
-                        print(f"[WARNING] LLM match failed for header '{header}': {str(e)}")
+        if unmatched_headers:
+            yield {"type": "status", "message": f"Matching remaining {len(unmatched_headers)} headers using AI...", "method": "LLM"}
+            print(f"\n--- [MATCHING PROCESS START] remaining_headers={len(unmatched_headers)} schema_terms={len(schema_terms)} ---")
+            print("[INFO] Attempting concurrent AI matching...")
+
+            try:
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    future_to_header = {
+                        executor.submit(get_single_llm_match, header, schema_terms): header
+                        for header in unmatched_headers
+                    }
+                    for future in as_completed(future_to_header):
+                        header = future_to_header[future]
+                        try:
+                            term = future.result()
+                            if term:
+                                matched[header] = term
+                                llm_success = True
+                                print(f"[MATCH - AI/LLM] CSV Header '{header}' -> Schema Term '{term}'")
+                                yield {"type": "match", "header": header, "term": term, "method": "LLM"}
+                        except Exception as e:
+                            print(f"[WARNING] LLM match failed for header '{header}': {str(e)}")
+            except Exception as e:
+                print(f"[WARNING] LLM matching failed during stream: {str(e)}. Falling back to heuristics...")
                         
             if not llm_success:
                 print("[INFO] LLM matching returned empty results. Falling back to heuristics...")
-        except Exception as e:
-            print(f"[WARNING] LLM matching failed during stream: {str(e)}. Falling back to heuristics...")
 
         # Fallback to heuristics if LLM is not viable (didn't make any matches or crashed)
         if not llm_success:

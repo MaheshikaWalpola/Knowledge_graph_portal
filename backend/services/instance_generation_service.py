@@ -144,6 +144,24 @@ def extract_primary_namespace(schema_bytes: bytes) -> tuple[str, str]:
         return DEFAULT_CMPO_NS, DEFAULT_INST_NS
 
 
+from datetime import datetime, timezone
+
+def _format_iso_timestamp(timestamp_val: float | int) -> str:
+    """Convert raw epoch or numeric timestamp to ISO 8601 xsd:dateTime string."""
+    try:
+        ts = float(timestamp_val)
+        # If epoch seconds (> 100,000,000)
+        if ts > 100000000:
+            dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+            return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        # Relative timestamp: offset from epoch 2026-01-01T00:00:00Z
+        base_epoch = 1767225600
+        dt = datetime.fromtimestamp(base_epoch + ts, tz=timezone.utc)
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    except Exception:
+        return "2026-01-01T00:00:00Z"
+
+
 def build_instances_from_csvs(
     files: List[bytes],
     filenames: List[str],
@@ -153,22 +171,44 @@ def build_instances_from_csvs(
     schema_bytes: bytes = None,
 ) -> InstanceBuildResult:
     """
-    Generate RDF instance file from CSVs matching the style of Instances_v2.ttl.
-    Dynamically extracts ontology and instance namespaces from schema_bytes if provided.
+    Generate RDF instance file from CSVs according to the structure of the uploaded schema.
+    Applies the 5 core quality fixes:
+    1. Only classes inheriting from ObservableProperty/CMPParameter become sosa:observedProperty targets. Entity classes & properties are created/attached directly.
+    2. Exactly one sosa:hasSimpleResult (xsd:float) per observation; empty/non-numeric cells create no observation.
+    3. Every observation receives cmpo:rawTimestamp (numeric) and sosa:resultTime (xsd:dateTime).
+    4. PolishingStep nodes are fully populated with stageLabel and entity links.
+    5. Wafer, Machine, and Step nodes are deduplicated across all uploaded files.
     """
+    from services.instance_analysis_service import extract_schema_model
 
-    if schema_bytes:
-        cmpo_ns_str, inst_ns_str = extract_primary_namespace(schema_bytes)
-    else:
-        cmpo_ns_str, inst_ns_str = DEFAULT_CMPO_NS, DEFAULT_INST_NS
+    schema_model = extract_schema_model(schema_bytes) if schema_bytes else {}
 
-    CMPO = Namespace(cmpo_ns_str)
+    ont_ns_str = schema_model.get("namespace") or (extract_primary_namespace(schema_bytes)[0] if schema_bytes else DEFAULT_CMPO_NS)
+    inst_ns_str = extract_primary_namespace(schema_bytes)[1] if schema_bytes else DEFAULT_INST_NS
+
+    ONT = Namespace(ont_ns_str)
     INST = Namespace(inst_ns_str)
+    SOSA = Namespace("http://www.w3.org/ns/sosa/")
 
     g = Graph()
-    g.bind("cmpo", CMPO)
+    g.bind("cmpo", ONT)
     g.bind("inst", INST)
+    g.bind("sosa", SOSA)
     g.bind("xsd", XSD)
+    g.bind("rdf", RDF)
+    g.bind("rdfs", RDF.RDFS if hasattr(RDF, "RDFS") else Namespace("http://www.w3.org/2000/01/rdf-schema#"))
+
+    classes = set(schema_model.get("classes", []))
+    properties = set(schema_model.get("properties", []))
+    altlabel_map = schema_model.get("altlabel_map", {})
+    observation_class = schema_model.get("observation_class")
+    observable_property_classes = set(schema_model.get("observable_property_classes", []))
+
+    # Registries to track deduplicated entities across all files
+    created_wafers: Set[str] = set()
+    created_machines: Set[str] = set()
+    created_steps: Set[str] = set()
+    created_entities: Set[str] = set()
 
     total_rows = 0
 
@@ -177,130 +217,204 @@ def build_instances_from_csvs(
         if df.empty:
             continue
 
-        # Find critical columns dynamically (case-insensitive)
+        # Find critical context columns dynamically
         wafer_col = None
+        machine_col = None
         stage_col = None
+        chamber_col = None
         time_col = None
 
         for col in df.columns:
-            col_lower = col.lower()
-            if "wafer" in col_lower:
+            col_strip = col.strip()
+            col_lower = col_strip.lower()
+            mapped = (mappings.get(col_strip) if mappings else None) or altlabel_map.get(col_strip) or altlabel_map.get(col_strip.upper()) or ""
+            mapped_lower = mapped.lower()
+
+            if "wafer" in col_lower or "wafer" in mapped_lower:
                 wafer_col = col
-            elif "stage" in col_lower:
+            elif "machine" in col_lower or "tool" in col_lower or "machine" in mapped_lower or "tool" in mapped_lower:
+                machine_col = col
+            elif "stage" in col_lower or "stage" in mapped_lower:
                 stage_col = col
-            elif "timestamp" in col_lower or "time" in col_lower:
+            elif "chamber" in col_lower or "chamber" in mapped_lower:
+                chamber_col = col
+            elif "timestamp" in col_lower or "time" in col_lower or "timestamp" in mapped_lower:
                 if time_col is None or len(col_lower) < len(time_col.lower()):
                     time_col = col
 
         for i, row in df.iterrows():
             total_rows += 1
+            run_id = f"{i + 1:05d}"
 
-            # Extract wafer_id
+            # Extract context values
             wafer_id = "0000000000"
-            if wafer_col:
+            if wafer_col and pd.notna(row.get(wafer_col)):
                 w_val = row.get(wafer_col)
-                if pd.notna(w_val):
-                    try:
-                        wafer_id = str(int(float(w_val)))
-                    except Exception:
-                        wafer_id = str(w_val).strip()
-
-            # Extract stage
-            stage = "A"
-            if stage_col:
-                s_val = row.get(stage_col)
-                if pd.notna(s_val):
-                    stage = str(s_val).strip()
-
-            # Extract timestamp
-            timestamp_val = 0.0
-            if time_col:
-                t_val = row.get(time_col)
-                if pd.notna(t_val):
-                    try:
-                        timestamp_val = float(t_val)
-                    except Exception:
-                        pass
-
-            # Determine observation / entity container class dynamically from schema
-            obs_class_name = "CMPObservation"
-            if schema_bytes:
                 try:
-                    from services.instance_analysis_service import extract_schema_terms
-                    sterms = extract_schema_terms(schema_bytes)
-                    sterms_set = set(sterms)
-
-                    # 1. Check common container / event / entity keywords
-                    keywords = [
-                        "CMPObservation", "Observation", "Measurement", "CMPProcess",
-                        "Process", "Activity", "Run", "Record", "Event", "Entity", "Sample", "Item"
-                    ]
-                    found_kw = False
-                    for kw in keywords:
-                        if kw in sterms_set:
-                            obs_class_name = kw
-                            found_kw = True
-                            break
-
-                    # 2. If no standard keyword matched, pick the first class term from the schema
-                    if not found_kw and sterms:
-                        obs_class_name = sterms[0]
-                except Exception as ex:
-                    print(f"[WARNING] Could not resolve observation class from schema: {ex}")
-
-            # Format run_id padded to 5 digits
-            run_id = f"{i:05d}"
-
-            # Create process/run URI
-            run_uri = INST[f"cmp_run_{wafer_id}_{stage}_{run_id}"]
-            g.add((run_uri, RDF.type, CMPO[obs_class_name]))
-            if time_col:
-                g.add((run_uri, CMPO.atTime, Literal(timestamp_val, datatype=XSD.float)))
-            if wafer_col:
-                wafer_uri = INST[f"wafer_{wafer_id}"]
-                g.add((wafer_uri, RDF.type, CMPO.Wafer))
-                g.add((run_uri, CMPO.hasInput, wafer_uri))
-
-            # Add parameters for columns
-            for col in df.columns:
-                if col in (wafer_col, stage_col, time_col):
-                    continue
-
-                val = row.get(col)
-                if pd.isna(val):
-                    continue
-
-                if mappings and col in mappings:
-                    local = mappings[col]
-                else:
-                    local = _local_name_from_header(col)
-                if not local:
-                    continue
-
-                param_uri = INST[f"parameter_{wafer_id}_{stage}_{run_id}_{col}"]
-
-                # Set type to the mapped schema class
-                g.add((param_uri, RDF.type, CMPO[local]))
-
-                if time_col:
-                    g.add((param_uri, CMPO.atTime, Literal(timestamp_val, datatype=XSD.float)))
-
-                g.add((param_uri, CMPO.hasParameterName, Literal(col, datatype=XSD.string)))
-                g.add((param_uri, CMPO.hasStage, Literal(stage)))
-
-                unit = _infer_unit(col)
-                if unit:
-                    g.add((param_uri, CMPO.hasUnit, Literal(unit, datatype=XSD.string)))
-
-                try:
-                    fval = float(val)
-                    g.add((param_uri, CMPO.hasNumericValue, Literal(fval, datatype=XSD.float)))
+                    wafer_id = str(int(float(w_val)))
                 except Exception:
-                    g.add((param_uri, CMPO.hasValue, Literal(str(val))))
+                    wafer_id = str(w_val).strip()
 
-                # Link parameter to run
-                g.add((param_uri, CMPO.isMeasurementOf, run_uri))
-                g.add((run_uri, CMPO.hasMeasurement, param_uri))
+            machine_id = "1"
+            if machine_col and pd.notna(row.get(machine_col)):
+                m_val = row.get(machine_col)
+                try:
+                    machine_id = str(int(float(m_val)))
+                except Exception:
+                    machine_id = str(m_val).strip()
+
+            stage = "A"
+            if stage_col and pd.notna(row.get(stage_col)):
+                stage = str(row.get(stage_col)).strip()
+
+            chamber = "1"
+            if chamber_col and pd.notna(row.get(chamber_col)):
+                chamber = str(row.get(chamber_col)).strip()
+
+            timestamp_val = 0.0
+            if time_col and pd.notna(row.get(time_col)):
+                try:
+                    timestamp_val = float(row.get(time_col))
+                except Exception:
+                    pass
+
+            # --- Fix 5: Deduplicated Wafer, Machine, and Step node creation ---
+            wafer_uri = INST[f"wafer_{wafer_id}"]
+            if wafer_id not in created_wafers:
+                created_wafers.add(wafer_id)
+                wafer_class = "Wafer" if "Wafer" in classes else "FeatureOfInterest"
+                g.add((wafer_uri, RDF.type, ONT[wafer_class] if wafer_class in classes else SOSA.FeatureOfInterest))
+                if "hasWaferId" in properties:
+                    g.add((wafer_uri, ONT.hasWaferId, Literal(wafer_id)))
+
+            machine_uri = INST[f"machine_{machine_id}"]
+            if machine_id not in created_machines:
+                created_machines.add(machine_id)
+                machine_class = "Tool" if "Tool" in classes else ("Platform" if "Platform" in classes else "Machine")
+                g.add((machine_uri, RDF.type, ONT[machine_class] if machine_class in classes else SOSA.Platform))
+                if "toolId" in properties:
+                    g.add((machine_uri, ONT.toolId, Literal(machine_id)))
+
+            # --- Fix 4: Fully populated PolishingStep nodes ---
+            step_key = f"{stage}_{wafer_id}"
+            step_uri = INST[f"step_{step_key}"]
+            if step_key not in created_steps:
+                created_steps.add(step_key)
+                step_class = "PolishingStep" if "PolishingStep" in classes else "ProcessStep"
+                if step_class in classes:
+                    g.add((step_uri, RDF.type, ONT[step_class]))
+                if "stageLabel" in properties:
+                    g.add((step_uri, ONT.stageLabel, Literal(stage)))
+                if "actsOn" in properties:
+                    g.add((step_uri, ONT.actsOn, wafer_uri))
+
+            # Timestamp ISO string
+            iso_time_str = _format_iso_timestamp(timestamp_val)
+
+            # Check if schema uses SOSA Observation pattern
+            if observation_class:
+                # --- PATH A: SOSA Observation Pattern ---
+                for col in df.columns:
+                    if col in (wafer_col, machine_col, stage_col, chamber_col, time_col):
+                        continue
+
+                    val = row.get(col)
+                    # Fix 2: Skip empty/NaN values completely
+                    if pd.isna(val) or str(val).strip() == "":
+                        continue
+
+                    col_strip = col.strip()
+                    local_term = (mappings.get(col_strip) if mappings else None) or altlabel_map.get(col_strip) or altlabel_map.get(col_strip.upper()) or _local_name_from_header(col_strip)
+                    if not local_term:
+                        continue
+
+                    # Attempt numeric cast for observation result
+                    try:
+                        fval = float(val)
+                        is_numeric = True
+                    except (ValueError, TypeError):
+                        is_numeric = False
+
+                    # Fix 1: Check term classification
+                    # If term is a property in the schema, attach directly as predicate
+                    if local_term in properties and local_term not in classes:
+                        if is_numeric:
+                            g.add((wafer_uri, ONT[local_term], Literal(fval, datatype=XSD.float)))
+                        else:
+                            g.add((wafer_uri, ONT[local_term], Literal(str(val).strip())))
+                        continue
+
+                    # If term is an entity class (e.g., Recipe, Layer, Equipment) and NOT an ObservableProperty:
+                    # Do NOT create an observation! Create/link the entity instance directly.
+                    if observable_property_classes and local_term in classes and local_term not in observable_property_classes:
+                        entity_val_clean = _safe_seg(str(val).strip())
+                        ent_uri = INST[f"{local_term.lower()}_{entity_val_clean}"]
+                        if str(ent_uri) not in created_entities:
+                            created_entities.add(str(ent_uri))
+                            g.add((ent_uri, RDF.type, ONT[local_term]))
+                        # Link entity to step / wafer
+                        g.add((step_uri, SOSA.hasFeatureOfInterest, ent_uri))
+                        continue
+
+                    # Non-numeric string value for a parameter class -> attach as string predicate on wafer, don't create invalid float observation
+                    if not is_numeric:
+                        g.add((wafer_uri, ONT[local_term], Literal(str(val).strip())))
+                        continue
+
+                    # Valid numeric observation of an ObservableProperty class
+                    col_safe = _safe_seg(_local_name_from_header(col_strip))
+                    obs_uri = INST[f"obs_{wafer_id}_{stage}_{run_id}_{col_safe}"]
+
+                    # Fix 2: Exactly one sosa:hasSimpleResult xsd:float
+                    g.add((obs_uri, RDF.type, ONT[observation_class]))
+                    g.add((obs_uri, SOSA.observedProperty, ONT[local_term]))
+                    g.add((obs_uri, SOSA.hasFeatureOfInterest, wafer_uri))
+                    g.add((obs_uri, SOSA.madeOnPlatform, machine_uri))
+                    g.add((obs_uri, SOSA.hasSimpleResult, Literal(fval, datatype=XSD.float)))
+
+                    if "duringStep" in properties or "duringStep" in schema_model.get("object_properties", []):
+                        g.add((obs_uri, ONT.duringStep, step_uri))
+
+                    # Fix 3: Every observation gets rawTimestamp & sosa:resultTime
+                    g.add((obs_uri, SOSA.resultTime, Literal(iso_time_str, datatype=XSD.dateTime)))
+                    if "rawTimestamp" in properties or True:
+                        g.add((obs_uri, ONT.rawTimestamp, Literal(timestamp_val, datatype=XSD.decimal)))
+
+            else:
+                # --- PATH B: Generic Fallback Pattern (Non-SOSA schema) ---
+                container_class = list(classes)[0] if classes else "ProcessRun"
+                run_uri = INST[f"run_{wafer_id}_{stage}_{run_id}"]
+                g.add((run_uri, RDF.type, ONT[container_class]))
+
+                for col in df.columns:
+                    if col in (wafer_col, stage_col, time_col):
+                        continue
+
+                    val = row.get(col)
+                    if pd.isna(val) or str(val).strip() == "":
+                        continue
+
+                    col_strip = col.strip()
+                    local_term = (mappings.get(col_strip) if mappings else None) or altlabel_map.get(col_strip) or altlabel_map.get(col_strip.upper()) or _local_name_from_header(col_strip)
+                    if not local_term:
+                        continue
+
+                    if local_term in properties:
+                        try:
+                            fval = float(val)
+                            g.add((run_uri, ONT[local_term], Literal(fval, datatype=XSD.float)))
+                        except Exception:
+                            g.add((run_uri, ONT[local_term], Literal(str(val).strip())))
+                    else:
+                        col_safe = _safe_seg(_local_name_from_header(col_strip))
+                        param_uri = INST[f"param_{wafer_id}_{stage}_{run_id}_{col_safe}"]
+                        g.add((param_uri, RDF.type, ONT[local_term]))
+                        try:
+                            fval = float(val)
+                            g.add((param_uri, ONT.hasNumericValue, Literal(fval, datatype=XSD.float)))
+                        except Exception:
+                            g.add((param_uri, ONT.hasValue, Literal(str(val).strip())))
+                        g.add((param_uri, ONT.isMeasurementOf, run_uri))
 
     turtle = g.serialize(format="turtle")
     triples = len(g)
