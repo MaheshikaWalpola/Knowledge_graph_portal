@@ -61,8 +61,8 @@ const STEPS = [
   "Validate & Report"
 ];
 
-const SAMPLE_INSTANCES = `@prefix cmpo: <https://tucid/cpmo/> .
-@prefix inst: <https://tucid/cpmo/instance/> .
+const SAMPLE_INSTANCES = `@prefix cmpo: <https://tucid/cmpo/> .
+@prefix inst: <https://tucid/cmpo/instance/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
@@ -356,8 +356,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
         `@prefix sh: <http://www.w3.org/ns/shacl#> .\n` +
         `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n` +
         `@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n` +
-        `@prefix cmpo: <https://tucid/cpmo/> .\n` +
-        `@prefix inst: <https://tucid/cpmo/instance/> .\n\n` +
+        `@prefix cmpo: <https://tucid/cmpo/> .\n` +
+        `@prefix inst: <https://tucid/cmpo/instance/> .\n\n` +
         `# Generating SHACL shapes. Please wait...\n`
       );
 

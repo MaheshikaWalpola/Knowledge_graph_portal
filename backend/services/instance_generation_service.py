@@ -83,8 +83,8 @@ def _infer_unit(header: str) -> str:
     return ""
 
 
-DEFAULT_CMPO_NS = "https://tucid/cpmo/"
-DEFAULT_INST_NS = "https://tucid/cpmo/instance/"
+DEFAULT_CMPO_NS = "https://tucid/cmpo/"
+DEFAULT_INST_NS = "https://tucid/cmpo/instance/"
 
 WELL_KNOWN_NAMESPACES = {
     "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
@@ -222,12 +222,38 @@ def build_instances_from_csvs(
                     except Exception:
                         pass
 
+            # Determine observation / entity container class dynamically from schema
+            obs_class_name = "CMPObservation"
+            if schema_bytes:
+                try:
+                    from services.instance_analysis_service import extract_schema_terms
+                    sterms = extract_schema_terms(schema_bytes)
+                    sterms_set = set(sterms)
+
+                    # 1. Check common container / event / entity keywords
+                    keywords = [
+                        "CMPObservation", "Observation", "Measurement", "CMPProcess",
+                        "Process", "Activity", "Run", "Record", "Event", "Entity", "Sample", "Item"
+                    ]
+                    found_kw = False
+                    for kw in keywords:
+                        if kw in sterms_set:
+                            obs_class_name = kw
+                            found_kw = True
+                            break
+
+                    # 2. If no standard keyword matched, pick the first class term from the schema
+                    if not found_kw and sterms:
+                        obs_class_name = sterms[0]
+                except Exception as ex:
+                    print(f"[WARNING] Could not resolve observation class from schema: {ex}")
+
             # Format run_id padded to 5 digits
             run_id = f"{i:05d}"
 
             # Create process/run URI
             run_uri = INST[f"cmp_run_{wafer_id}_{stage}_{run_id}"]
-            g.add((run_uri, RDF.type, CMPO.Measurement))
+            g.add((run_uri, RDF.type, CMPO[obs_class_name]))
             if time_col:
                 g.add((run_uri, CMPO.atTime, Literal(timestamp_val, datatype=XSD.float)))
             if wafer_col:

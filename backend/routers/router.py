@@ -134,9 +134,9 @@ def api_workspace_add_relation(
     payload: Dict = Body(
         ...,
         example={
-            "subject": "https://tucid/cpmo/Velocity",
+            "subject": "https://tucid/cmpo/Velocity",
             "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-            "object": "https://tucid/cpmo/ProcessVariable",
+            "object": "https://tucid/cmpo/ProcessVariable",
         },
     ),
     current_user: Any = Depends(get_current_user),
@@ -151,9 +151,9 @@ def api_workspace_delete_relation(
     payload: Dict = Body(
         ...,
         example={
-            "subject": "https://tucid/cpmo/Velocity",
+            "subject": "https://tucid/cmpo/Velocity",
             "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-            "object": "https://tucid/cpmo/ProcessVariable",
+            "object": "https://tucid/cmpo/ProcessVariable",
         },
     ),
     current_user: Any = Depends(get_current_user),
@@ -171,10 +171,10 @@ def api_workspace_update_relation(
     payload: Dict = Body(
         ...,
         example={
-            "subject": "https://tucid/cpmo/Velocity",
+            "subject": "https://tucid/cmpo/Velocity",
             "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-            "old_object": "https://tucid/cpmo/ProcessVariable",
-            "new_object": "https://tucid/cpmo/PhysicalQuantity",
+            "old_object": "https://tucid/cmpo/ProcessVariable",
+            "new_object": "https://tucid/cmpo/PhysicalQuantity",
         },
     ),
     current_user: Any = Depends(get_current_user),
