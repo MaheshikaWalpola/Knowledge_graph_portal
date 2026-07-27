@@ -736,14 +736,31 @@ class ValidationService:
 
         # 3. Overall Compliance Summary Callout Box
         comp_pct = report_data.get("pass_percentage", 0.0)
-        summary_text = (
-            f"<b>Compliance Summary:</b> {passed_q} of {total_q} validation rules passed successfully ({comp_pct}% compliance). "
-            f"A total of <b>{violation_cnt} constraint violations</b> were detected across <b>{affected_fn} unique focus nodes</b>."
-            if failed_q > 0 else
-            f"<b>Compliance Summary:</b> All {total_q} validation rules passed successfully (100% compliance). The dataset fully conforms to the defined SHACL shapes."
-        )
-        banner_color = c_danger_bg if failed_q > 0 else c_success_bg
-        banner_border = c_danger_border if failed_q > 0 else c_success_border
+        if failed_q > 0:
+            summary_text = (
+                f"<b>Compliance Summary:</b> {passed_q} of {total_q} validation rules passed successfully ({comp_pct}% compliance). "
+                f"A total of <b>{violation_cnt:,} constraint violations</b> were detected across <b>{affected_fn:,} unique focus nodes</b>."
+            )
+        elif violation_cnt > 0:
+            summary_text = (
+                f"<b>Compliance Summary:</b> All {total_q} validation rules passed successfully (100% compliance). "
+                f"However, the underlying SHACL shapes flagged <b>{violation_cnt:,} constraint violations</b> across <b>{affected_fn:,} focus nodes</b>. "
+                f"See the Violation Overview below for a breakdown by constraint type."
+            )
+        else:
+            summary_text = (
+                f"<b>Compliance Summary:</b> All {total_q} validation rules passed successfully (100% compliance). "
+                f"The dataset fully conforms to the defined SHACL shapes."
+            )
+        if failed_q > 0:
+            banner_color = c_danger_bg
+            banner_border = c_danger_border
+        elif violation_cnt > 0:
+            banner_color = c_warning_bg
+            banner_border = c_warning_border
+        else:
+            banner_color = c_success_bg
+            banner_border = c_success_border
 
         summary_table = Table([[Paragraph(summary_text, style_body)]], colWidths=[534])
         summary_table.setStyle(TableStyle([
@@ -753,6 +770,73 @@ class ValidationService:
         ]))
         story.append(summary_table)
         story.append(Spacer(1, 12))
+
+        # 3b. Violation Overview — concise grouped summary
+        if violations:
+            story.append(Paragraph("Violation Overview", style_h2))
+
+            # Group violations by message (constraint type)
+            from collections import Counter, defaultdict
+            msg_counter = Counter()
+            msg_paths = defaultdict(set)
+            msg_example_node = {}
+            for v in violations:
+                msg = v.get("message", "Constraint violated")
+                msg_counter[msg] += 1
+                p = v.get("path_short", "")
+                if p:
+                    msg_paths[msg].add(p)
+                if msg not in msg_example_node:
+                    msg_example_node[msg] = v.get("focus_node_short", "")
+
+            overview_intro = (
+                f"The {violation_cnt:,} violations fall into <b>{len(msg_counter)}</b> "
+                f"distinct constraint {'type' if len(msg_counter) == 1 else 'types'}, summarised below."
+            )
+            story.append(Paragraph(overview_intro, style_body))
+            story.append(Spacer(1, 6))
+
+            overview_rows = [
+                [
+                    Paragraph("<b>#</b>", style_body_bold),
+                    Paragraph("<b>Constraint / Message</b>", style_body_bold),
+                    Paragraph("<b>Property</b>", style_body_bold),
+                    Paragraph("<b>Count</b>", style_body_bold),
+                ]
+            ]
+            for rank, (msg, cnt) in enumerate(msg_counter.most_common(15), 1):
+                # Truncate long messages for readability
+                display_msg = msg
+                paths_str = ", ".join(sorted(msg_paths[msg])[:3])
+                if len(msg_paths[msg]) > 3:
+                    paths_str += f" (+{len(msg_paths[msg]) - 3})"
+                overview_rows.append([
+                    Paragraph(str(rank), style_body),
+                    Paragraph(display_msg, style_body),
+                    Paragraph(paths_str or "—", style_mono),
+                    Paragraph(f"{cnt:,}", style_body),
+                ])
+
+            if len(msg_counter) > 15:
+                remaining_types = len(msg_counter) - 15
+                remaining_cnt = sum(c for _, c in msg_counter.most_common()[15:])
+                overview_rows.append([
+                    Paragraph("", style_body),
+                    Paragraph(f"<i>... and {remaining_types} more constraint types</i>", style_body),
+                    Paragraph("", style_body),
+                    Paragraph(f"<i>{remaining_cnt:,}</i>", style_body),
+                ])
+
+            ov_table = Table(overview_rows, colWidths=[24, 310, 120, 80])
+            ov_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                ('PADDING', (0, 0), (-1, -1), 4),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, c_bg_light]),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            story.append(ov_table)
+            story.append(Spacer(1, 12))
 
         # Group violations by shape_iri for clean diagnostic display
         violations_by_shape = {}
