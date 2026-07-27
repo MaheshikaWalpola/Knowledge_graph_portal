@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from io import BytesIO
-from typing import List, Dict
+from typing import Any, Dict, List, Optional, Set
 import urllib.parse
 import re
 
@@ -233,6 +233,20 @@ def build_instances_from_csvs(
     observation_class = schema_model.get("observation_class") or "CMPObservation"
     observable_property_classes = set(schema_model.get("observable_property_classes", []))
 
+    # Detect observation-metadata properties: datatype properties whose domain
+    # is the observation class.  These are labels an observation carries (e.g.
+    # machineDataId) — NOT measurable parameters.  They must be attached as
+    # literals on existing observations, never generate their own observations.
+    datatype_properties = set(schema_model.get("datatype_properties", []))
+    property_domains = schema_model.get("property_domains", {})
+    property_ranges = schema_model.get("property_ranges", {})
+    obs_metadata_props: Set[str] = set()
+    for prop in datatype_properties:
+        if property_domains.get(prop) == observation_class:
+            obs_metadata_props.add(prop)
+    if obs_metadata_props:
+        print(f"[SCHEMA MODEL] observation-metadata properties (will attach, not observe): {sorted(obs_metadata_props)}")
+
     # Registries to track deduplicated entities across all files
     created_wafers: Set[str] = set()
     created_machines: Set[str] = set()
@@ -453,7 +467,37 @@ def build_instances_from_csvs(
             # Timestamp parsing (Step 7: omit if missing/zero)
             iso_time_str = _format_iso_timestamp(raw_ts) if raw_ts else None
 
-            # Process observations & parameter columns
+            # --- First pass: collect observation-metadata columns for this row ---
+            # These are datatype properties whose domain is the observation class
+            # (e.g. machineDataId).  They get attached as literals on each
+            # observation generated for this row, not as separate observations.
+            row_obs_metadata: list[tuple[str, Any]] = []
+            for col in df.columns:
+                if col in (wafer_col, machine_col, stage_col, chamber_col, time_col):
+                    continue
+                col_strip = col.strip()
+                local_term = (mappings.get(col_strip) if mappings else None) or altlabel_map.get(col_strip) or altlabel_map.get(col_strip.upper()) or _local_name_from_header(col_strip)
+                if local_term and local_term in obs_metadata_props:
+                    meta_val = row.get(col)
+                    if pd.notna(meta_val) and str(meta_val).strip() != "":
+                        # Determine the XSD datatype from the ontology range
+                        range_name = property_ranges.get(local_term, "")
+                        range_lower = range_name.lower() if range_name else ""
+                        if range_lower in ("integer", "int", "nonNegativeInteger"):
+                            try:
+                                typed_val = Literal(int(float(meta_val)), datatype=XSD.integer)
+                            except (ValueError, TypeError):
+                                typed_val = Literal(str(meta_val).strip(), datatype=XSD.string)
+                        elif range_lower in ("float", "double", "decimal"):
+                            try:
+                                typed_val = Literal(float(meta_val), datatype=XSD.float)
+                            except (ValueError, TypeError):
+                                typed_val = Literal(str(meta_val).strip(), datatype=XSD.string)
+                        else:
+                            typed_val = Literal(str(meta_val).strip(), datatype=XSD.string)
+                        row_obs_metadata.append((local_term, typed_val))
+
+            # --- Second pass: process observations & parameter columns ---
             for col in df.columns:
                 if col in (wafer_col, machine_col, stage_col, chamber_col, time_col):
                     continue
@@ -465,6 +509,11 @@ def build_instances_from_csvs(
                 col_strip = col.strip()
                 local_term = (mappings.get(col_strip) if mappings else None) or altlabel_map.get(col_strip) or altlabel_map.get(col_strip.upper()) or _local_name_from_header(col_strip)
                 if not local_term:
+                    continue
+
+                # Skip observation-metadata columns — they are handled via
+                # row_obs_metadata and attached to real observations below.
+                if local_term in obs_metadata_props:
                     continue
 
                 try:
@@ -512,6 +561,10 @@ def build_instances_from_csvs(
                 # Exactly one sosa:hasSimpleResult xsd:float
                 g.add((obs_uri, SOSA.hasSimpleResult, Literal(fval, datatype=XSD.float)))
                 g.add((obs_uri, ONT.duringStep, step_uri))
+
+                # Attach observation-metadata properties (e.g. machineDataId)
+                for meta_prop, meta_lit in row_obs_metadata:
+                    g.add((obs_uri, ONT[meta_prop], meta_lit))
 
                 # Step 7: Timestamps added ONLY if present and valid
                 if iso_time_str and raw_ts:
