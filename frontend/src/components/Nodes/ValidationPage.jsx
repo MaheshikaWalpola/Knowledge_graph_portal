@@ -562,9 +562,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const handleDownloadPDF = async (reportData) => {
     if (!reportData) return;
     try {
-      const formData = new FormData();
-      formData.append("report_data", JSON.stringify(reportData));
-      const res = await axios.post(`${API}/validation/export-pdf`, formData, {
+      const res = await axios.post(`${API}/validation/export-pdf`, { report_data: reportData }, {
         ...getAuthConfig(),
         responseType: "blob"
       });
