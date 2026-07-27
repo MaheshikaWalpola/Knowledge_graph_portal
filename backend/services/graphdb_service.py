@@ -1310,7 +1310,7 @@ def user_schema_instance_graph(user_key: str, schema_id: str) -> str:
     """
     Named graph IRI for instances belonging to a user's schema.
     Example:
-      https://tucid/cpmo/workspace/pabapalihena%40gmail.com/main/instances
+      https://tucid/cmpo/workspace/pabapalihena%40gmail.com/main/instances
     """
     safe_user = urllib.parse.quote(user_key, safe="")
     safe_schema = urllib.parse.quote(schema_id, safe="")

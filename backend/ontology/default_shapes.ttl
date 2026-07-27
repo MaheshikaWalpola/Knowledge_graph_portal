@@ -1,8 +1,8 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix cmpo: <https://tucid/cpmo/> .
-@prefix inst: <https://tucid/cpmo/instance/> .
+@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .
+@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .
 
 # 1. CMP Process Shape
 cmpo:CMPProcessShape a sh:NodeShape ;
@@ -15,9 +15,9 @@ cmpo:CMPProcessShape a sh:NodeShape ;
         sh:message "Every CMP Process run must have a valid measurement timestamp (xsd:dateTime)." ;
     ] ;
     sh:property [
-        sh:path cmpo:actsOn ;
+        sh:path cmpo:hasInput ;
         sh:minCount 1 ;
-        sh:message "Every CMP Process must act on at least one Wafer." ;
+        sh:message "Every CMP Process must act on at least one Wafer via hasInput." ;
     ] ;
     sh:property [
         sh:path cmpo:hasCMPToolComponent ;

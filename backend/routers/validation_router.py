@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 import json
 import io
 
-from fastapi import APIRouter, Depends, Form, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 
 from core.auth import get_current_user
@@ -39,6 +39,7 @@ def _fetch_workspace_instances_ttl(user_email: str, schema_id: str) -> str:
 @router.post("/validation/suggest-rules")
 async def api_suggest_rules(
     user_explanation: Optional[str] = Form(None),
+    num_questions: int = Form(10),
     schema_id: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
     instance_file: Optional[UploadFile] = File(None),
@@ -64,7 +65,12 @@ async def api_suggest_rules(
         except Exception as e:
             print(f"Error fetching workspace instances: {e}")
             
-    rules = validation_service.suggest_validation_rules(user_explanation, schema_content, instance_content)
+    rules = validation_service.suggest_validation_rules(
+        user_explanation=user_explanation,
+        schema_content=schema_content,
+        instance_content=instance_content,
+        num_questions=num_questions
+    )
     return {"status": "ok", "rules": rules}
 
 
@@ -226,12 +232,16 @@ async def api_run_workspace_stream(
 
 
 @router.post("/validation/export-pdf")
-def api_export_pdf(
-    report_data: str = Form(...),
+async def api_export_pdf(
+    request: Request,
     current_user: Any = Depends(get_current_user)
 ):
     try:
-        data = json.loads(report_data)
+        body = await request.json()
+        # Accept either { report_data: {...} } or the report object directly
+        data = body.get("report_data", body) if isinstance(body, dict) else body
+        if isinstance(data, str):
+            data = json.loads(data)
         pdf_bytes = validation_service.generate_pdf_report(data)
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
@@ -240,3 +250,4 @@ def api_export_pdf(
         )
     except Exception as e:
         raise HTTPException(500, detail=f"PDF generation failed: {e}")
+

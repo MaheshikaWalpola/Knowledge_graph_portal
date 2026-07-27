@@ -117,6 +117,7 @@ async def ctrl_generate_instance(
             user_key=user_email,
             schema_id=schema_id,
             mappings=header_mappings,
+            schema_bytes=schema_content,
         )
 
         # Prepare response

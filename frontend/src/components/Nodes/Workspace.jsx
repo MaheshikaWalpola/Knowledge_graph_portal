@@ -12,7 +12,7 @@ import {
 import SimpleChart from "../Common/SimpleChart";
 
 const API = import.meta.env.VITE_API_URL;
-const CMP_NS = import.meta.env.VITE_CMP_NS || "https://tucid/cpmo/";
+const CMP_NS = import.meta.env.VITE_CMP_NS || "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#";
 
 // ---------- helpers ----------
 const local = (iri = "") => getLocalName(iri);

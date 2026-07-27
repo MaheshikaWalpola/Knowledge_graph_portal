@@ -1,5 +1,3 @@
-/* ===== Validation Page — matches InstanceGenerationWorkflow.css ===== */
-
 /* Outer container — mirrors instance-gen-container */
 .validation-container {
   width: 100%;
@@ -97,6 +95,14 @@
   flex: 1;
   min-width: 100px;
   text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--transition-fast);
+}
+
+.validation-stepper-step:hover .validation-stepper-circle {
+  transform: scale(1.08);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
 }
 
 .validation-stepper-circle {
@@ -457,6 +463,11 @@
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
 }
 
+.validation-summary-banner.partial {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%);
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.25);
+}
+
 .validation-summary-banner.fail {
   background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f87171 100%);
   box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
@@ -501,6 +512,94 @@
   padding: 16px;
   background: var(--bg-tertiary);
   border-top: 1px solid var(--border-light);
+}
+
+/* ===== Six Compact KPI Cards ===== */
+.validation-kpi-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  background: var(--bg-glass-strong);
+  backdrop-filter: blur(8px);
+  text-align: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.validation-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  transition: opacity 0.25s ease;
+}
+
+.validation-kpi-card.kpi-success::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.validation-kpi-card.kpi-danger::before {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.validation-kpi-card.kpi-warning::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.validation-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-color: var(--border-medium);
+}
+
+.validation-kpi-card.kpi-success:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.1);
+}
+
+.validation-kpi-card.kpi-danger:hover {
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.1);
+}
+
+.validation-kpi-card.kpi-warning:hover {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.1);
+}
+
+.validation-kpi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.validation-kpi-value {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em;
+  line-height: 1.2 !important;
+}
+
+.validation-kpi-label {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary) !important;
+  line-height: 1.2 !important;
 }
 
 /* ===== Compact Target Bar ===== */
