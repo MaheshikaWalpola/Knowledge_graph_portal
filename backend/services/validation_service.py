@@ -392,29 +392,174 @@ class ValidationService:
                 return
             yield {"step": "schema_merged", "message": f"Schema merged ({len(g_combined)} total triples)"}
 
-        # Step 4: Run SHACL validation
-        yield {"step": "validating", "message": f"Running SHACL validation on {len(g_combined)} triples..."}
+        # Step 4a: Pre-materialize rdfs:subClassOf transitive closure
+        # ------------------------------------------------------------------
+        # Materializes ancestor relationships so rdfs:subClassOf* property
+        # paths in SPARQL resolve from explicit triples (O(1) lookup) instead
+        # of recursive graph walks (O(depth) per call).
+        yield {"step": "materializing", "message": "Pre-materializing class hierarchy for SPARQL performance..."}
+        try:
+            RDFS_NS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
+            parents = {}
+            for s, _, o in g_combined.triples((None, RDFS_NS.subClassOf, None)):
+                s_str, o_str = str(s), str(o)
+                if s_str not in parents:
+                    parents[s_str] = set()
+                parents[s_str].add(o_str)
+            changed = True
+            while changed:
+                changed = False
+                for cls in list(parents):
+                    new_ancestors = set()
+                    for p in list(parents[cls]):
+                        if p in parents:
+                            new_ancestors |= parents[p]
+                    before = len(parents[cls])
+                    parents[cls] |= new_ancestors
+                    if len(parents[cls]) > before:
+                        changed = True
+            mat_count = 0
+            for cls, ancestors in parents.items():
+                cls_ref = URIRef(cls)
+                for ancestor in ancestors:
+                    anc_ref = URIRef(ancestor)
+                    if (cls_ref, RDFS_NS.subClassOf, anc_ref) not in g_combined:
+                        g_combined.add((cls_ref, RDFS_NS.subClassOf, anc_ref))
+                        mat_count += 1
+            yield {"step": "materialized", "message": f"Class hierarchy materialized (+{mat_count} transitive triples)"}
+        except Exception as e:
+            yield {"step": "materialized", "message": f"Materialization skipped: {str(e)[:100]}"}
+
+        # Step 4b: Bulk-evaluate sh:sparql constraints
+        # ------------------------------------------------------------------
+        # pySHACL evaluates each sh:sparql query once per focus node. With
+        # 80K+ CMPObservation nodes, Q2 and Q12 alone trigger 160K+ SPARQL
+        # executions — taking hours.
+        #
+        # Instead: run each SPARQL query once in bulk (all violations in one
+        # query), strip sh:sparql from the shapes graph, and let pySHACL
+        # handle only the fast property-based shapes.
+        yield {"step": "sparql_bulk", "message": "Bulk-evaluating SPARQL-based constraints..."}
+
+        # Collect prefix declarations from shapes graph for SPARQL queries
+        prefix_map = {
+            "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+            "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+            "xsd": "http://www.w3.org/2001/XMLSchema#",
+            "owl": "http://www.w3.org/2002/07/owl#",
+            "sh": "http://www.w3.org/ns/shacl#",
+            "sosa": "http://www.w3.org/ns/sosa/",
+        }
+        for decl_node in g_shapes.objects(None, SH.declare):
+            pfx = str(g_shapes.value(decl_node, SH.prefix) or "")
+            ns = str(g_shapes.value(decl_node, SH.namespace) or "")
+            if pfx and ns:
+                prefix_map[pfx] = ns
+        prefix_header = "\n".join(f"PREFIX {pfx}: <{ns}>" for pfx, ns in prefix_map.items())
+
+        bulk_violations = []
+        bulk_violated_shapes = set()
+        bulk_shape_failed_nodes = {}
+        sparql_bnodes = set()  # blank nodes to strip from shapes
+
+        for shape_node in shape_nodes_set:
+            sparql_constraints = list(g_shapes.objects(shape_node, SH.sparql))
+            if not sparql_constraints:
+                continue
+
+            for sparql_bnode in sparql_constraints:
+                select_q = str(g_shapes.value(sparql_bnode, SH.select) or "")
+                msg = str(g_shapes.value(sparql_bnode, SH.message) or "SPARQL constraint violated")
+                if not select_q:
+                    continue
+
+                sparql_bnodes.add(sparql_bnode)
+                full_query = prefix_header + "\n" + select_q
+
+                try:
+                    import time as _t
+                    t0 = _t.time()
+                    results = list(g_combined.query(full_query))
+                    t1 = round(_t.time() - t0, 2)
+                    shape_str = str(shape_node)
+                    label = str(g_shapes.value(shape_node, RDFS.label) or shape_str)
+                    short_label = label[:60] + "..." if len(label) > 60 else label
+
+                    if results:
+                        bulk_violated_shapes.add(shape_str)
+                        if shape_str not in bulk_shape_failed_nodes:
+                            bulk_shape_failed_nodes[shape_str] = set()
+
+                    for row in results:
+                        # $this is the first binding (focus node)
+                        focus = str(row[0]) if row[0] is not None else ""
+                        value = str(row[1]) if len(row) > 1 and row[1] is not None else ""
+
+                        if focus:
+                            bulk_shape_failed_nodes[shape_str].add(focus)
+
+                        bulk_violations.append({
+                            "focus_node": focus,
+                            "focus_node_short": self._shorten_iri(focus),
+                            "path": "",
+                            "path_short": "",
+                            "severity": "Violation",
+                            "source_shape": shape_str,
+                            "source_shape_short": self._shorten_iri(shape_node),
+                            "message": msg,
+                            "value": value
+                        })
+
+                    yield {"step": "sparql_bulk", "message": f"SPARQL: \"{short_label}\" — {len(results)} violations ({t1}s)"}
+                except Exception as e:
+                    print(f"[WARNING] Bulk SPARQL failed for {shape_node}: {e}")
+                    yield {"step": "sparql_bulk", "message": f"SPARQL fallback needed: {str(e)[:80]}"}
+                    # Don't strip this shape — let pySHACL handle it as fallback
+                    sparql_bnodes.discard(sparql_bnode)
+
+        yield {"step": "sparql_done", "message": f"Bulk SPARQL complete: {len(bulk_violations)} violations from {len(bulk_violated_shapes)} shapes"}
+
+        # Build stripped shapes graph (remove sh:sparql so pySHACL skips them)
+        g_shapes_stripped = Graph()
+        for pfx, ns in g_shapes.namespaces():
+            g_shapes_stripped.bind(pfx, ns)
+        for s, p, o in g_shapes:
+            if p == SH.sparql and o in sparql_bnodes:
+                continue  # drop the sh:sparql link
+            if s in sparql_bnodes:
+                continue  # drop the blank node's own triples (sh:select, sh:message, sh:prefixes)
+            g_shapes_stripped.add((s, p, o))
+
+        # Step 4c: Run pySHACL on property-based shapes only (fast)
+        yield {"step": "validating", "message": f"Running pySHACL on property-based shapes ({len(g_combined)} triples)..."}
         try:
             start_time = time.time()
             conforms, results_graph, results_text = validate(
                 g_combined,
-                shacl_graph=g_shapes,
+                shacl_graph=g_shapes_stripped,
                 inference="none",
+                advanced=False,
                 serialize_results_format="turtle"
             )
             elapsed = round(time.time() - start_time, 1)
         except Exception as e:
             yield {"step": "error", "message": f"SHACL validation engine error: {str(e)[:200]}", "error": True}
             return
-        yield {"step": "validation_done", "message": f"Validation completed in {elapsed}s"}
 
-        # Step 5: Collect results
+        # Override conforms if bulk SPARQL found violations
+        if bulk_violations:
+            conforms = False
+
+        yield {"step": "validation_done", "message": f"pySHACL completed in {elapsed}s"}
+
+        # Step 5: Collect results (merge pySHACL + bulk SPARQL violations)
         yield {"step": "collecting", "message": "Collecting results..."}
 
         violations = []
         violated_shapes = set()
         shape_failed_nodes = {}  # shape_iri -> set of focusNode IRIs
 
+        # 5a: pySHACL results
         for result_node in results_graph.subjects(RDF.type, SH.ValidationResult):
             focus_node = results_graph.value(result_node, SH.focusNode)
             path = results_graph.value(result_node, SH.resultPath)
@@ -442,6 +587,14 @@ class ValidationService:
                 "message": str(message) if message else "Validation constraint violated",
                 "value": str(val) if val is not None else ""
             })
+
+        # 5b: Merge bulk SPARQL violations
+        violations.extend(bulk_violations)
+        violated_shapes |= bulk_violated_shapes
+        for shape_str, nodes in bulk_shape_failed_nodes.items():
+            if shape_str not in shape_failed_nodes:
+                shape_failed_nodes[shape_str] = set()
+            shape_failed_nodes[shape_str] |= nodes
 
         all_shapes = []
         for shape_node in shape_nodes_set:
