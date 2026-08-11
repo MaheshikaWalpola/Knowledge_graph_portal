@@ -47,7 +47,21 @@ const isWorkspaceGroupIri = (iri = "") => {
   return iri.startsWith(base);
 };
 
-const displayLabel = (iri) => camelToTitleCase(local(iri));
+// Friendly overrides for technical node names
+const NODE_LABEL_OVERRIDES = {
+  hasNumericValue: "Data",
+  "has Numeric Value": "Data",
+};
+const applyLabelOverride = (label) => NODE_LABEL_OVERRIDES[label] || label;
+const displayLabel = (iri) => {
+  const name = local(iri);
+  return NODE_LABEL_OVERRIDES[name] || camelToTitleCase(name);
+};
+/** Resolve display label: backend label → override → IRI fallback */
+const resolveLabel = (iri, backendLabel) => {
+  if (backendLabel) return applyLabelOverride(backendLabel);
+  return displayLabel(iri);
+};
 const displayPredicate = (iri) => {
   const pred = getPredicateDisplay(iri);
   return pred.symbol ? `${pred.symbol} ${pred.name}` : pred.readable;
@@ -536,7 +550,7 @@ const Workspace = () => {
 
     const pushNode = (id, isCenter = false) => {
       if (!id || nodes.has(id)) return;
-      const label = labelMap.get(id) || displayLabel(id);
+      const label = resolveLabel(id, labelMap.get(id));
       const isGroup = isWorkspaceGroupIri(id);
 
       let color;
@@ -957,8 +971,8 @@ const Workspace = () => {
                     const source = e.source || e.s || e.from;
                     const target = e.target || e.t || e.to;
                     const relation = e.relation || e.p || e.pred || e.label;
-                    const sourceLabel = labelMap.get(source) || displayLabel(source);
-                    const targetLabel = labelMap.get(target) || displayLabel(target);
+                    const sourceLabel = resolveLabel(source, labelMap.get(source));
+                    const targetLabel = resolveLabel(target, labelMap.get(target));
                     const isGroupSrc = isWorkspaceGroupIri(source);
                     const isGroupTgt = isWorkspaceGroupIri(target);
                     // Every edge row is clickable: group-end shows chart, other shows neighbors
@@ -1001,7 +1015,7 @@ const Workspace = () => {
 
               {selectedNodeIri && details && (
                 <div className="workspace-details">
-                  <h4>{labelMap.get(selectedNodeIri) || displayLabel(selectedNodeIri)}</h4>
+                  <h4>{resolveLabel(selectedNodeIri, labelMap.get(selectedNodeIri))}</h4>
 
                   {details.values && details.values.length > 0 && (() => {
                     // Semantic check: only chart values from confirmed measurement predicates.
