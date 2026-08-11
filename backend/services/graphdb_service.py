@@ -624,6 +624,7 @@ def workspace_instance_groups_for_class(
 def workspace_group_values(
     group_node_iri: str,
     instance_graph_iri: str,
+    schema_graph_iri: Optional[str] = None,
     limit: int = 5000,
 ) -> Dict:
     """
@@ -640,34 +641,71 @@ def workspace_group_values(
     if "|" in group_key:
         # Strategy B: predicate-based group
         cls_iri, pred_iri = group_key.split("|", 1)
-        q = f"""
-        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-        SELECT ?v WHERE {{
-          GRAPH <{instance_graph_iri}> {{
-            ?inst rdf:type <{cls_iri}> .
-            ?inst <{pred_iri}> ?v .
-            FILTER(isLiteral(?v))
-            FILTER(datatype(?v) IN ({numeric_types}))
-          }}
-        }}
-        ORDER BY ?inst
-        LIMIT {limit}
-        """
+        if schema_graph_iri:
+            q = f"""
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+            SELECT ?v WHERE {{
+              GRAPH <{instance_graph_iri}> {{
+                ?inst rdf:type ?cls .
+                ?inst <{pred_iri}> ?v .
+                FILTER(isLiteral(?v))
+                FILTER(datatype(?v) IN ({numeric_types}))
+              }}
+              GRAPH <{schema_graph_iri}> {{
+                ?cls rdfs:subClassOf* <{cls_iri}> .
+              }}
+            }}
+            ORDER BY ?inst
+            LIMIT {limit}
+            """
+        else:
+            q = f"""
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+            SELECT ?v WHERE {{
+              GRAPH <{instance_graph_iri}> {{
+                ?inst rdf:type <{cls_iri}> .
+                ?inst <{pred_iri}> ?v .
+                FILTER(isLiteral(?v))
+                FILTER(datatype(?v) IN ({numeric_types}))
+              }}
+            }}
+            ORDER BY ?inst
+            LIMIT {limit}
+            """
     else:
         # Strategy A: class-based group with <hasNumericValue>
         cls_iri = group_key
-        q = f"""
-        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        SELECT ?v WHERE {{
-          GRAPH <{instance_graph_iri}> {{
-            ?s rdf:type <{cls_iri}> .
-            ?s <{has_numeric_value}> ?v .
-          }}
-        }}
-        ORDER BY ?s
-        LIMIT {limit}
-        """
+        if schema_graph_iri:
+            q = f"""
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            SELECT ?v WHERE {{
+              GRAPH <{instance_graph_iri}> {{
+                ?s rdf:type ?cls .
+                ?s <{has_numeric_value}> ?v .
+              }}
+              GRAPH <{schema_graph_iri}> {{
+                ?cls rdfs:subClassOf* <{cls_iri}> .
+              }}
+            }}
+            ORDER BY ?s
+            LIMIT {limit}
+            """
+        else:
+            q = f"""
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            SELECT ?v WHERE {{
+              GRAPH <{instance_graph_iri}> {{
+                ?s rdf:type <{cls_iri}> .
+                ?s <{has_numeric_value}> ?v .
+              }}
+            }}
+            ORDER BY ?s
+            LIMIT {limit}
+            """
 
     res = _exec_select(q)
 

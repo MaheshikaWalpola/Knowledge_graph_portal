@@ -208,6 +208,7 @@ def ctrl_workspace_neighbors(
         details = workspace_group_values(
             group_node_iri=q,
             instance_graph_iri=instance_graph_iri,
+            schema_graph_iri=schema_graph_iri,
             limit=5000,
         )
 
@@ -259,6 +260,7 @@ def _uploaded_workspace_neighbors(
         details = workspace_group_values(
             group_node_iri=q,
             instance_graph_iri=instance_graph_iri,
+            schema_graph_iri=graph_iri,
             limit=5000,
         )
         return {

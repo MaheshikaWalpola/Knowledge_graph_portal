@@ -67,6 +67,28 @@ const displayPredicate = (iri) => {
   return pred.symbol ? `${pred.symbol} ${pred.name}` : pred.readable;
 };
 
+const isNodeEmptyData = (id, label, nodeDataMap) => {
+  if (!id) return false;
+  const isGroup = isWorkspaceGroupIri(id);
+  const localName = local(id);
+  const isDataNode =
+    isGroup ||
+    localName === "hasNumericValue" ||
+    localName === "has_numeric_value" ||
+    label === "Data" ||
+    label === "has Numeric Value";
+
+  if (!isDataNode) return false;
+
+  // Plain schema property node (e.g. cmpo:hasNumericValue) without instance group -> empty!
+  if (!isGroup) return true;
+
+  // Workspace group node -> empty if count is 0 or summary missing
+  const backendNode = nodeDataMap?.get(id);
+  const count = backendNode?.summary?.count ?? 0;
+  return count === 0;
+};
+
 const getRelationColor = (relation) => {
   if (!relation) return "#94a3b8";
 
@@ -316,17 +338,21 @@ const Workspace = () => {
     init();
   }, [token, fetchSchemas]);
 
-  // ---------- label map ----------
-  const labelMap = useMemo(() => {
-    const m = new Map();
+  // ---------- label map & node metadata ----------
+  const { labelMap, nodeDataMap } = useMemo(() => {
+    const lm = new Map();
+    const dm = new Map();
     if (data?.nodes && Array.isArray(data.nodes)) {
       for (const n of data.nodes) {
         const iri = getNodeIri(n);
         const lbl = typeof n === "object" ? n.label : "";
-        if (iri) m.set(iri, lbl || "");
+        if (iri) {
+          lm.set(iri, lbl || "");
+          if (typeof n === "object") dm.set(iri, n);
+        }
       }
     }
-    return m;
+    return { labelMap: lm, nodeDataMap: dm };
   }, [data]);
 
   const isOntologyMetaIri = (iri = "") =>
@@ -602,8 +628,25 @@ const Workspace = () => {
       });
     }
 
-    return [...nodes.values(), ...edges];
-  }, [data, labelMap]);
+    // ── Post-processing: hide empty data nodes & schema property nodes ──
+    const hiddenIds = new Set();
+
+    for (const [id, el] of nodes) {
+      if (el.data.isCenter === "true") continue; // never hide the queried node
+
+      if (isNodeEmptyData(id, el.data.label, nodeDataMap)) {
+        hiddenIds.add(id);
+      }
+    }
+
+    // Remove hidden nodes and their edges
+    for (const id of hiddenIds) nodes.delete(id);
+    const filteredEdges = hiddenIds.size > 0
+      ? edges.filter(e => !hiddenIds.has(e.data.source) && !hiddenIds.has(e.data.target))
+      : edges;
+
+    return [...nodes.values(), ...filteredEdges];
+  }, [data, labelMap, nodeDataMap]);
 
   const stylesheet = useMemo(() => {
     // 1366px is baseline, scale factor scales linearly but bounds to reasonable levels
@@ -697,7 +740,18 @@ const Workspace = () => {
 
     if (data.edges) {
       const seen = new Set();
+      const centerNodeIri = data.node ? getNodeIri(data.node) : "";
+
       for (const e of data.edges) {
+        const source = e.source || e.s || e.from;
+        const target = e.target || e.t || e.to;
+        const sourceLabel = resolveLabel(source, labelMap.get(source));
+        const targetLabel = resolveLabel(target, labelMap.get(target));
+
+        const sourceEmpty = source !== centerNodeIri && isNodeEmptyData(source, sourceLabel, nodeDataMap);
+        const targetEmpty = target !== centerNodeIri && isNodeEmptyData(target, targetLabel, nodeDataMap);
+        if (sourceEmpty || targetEmpty) continue;
+
         const relation = e.relation || e.p || e.pred || e.label;
         if (!relation) continue;
         const pred = getPredicateDisplay(relation);
@@ -719,7 +773,7 @@ const Workspace = () => {
     });
 
     return list;
-  }, [data]);
+  }, [data, labelMap, nodeDataMap]);
 
   // ---------- render ----------
   if (initStatus === "loading") {
@@ -965,96 +1019,95 @@ const Workspace = () => {
                 </div>
               )}
 
-              {view === "list" && (
-                <div className="workspace-list">
-                  {data.edges?.map((e, i) => {
-                    const source = e.source || e.s || e.from;
-                    const target = e.target || e.t || e.to;
-                    const relation = e.relation || e.p || e.pred || e.label;
-                    const sourceLabel = resolveLabel(source, labelMap.get(source));
-                    const targetLabel = resolveLabel(target, labelMap.get(target));
-                    const isGroupSrc = isWorkspaceGroupIri(source);
-                    const isGroupTgt = isWorkspaceGroupIri(target);
-                    // Every edge row is clickable: group-end shows chart, other shows neighbors
-                    const isClickable =
-                      !isOntologyMetaIri(source) || !isOntologyMetaIri(target);
+              {view === "list" && (() => {
+                const centerNodeIri = data?.node ? getNodeIri(data.node) : "";
+                const filteredListEdges = (data?.edges || []).filter((e) => {
+                  const source = e.source || e.s || e.from;
+                  const target = e.target || e.t || e.to;
+                  const sourceLabel = resolveLabel(source, labelMap.get(source));
+                  const targetLabel = resolveLabel(target, labelMap.get(target));
 
-                    return (
-                      <div
-                        className={`edge-item${isClickable ? " clickable" : ""}`}
-                        key={i}
-                        onClick={() => {
-                          // Prefer to click whichever end is a group node (shows chart)
-                          const clickIri = isGroupSrc
-                            ? source
-                            : isGroupTgt
-                            ? target
-                            : isOntologyMetaIri(source)
-                            ? target
-                            : source;
-                          if (clickIri && !isOntologyMetaIri(clickIri)) {
-                            setSelectedNodeIri(clickIri);
-                            loadDetails(clickIri);
-                          }
-                        }}
-                      >
-                        <span className="edge-source">{sourceLabel}</span>
-                        <span className="edge-relation">
-                          {displayPredicate(relation)}
-                        </span>
-                        <span className="edge-target">{targetLabel}</span>
-                      </div>
-                    );
-                  })}
+                  const sourceEmpty = source !== centerNodeIri && isNodeEmptyData(source, sourceLabel, nodeDataMap);
+                  const targetEmpty = target !== centerNodeIri && isNodeEmptyData(target, targetLabel, nodeDataMap);
 
-                  {(!data.edges || data.edges.length === 0) && (
-                    <div className="empty-state">No connections found.</div>
-                  )}
-                </div>
-              )}
+                  return !sourceEmpty && !targetEmpty;
+                });
 
-              {selectedNodeIri && details && (
-                <div className="workspace-details">
-                  <h4>{resolveLabel(selectedNodeIri, labelMap.get(selectedNodeIri))}</h4>
+                return (
+                  <div className="workspace-list">
+                    {filteredListEdges.map((e, i) => {
+                      const source = e.source || e.s || e.from;
+                      const target = e.target || e.t || e.to;
+                      const relation = e.relation || e.p || e.pred || e.label;
+                      const sourceLabel = resolveLabel(source, labelMap.get(source));
+                      const targetLabel = resolveLabel(target, labelMap.get(target));
+                      const isGroupSrc = isWorkspaceGroupIri(source);
+                      const isGroupTgt = isWorkspaceGroupIri(target);
+                      const isClickable =
+                        !isOntologyMetaIri(source) || !isOntologyMetaIri(target);
 
-                  {details.values && details.values.length > 0 && (() => {
-                    // Semantic check: only chart values from confirmed measurement predicates.
-                    //
-                    // Priority order for the flag:
-                    //  1. details.is_measurement  — explicit backend flag (now forwarded by controller)
-                    //  2. details.kind === "workspace_group"  — all group nodes passed backend
-                    //     semantic classification before being created, so trust them implicitly
-                    //  3. Client-side heuristic on predicate_iri (NOT on groupKey which is a class IRI)
-                    const isWorkspaceGroup = details.kind === "workspace_group";
-                    const measVals = getMeasurementValues(
+                      return (
+                        <div
+                          className={`edge-item${isClickable ? " clickable" : ""}`}
+                          key={i}
+                          onClick={() => {
+                            const clickIri = isGroupSrc
+                              ? source
+                              : isGroupTgt
+                              ? target
+                              : isOntologyMetaIri(source)
+                              ? target
+                              : source;
+                            if (clickIri && !isOntologyMetaIri(clickIri)) {
+                              setSelectedNodeIri(clickIri);
+                              loadDetails(clickIri);
+                            }
+                          }}
+                        >
+                          <span className="edge-source">{sourceLabel}</span>
+                          <span className="edge-relation">
+                            {displayPredicate(relation)}
+                          </span>
+                          <span className="edge-target">{targetLabel}</span>
+                        </div>
+                      );
+                    })}
+
+                    {filteredListEdges.length === 0 && (
+                      <div className="empty-state">No connections found.</div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {selectedNodeIri && details && (() => {
+                const isWorkspaceGroup = details.kind === "workspace_group";
+                const measVals = (details.values && details.values.length > 0)
+                  ? getMeasurementValues(
                       details.values,
                       {
-                        // If backend explicitly says it's a measurement, trust it.
-                        // Also accept workspace group nodes as implicit measurements
-                        // (they were already validated during group creation).
                         backendFlag: details.is_measurement ?? (isWorkspaceGroup ? true : undefined),
-                        // Use the actual predicate IRI (hasNumericValue or the specific pred)
-                        // — NOT groupKey which is a class IRI and won't match keyword signals.
                         predicateIri: details.predicate_iri,
                         label: details.label || labelMap.get(selectedNodeIri),
                       }
-                    );
+                    )
+                  : null;
 
-                    if (!measVals) return null;
+                // Do not render details container if there are no measurement values and no error
+                if (!measVals && !detailsErr) return null;
 
-                    // Stride-sample so the chart represents the full data range,
-                    // not just the first 100 values (which may all be clustered).
-                    const CHART_POINTS = 150;
-                    const sampleData = strideSample(measVals, CHART_POINTS);
+                const CHART_POINTS = 150;
+                const sampleData = measVals ? strideSample(measVals, CHART_POINTS) : [];
+                const summaryMin = typeof details.summary?.min === "number"
+                  ? details.summary.min : undefined;
+                const summaryMax = typeof details.summary?.max === "number"
+                  ? details.summary.max : undefined;
 
-                    // Use summary stats for Y-axis bounds so the scale always
-                    // reflects the true min/max even when showing a sample.
-                    const summaryMin = typeof details.summary?.min === "number"
-                      ? details.summary.min : undefined;
-                    const summaryMax = typeof details.summary?.max === "number"
-                      ? details.summary.max : undefined;
+                return (
+                  <div className="workspace-details">
+                    <h4>{resolveLabel(selectedNodeIri, labelMap.get(selectedNodeIri))}</h4>
 
-                    return (
+                    {measVals && (
                       <>
                         {sampleData.length > 1 && (
                           <SimpleChart
@@ -1082,13 +1135,12 @@ const Workspace = () => {
                           </div>
                         </div>
                       </>
-                    );
-                  })()}
+                    )}
 
-
-                  {detailsErr && <div className="error-banner">{detailsErr}</div>}
-                </div>
-              )}
+                    {detailsErr && <div className="error-banner">{detailsErr}</div>}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
