@@ -915,6 +915,7 @@ const Workspace = () => {
             >
               <option value="schema">Schema only</option>
               <option value="both">Schema + Data</option>
+              <option value="data">Data only</option>
             </select>
             <button
               className="workspace-btn-primary"
