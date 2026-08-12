@@ -481,7 +481,7 @@ def workspace_instance_groups_for_class(
     result_nodes: List[Dict] = []
     result_edges: List[Dict] = []
 
-    # ── Strategy A: typed parameter nodes with <hasNumericValue> ──────────
+    # ── Strategy A: typed parameter nodes or observation nodes with observedProperty ──────────
     q_a = f"""
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -493,12 +493,21 @@ def workspace_instance_groups_for_class(
            (AVG(xsd:float(?v)) AS ?avg)
     WHERE {{
       GRAPH <{instance_graph_iri}> {{
-        ?node rdf:type ?cls .
-        ?node <{has_numeric_value}> ?v .
+        {{
+          ?node rdf:type ?cls .
+          ?node ?numPred ?v .
+        }} UNION {{
+          ?node ?obsPred ?cls .
+          ?node ?numPred ?v .
+          FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+        }}
+        FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
       }}
       GRAPH <{schema_graph_iri}> {{
-        ?cls rdfs:subClassOf* <{class_iri}> .
+        ?schemaCls rdfs:subClassOf* <{class_iri}> .
       }}
+      FILTER(?cls = ?schemaCls || 
+             REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
     }}
     GROUP BY ?cls
     ORDER BY ?cls
@@ -559,11 +568,13 @@ def workspace_instance_groups_for_class(
             FILTER(datatype(?v) IN ({numeric_types}))
             FILTER(?pred != rdf:type)
             FILTER(!STRSTARTS(STR(?pred), "http://www.w3.org/"))
-            FILTER(?pred != <{has_numeric_value}>)
+            FILTER(!STRENDS(STR(?pred), "hasNumericValue") && !STRENDS(STR(?pred), "hasSimpleResult") && ?pred != <{has_numeric_value}>)
           }}
           GRAPH <{schema_graph_iri}> {{
-            ?cls rdfs:subClassOf* <{class_iri}> .
+            ?schemaCls rdfs:subClassOf* <{class_iri}> .
           }}
+          FILTER(?cls = ?schemaCls || 
+                 REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
         }}
         GROUP BY ?pred
         HAVING (COUNT(?v) > 1)
@@ -654,8 +665,10 @@ def workspace_group_values(
                 FILTER(datatype(?v) IN ({numeric_types}))
               }}
               GRAPH <{schema_graph_iri}> {{
-                ?cls rdfs:subClassOf* <{cls_iri}> .
+                ?schemaCls rdfs:subClassOf* <{cls_iri}> .
               }}
+              FILTER(?cls = ?schemaCls || 
+                     REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
             }}
             ORDER BY ?inst
             LIMIT {limit}
@@ -684,12 +697,21 @@ def workspace_group_values(
             PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             SELECT ?v WHERE {{
               GRAPH <{instance_graph_iri}> {{
-                ?s rdf:type ?cls .
-                ?s <{has_numeric_value}> ?v .
+                {{
+                  ?s rdf:type ?cls .
+                  ?s ?numPred ?v .
+                }} UNION {{
+                  ?s ?obsPred ?cls .
+                  ?s ?numPred ?v .
+                  FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+                }}
+                FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
               }}
               GRAPH <{schema_graph_iri}> {{
-                ?cls rdfs:subClassOf* <{cls_iri}> .
+                ?schemaCls rdfs:subClassOf* <{cls_iri}> .
               }}
+              FILTER(?cls = ?schemaCls || 
+                     REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
             }}
             ORDER BY ?s
             LIMIT {limit}
@@ -699,8 +721,15 @@ def workspace_group_values(
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             SELECT ?v WHERE {{
               GRAPH <{instance_graph_iri}> {{
-                ?s rdf:type <{cls_iri}> .
-                ?s <{has_numeric_value}> ?v .
+                {{
+                  ?s rdf:type <{cls_iri}> .
+                  ?s ?numPred ?v .
+                }} UNION {{
+                  ?s ?obsPred <{cls_iri}> .
+                  ?s ?numPred ?v .
+                  FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+                }}
+                FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
               }}
             }}
             ORDER BY ?s

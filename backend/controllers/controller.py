@@ -253,7 +253,8 @@ def _uploaded_workspace_neighbors(
     (same pattern as the base workspace flow).
     """
     graph_iri = meta["graph_iri"]
-    instance_graph_iri = meta.get("instance_graph_iri")
+    # Fallback to graph_iri if instance_graph_iri is None (single file combined mode)
+    instance_graph_iri = meta.get("instance_graph_iri") or graph_iri
 
     # Handle workspace group node clicks (instance aggregation details)
     if level == "both" and instance_graph_iri and _is_workspace_group_node(q):
@@ -297,9 +298,8 @@ def _uploaded_workspace_neighbors(
             )
 
     # Schema-only
-    if level != "both" or not instance_graph_iri:
-        schema_only_flag = (level != "both")
-        return neighbors_in_uploaded_graph(node_iri, graph_iri, schema_only=schema_only_flag, limit=limit)
+    if level != "both":
+        return neighbors_in_uploaded_graph(node_iri, graph_iri, schema_only=True, limit=limit)
 
     # Schema + Data: get schema neighbors first
     schema_result = neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
