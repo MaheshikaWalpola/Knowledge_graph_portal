@@ -208,10 +208,10 @@ def ctrl_workspace_neighbors(
         details = workspace_group_values(
             group_node_iri=q,
             instance_graph_iri=instance_graph_iri,
+            schema_graph_iri=schema_graph_iri,
             limit=5000,
         )
 
-        # Minimal graph response (safe for existing frontend):
         return {
             "node": q,
             "nodes": [
@@ -222,25 +222,38 @@ def ctrl_workspace_neighbors(
                     "groupKey": details.get("groupKey"),
                     "summary": details.get("summary"),
                     "values": details.get("values"),
-                    # Forward semantic metadata so the frontend can decide whether
-                    # to render a chart (is_measurement) and label the predicate.
                     "is_measurement": details.get("is_measurement", True),
                     "predicate_iri": details.get("predicate_iri"),
                 }
             ],
             "edges": [],
-            "details": details,  # optional; frontend can use this directly
+            "details": details,
         }
 
-    # 2) Otherwise resolve q as schema term/IRI and return schema+instance neighborhood.
+    # 2) Otherwise resolve q as schema term/IRI and return neighborhood.
     node_iri = _resolve_node_iri_or_404(q)
 
-    return neighbors_schema_and_instances_in_two_graphs(
+    full_res = neighbors_schema_and_instances_in_two_graphs(
         node_iri=node_iri,
         schema_graph_iri=schema_graph_iri,
         instance_graph_iri=instance_graph_iri,
         limit=limit,
     )
+
+    if level == "data":
+        center_iri = full_res.get("node")
+        data_nodes = [
+            n for n in full_res.get("nodes", [])
+            if n.get("iri") == center_iri or n.get("kind") == "workspace_group" or _is_workspace_group_node(n.get("iri"))
+        ]
+        data_node_iris = {n["iri"] for n in data_nodes}
+        data_edges = [
+            e for e in full_res.get("edges", [])
+            if e.get("source") in data_node_iris and e.get("target") in data_node_iris
+        ]
+        return {"node": center_iri, "nodes": data_nodes, "edges": data_edges}
+
+    return full_res
 
 
 def _uploaded_workspace_neighbors(
@@ -252,13 +265,15 @@ def _uploaded_workspace_neighbors(
     (same pattern as the base workspace flow).
     """
     graph_iri = meta["graph_iri"]
-    instance_graph_iri = meta.get("instance_graph_iri")
+    # Fallback to graph_iri if instance_graph_iri is None (single file combined mode)
+    instance_graph_iri = meta.get("instance_graph_iri") or graph_iri
 
     # Handle workspace group node clicks (instance aggregation details)
     if level == "both" and instance_graph_iri and _is_workspace_group_node(q):
         details = workspace_group_values(
             group_node_iri=q,
             instance_graph_iri=instance_graph_iri,
+            schema_graph_iri=graph_iri,
             limit=5000,
         )
         return {
@@ -295,15 +310,13 @@ def _uploaded_workspace_neighbors(
             )
 
     # Schema-only
-    if level != "both" or not instance_graph_iri:
-        schema_only_flag = (level != "both")
-        return neighbors_in_uploaded_graph(node_iri, graph_iri, schema_only=schema_only_flag, limit=limit)
+    if level == "schema":
+        return neighbors_in_uploaded_graph(node_iri, graph_iri, schema_only=True, limit=limit)
 
-    # Schema + Data: get schema neighbors first
-    schema_result = neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
-
-    # Then get aggregated instance groups for this class
+    # Fetch aggregated instance data groups
     import traceback as _tb
+    group_nodes = []
+    group_edges = []
     try:
         instance_groups = workspace_instance_groups_for_class(
             class_iri=node_iri,
@@ -313,17 +326,33 @@ def _uploaded_workspace_neighbors(
         )
         group_nodes = instance_groups.get("nodes", [])
         group_edges = instance_groups.get("edges", [])
-        print(
-            f"[ctrl_workspace_neighbors] merged {len(group_nodes)} group nodes "
-            f"for <{node_iri}> from {instance_graph_iri}"
-        )
-        # Merge instance group nodes and edges into schema result
-        schema_result["nodes"].extend(group_nodes)
-        schema_result["edges"].extend(group_edges)
     except Exception as e:
         print(f"[ctrl_workspace_neighbors] instance group query FAILED: {e}")
         _tb.print_exc()
 
+    # Data only: Return ONLY searched node + data nodes (no schema neighbors)
+    if level == "data":
+        center_node = {
+            "iri": node_iri,
+            "label": None,
+            "kind": "schema",
+        }
+        all_nodes = [center_node] + group_nodes
+        all_node_iris = {n["iri"] for n in all_nodes}
+        filtered_edges = [
+            e for e in group_edges
+            if e.get("source") in all_node_iris and e.get("target") in all_node_iris
+        ]
+        return {
+            "node": node_iri,
+            "nodes": all_nodes,
+            "edges": filtered_edges,
+        }
+
+    # Schema + Data: merge schema neighbors and data nodes
+    schema_result = neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
+    schema_result["nodes"].extend(group_nodes)
+    schema_result["edges"].extend(group_edges)
     return schema_result
 
 

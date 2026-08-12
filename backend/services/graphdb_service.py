@@ -481,7 +481,7 @@ def workspace_instance_groups_for_class(
     result_nodes: List[Dict] = []
     result_edges: List[Dict] = []
 
-    # ── Strategy A: typed parameter nodes with <hasNumericValue> ──────────
+    # ── Strategy A: typed parameter nodes or observation nodes with observedProperty ──────────
     q_a = f"""
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -493,12 +493,21 @@ def workspace_instance_groups_for_class(
            (AVG(xsd:float(?v)) AS ?avg)
     WHERE {{
       GRAPH <{instance_graph_iri}> {{
-        ?node rdf:type ?cls .
-        ?node <{has_numeric_value}> ?v .
+        {{
+          ?node rdf:type ?cls .
+          ?node ?numPred ?v .
+        }} UNION {{
+          ?node ?obsPred ?cls .
+          ?node ?numPred ?v .
+          FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+        }}
+        FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
       }}
       GRAPH <{schema_graph_iri}> {{
-        ?cls rdfs:subClassOf* <{class_iri}> .
+        ?schemaCls rdfs:subClassOf* <{class_iri}> .
       }}
+      FILTER(?cls = ?schemaCls || 
+             REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
     }}
     GROUP BY ?cls
     ORDER BY ?cls
@@ -559,11 +568,13 @@ def workspace_instance_groups_for_class(
             FILTER(datatype(?v) IN ({numeric_types}))
             FILTER(?pred != rdf:type)
             FILTER(!STRSTARTS(STR(?pred), "http://www.w3.org/"))
-            FILTER(?pred != <{has_numeric_value}>)
+            FILTER(!STRENDS(STR(?pred), "hasNumericValue") && !STRENDS(STR(?pred), "hasSimpleResult") && ?pred != <{has_numeric_value}>)
           }}
           GRAPH <{schema_graph_iri}> {{
-            ?cls rdfs:subClassOf* <{class_iri}> .
+            ?schemaCls rdfs:subClassOf* <{class_iri}> .
           }}
+          FILTER(?cls = ?schemaCls || 
+                 REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
         }}
         GROUP BY ?pred
         HAVING (COUNT(?v) > 1)
@@ -624,6 +635,7 @@ def workspace_instance_groups_for_class(
 def workspace_group_values(
     group_node_iri: str,
     instance_graph_iri: str,
+    schema_graph_iri: Optional[str] = None,
     limit: int = 5000,
 ) -> Dict:
     """
@@ -640,34 +652,89 @@ def workspace_group_values(
     if "|" in group_key:
         # Strategy B: predicate-based group
         cls_iri, pred_iri = group_key.split("|", 1)
-        q = f"""
-        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-        SELECT ?v WHERE {{
-          GRAPH <{instance_graph_iri}> {{
-            ?inst rdf:type <{cls_iri}> .
-            ?inst <{pred_iri}> ?v .
-            FILTER(isLiteral(?v))
-            FILTER(datatype(?v) IN ({numeric_types}))
-          }}
-        }}
-        ORDER BY ?inst
-        LIMIT {limit}
-        """
+        if schema_graph_iri:
+            q = f"""
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+            SELECT ?v WHERE {{
+              GRAPH <{instance_graph_iri}> {{
+                ?inst rdf:type ?cls .
+                ?inst <{pred_iri}> ?v .
+                FILTER(isLiteral(?v))
+                FILTER(datatype(?v) IN ({numeric_types}))
+              }}
+              GRAPH <{schema_graph_iri}> {{
+                ?schemaCls rdfs:subClassOf* <{cls_iri}> .
+              }}
+              FILTER(?cls = ?schemaCls || 
+                     REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
+            }}
+            ORDER BY ?inst
+            LIMIT {limit}
+            """
+        else:
+            q = f"""
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+            SELECT ?v WHERE {{
+              GRAPH <{instance_graph_iri}> {{
+                ?inst rdf:type <{cls_iri}> .
+                ?inst <{pred_iri}> ?v .
+                FILTER(isLiteral(?v))
+                FILTER(datatype(?v) IN ({numeric_types}))
+              }}
+            }}
+            ORDER BY ?inst
+            LIMIT {limit}
+            """
     else:
         # Strategy A: class-based group with <hasNumericValue>
         cls_iri = group_key
-        q = f"""
-        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-        SELECT ?v WHERE {{
-          GRAPH <{instance_graph_iri}> {{
-            ?s rdf:type <{cls_iri}> .
-            ?s <{has_numeric_value}> ?v .
-          }}
-        }}
-        ORDER BY ?s
-        LIMIT {limit}
-        """
+        if schema_graph_iri:
+            q = f"""
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            SELECT ?v WHERE {{
+              GRAPH <{instance_graph_iri}> {{
+                {{
+                  ?s rdf:type ?cls .
+                  ?s ?numPred ?v .
+                }} UNION {{
+                  ?s ?obsPred ?cls .
+                  ?s ?numPred ?v .
+                  FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+                }}
+                FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
+              }}
+              GRAPH <{schema_graph_iri}> {{
+                ?schemaCls rdfs:subClassOf* <{cls_iri}> .
+              }}
+              FILTER(?cls = ?schemaCls || 
+                     REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
+            }}
+            ORDER BY ?s
+            LIMIT {limit}
+            """
+        else:
+            q = f"""
+            PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            SELECT ?v WHERE {{
+              GRAPH <{instance_graph_iri}> {{
+                {{
+                  ?s rdf:type <{cls_iri}> .
+                  ?s ?numPred ?v .
+                }} UNION {{
+                  ?s ?obsPred <{cls_iri}> .
+                  ?s ?numPred ?v .
+                  FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+                }}
+                FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
+              }}
+            }}
+            ORDER BY ?s
+            LIMIT {limit}
+            """
 
     res = _exec_select(q)
 
@@ -1043,7 +1110,9 @@ def numeric_stats_for_class(
     instance_graph_iri: str = BASE_INSTANCE_GRAPH,
     schema_graph_iri: str = BASE_SCHEMA_GRAPH,
 ) -> Optional[Dict]:
+    has_numeric_value = f"{settings.CMP_NS}hasNumericValue"
     q = PREFIXES + f"""
+    PREFIX sosa: <http://www.w3.org/ns/sosa/>
     SELECT
       (COUNT(?s) AS ?count)
       (MIN(xsd:float(?v)) AS ?min)
@@ -1051,8 +1120,15 @@ def numeric_stats_for_class(
       (AVG(xsd:float(?v)) AS ?avg)
     WHERE {{
       GRAPH ?g {{
-        ?s rdf:type ?cls .
-        ?s cmpo:hasNumericValue ?v .
+        {{
+          ?s rdf:type ?cls .
+          ?s ?numPred ?v .
+        }} UNION {{
+          ?s ?obsPred ?cls .
+          ?s ?numPred ?v .
+          FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+        }}
+        FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
       }}
       FILTER(?g IN (<{instance_graph_iri}>, <{schema_graph_iri}>))
       GRAPH <{schema_graph_iri}> {{
@@ -1896,18 +1972,27 @@ def build_safe_sparql_query(intent: str, target_graphs: List[str], entity_iri: O
         instance_graph = target_graphs[1] if len(target_graphs) > 1 else schema_graph
         stat_lower = stat.lower() if stat else "all"
         
+        has_numeric_value = f"{settings.CMP_NS}hasNumericValue"
         if stat_lower == "plot":
             return PREFIXES + f"""
+            PREFIX sosa: <http://www.w3.org/ns/sosa/>
             SELECT ?label ?value WHERE {{
               GRAPH <{schema_graph}> {{
                 ?class rdfs:subClassOf* <{entity_iri}> .
               }}
               GRAPH <{instance_graph}> {{
-                ?s rdf:type ?class .
-                ?s cmpo:hasNumericValue ?value .
+                {{
+                  ?s rdf:type ?class .
+                  ?s ?numPred ?value .
+                }} UNION {{
+                  ?s ?obsPred ?class .
+                  ?s ?numPred ?value .
+                  FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+                }}
+                FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
                 OPTIONAL {{ ?s rdfs:label ?label }}
               }}
-            }} LIMIT 100
+            }} LIMIT 500
             """
             
         stat_select = ""
@@ -1923,13 +2008,21 @@ def build_safe_sparql_query(intent: str, target_graphs: List[str], entity_iri: O
             stat_select = "(MIN(xsd:float(?value)) AS ?min) (MAX(xsd:float(?value)) AS ?max) (AVG(xsd:float(?value)) AS ?avg)"
             
         return PREFIXES + f"""
+        PREFIX sosa: <http://www.w3.org/ns/sosa/>
         SELECT (COUNT(?s) AS ?count) {stat_select} WHERE {{
           GRAPH <{schema_graph}> {{
             ?class rdfs:subClassOf* <{entity_iri}> .
           }}
           GRAPH <{instance_graph}> {{
-            ?s rdf:type ?class .
-            ?s cmpo:hasNumericValue ?value .
+            {{
+              ?s rdf:type ?class .
+              ?s ?numPred ?value .
+            }} UNION {{
+              ?s ?obsPred ?class .
+              ?s ?numPred ?value .
+              FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+            }}
+            FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
           }}
         }} LIMIT 1
         """
