@@ -1016,6 +1016,37 @@ const Workspace = () => {
                     }}
                   />
 
+                  {/* Graph Color Legend Overlay */}
+                  <div className="graph-legend">
+                    <div className="legend-title">Node Color Legend</div>
+                    <div className="legend-items">
+                      <div className="legend-item-row">
+                        <span className="legend-color-dot" style={{ background: "#eab308" }}></span>
+                        <span className="legend-label">Searched Term</span>
+                      </div>
+                      <div className="legend-item-row">
+                        <span className="legend-color-dot" style={{ background: "#ec4899" }}></span>
+                        <span className="legend-label">Data / Values Node</span>
+                      </div>
+                      <div className="legend-item-row">
+                        <span className="legend-color-dot" style={{ background: "#3b82f6" }}></span>
+                        <span className="legend-label">Subclass</span>
+                      </div>
+                      <div className="legend-item-row">
+                        <span className="legend-color-dot" style={{ background: "#8b5cf6" }}></span>
+                        <span className="legend-label">Type / Class</span>
+                      </div>
+                      <div className="legend-item-row">
+                        <span className="legend-color-dot" style={{ background: "#14b8a6" }}></span>
+                        <span className="legend-label">Domain</span>
+                      </div>
+                      <div className="legend-item-row">
+                        <span className="legend-color-dot" style={{ background: "#f97316" }}></span>
+                        <span className="legend-label">Range</span>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               )}
 

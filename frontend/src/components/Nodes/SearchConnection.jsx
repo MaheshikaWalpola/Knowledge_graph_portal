@@ -531,31 +531,64 @@ export default function SearchConnection() {
             )}
 
             {view === "graph" && (
-              <div className="graph-wrap">
+              <div className="graph-wrap" style={{ position: "relative" }}>
                 {cyElements.length === 0 ? (
                   <div className="empty">No graph to display.</div>
                 ) : (
-                  <CytoscapeComponent
-                    elements={cyElements}
-                    layout={{
-                      name: "cose",
-                      animate: "end",
-                      fit: true,
-                      padding: 30,
-                    }}
-                    stylesheet={stylesheet}
-                    style={{ width: "100%", height: "520px" }}
-                    wheelSensitivity={0.2}
-                    cy={(cy) => {
-                      // IMPORTANT: prevent duplicate handlers when React re-renders
-                      cy.off("tap", "node");
+                  <>
+                    <CytoscapeComponent
+                      elements={cyElements}
+                      layout={{
+                        name: "cose",
+                        animate: "end",
+                        fit: true,
+                        padding: 30,
+                      }}
+                      stylesheet={stylesheet}
+                      style={{ width: "100%", height: "520px" }}
+                      wheelSensitivity={0.2}
+                      cy={(cy) => {
+                        // IMPORTANT: prevent duplicate handlers when React re-renders
+                        cy.off("tap", "node");
 
-                      cy.on("tap", "node", (evt) => {
-                        const iri = evt.target.id();
-                        if (isInstanceIri(iri)) loadInstanceDetails(iri);
-                      });
-                    }}
-                  />
+                        cy.on("tap", "node", (evt) => {
+                          const iri = evt.target.id();
+                          if (isInstanceIri(iri)) loadInstanceDetails(iri);
+                        });
+                      }}
+                    />
+
+                    {/* Graph Color Legend Overlay */}
+                    <div className="graph-legend">
+                      <div className="legend-title">Node Color Legend</div>
+                      <div className="legend-items">
+                        <div className="legend-item-row">
+                          <span className="legend-color-dot" style={{ background: "#eab308" }}></span>
+                          <span className="legend-label">Searched Term</span>
+                        </div>
+                        <div className="legend-item-row">
+                          <span className="legend-color-dot" style={{ background: "#ec4899" }}></span>
+                          <span className="legend-label">Data / Values Node</span>
+                        </div>
+                        <div className="legend-item-row">
+                          <span className="legend-color-dot" style={{ background: "#3b82f6" }}></span>
+                          <span className="legend-label">Subclass</span>
+                        </div>
+                        <div className="legend-item-row">
+                          <span className="legend-color-dot" style={{ background: "#8b5cf6" }}></span>
+                          <span className="legend-label">Type / Class</span>
+                        </div>
+                        <div className="legend-item-row">
+                          <span className="legend-color-dot" style={{ background: "#14b8a6" }}></span>
+                          <span className="legend-label">Domain</span>
+                        </div>
+                        <div className="legend-item-row">
+                          <span className="legend-color-dot" style={{ background: "#f97316" }}></span>
+                          <span className="legend-label">Range</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
