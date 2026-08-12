@@ -1110,7 +1110,9 @@ def numeric_stats_for_class(
     instance_graph_iri: str = BASE_INSTANCE_GRAPH,
     schema_graph_iri: str = BASE_SCHEMA_GRAPH,
 ) -> Optional[Dict]:
+    has_numeric_value = f"{settings.CMP_NS}hasNumericValue"
     q = PREFIXES + f"""
+    PREFIX sosa: <http://www.w3.org/ns/sosa/>
     SELECT
       (COUNT(?s) AS ?count)
       (MIN(xsd:float(?v)) AS ?min)
@@ -1118,8 +1120,15 @@ def numeric_stats_for_class(
       (AVG(xsd:float(?v)) AS ?avg)
     WHERE {{
       GRAPH ?g {{
-        ?s rdf:type ?cls .
-        ?s cmpo:hasNumericValue ?v .
+        {{
+          ?s rdf:type ?cls .
+          ?s ?numPred ?v .
+        }} UNION {{
+          ?s ?obsPred ?cls .
+          ?s ?numPred ?v .
+          FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+        }}
+        FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
       }}
       FILTER(?g IN (<{instance_graph_iri}>, <{schema_graph_iri}>))
       GRAPH <{schema_graph_iri}> {{
@@ -1963,18 +1972,27 @@ def build_safe_sparql_query(intent: str, target_graphs: List[str], entity_iri: O
         instance_graph = target_graphs[1] if len(target_graphs) > 1 else schema_graph
         stat_lower = stat.lower() if stat else "all"
         
+        has_numeric_value = f"{settings.CMP_NS}hasNumericValue"
         if stat_lower == "plot":
             return PREFIXES + f"""
+            PREFIX sosa: <http://www.w3.org/ns/sosa/>
             SELECT ?label ?value WHERE {{
               GRAPH <{schema_graph}> {{
                 ?class rdfs:subClassOf* <{entity_iri}> .
               }}
               GRAPH <{instance_graph}> {{
-                ?s rdf:type ?class .
-                ?s cmpo:hasNumericValue ?value .
+                {{
+                  ?s rdf:type ?class .
+                  ?s ?numPred ?value .
+                }} UNION {{
+                  ?s ?obsPred ?class .
+                  ?s ?numPred ?value .
+                  FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+                }}
+                FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
                 OPTIONAL {{ ?s rdfs:label ?label }}
               }}
-            }} LIMIT 100
+            }} LIMIT 500
             """
             
         stat_select = ""
@@ -1990,13 +2008,21 @@ def build_safe_sparql_query(intent: str, target_graphs: List[str], entity_iri: O
             stat_select = "(MIN(xsd:float(?value)) AS ?min) (MAX(xsd:float(?value)) AS ?max) (AVG(xsd:float(?value)) AS ?avg)"
             
         return PREFIXES + f"""
+        PREFIX sosa: <http://www.w3.org/ns/sosa/>
         SELECT (COUNT(?s) AS ?count) {stat_select} WHERE {{
           GRAPH <{schema_graph}> {{
             ?class rdfs:subClassOf* <{entity_iri}> .
           }}
           GRAPH <{instance_graph}> {{
-            ?s rdf:type ?class .
-            ?s cmpo:hasNumericValue ?value .
+            {{
+              ?s rdf:type ?class .
+              ?s ?numPred ?value .
+            }} UNION {{
+              ?s ?obsPred ?class .
+              ?s ?numPred ?value .
+              FILTER(STRENDS(STR(?obsPred), "observedProperty"))
+            }}
+            FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
           }}
         }} LIMIT 1
         """
