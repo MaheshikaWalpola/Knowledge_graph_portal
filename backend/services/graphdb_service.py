@@ -588,7 +588,7 @@ def workspace_instance_groups_for_class(
     result_edges: List[Dict] = []
 
     subclasses_vars = _get_subclasses_with_variations(class_iri, schema_graph_iri)
-    in_clause = ", ".join(f"<{s}>" for s in subclasses_vars)
+    values_clause = " ".join(f"<{s}>" for s in subclasses_vars)
 
     # Strategy A: typed parameter nodes or observation nodes
     q_a = f"""
@@ -601,13 +601,12 @@ def workspace_instance_groups_for_class(
            (AVG(xsd:float(?v)) AS ?avg)
     WHERE {{
       GRAPH <{instance_graph_iri}> {{
+        VALUES ?cls {{ {values_clause} }}
         {{
           ?node rdf:type ?cls .
-          FILTER(?cls IN ({in_clause}))
           ?node ?numPred ?v .
         }} UNION {{
           ?node ?obsPred ?cls .
-          FILTER(?cls IN ({in_clause}))
           ?node ?numPred ?v .
           FILTER(STRENDS(STR(?obsPred), "observedProperty"))
         }}
@@ -620,7 +619,10 @@ def workspace_instance_groups_for_class(
     """
 
     try:
+        import time
+        t0 = time.time()
         res_a = _exec_select(q_a)
+        print(f"[PERF] workspace_groups Strategy A query took {(time.time() - t0):.3f}s")
         strategy_a_classes: set = set()
 
         for b in res_a["results"]["bindings"]:
@@ -666,8 +668,8 @@ def workspace_instance_groups_for_class(
                (AVG(xsd:float(?v)) AS ?avg)
         WHERE {{
           GRAPH <{instance_graph_iri}> {{
+            VALUES ?cls {{ {values_clause} }}
             ?inst rdf:type ?cls .
-            FILTER(?cls IN ({in_clause}))
             ?inst ?pred ?v .
             FILTER(isLiteral(?v))
             FILTER(datatype(?v) IN ({numeric_types}))
@@ -683,7 +685,9 @@ def workspace_instance_groups_for_class(
         """
 
         try:
+            t0 = time.time()
             res_b = _exec_select(q_b)
+            print(f"[PERF] workspace_groups Strategy B query took {(time.time() - t0):.3f}s")
 
             # Batch fetch schema properties metadata to avoid N-plus-1 SPARQL queries
             schema_metadata = _get_schema_predicates_metadata(schema_graph_iri)
@@ -757,14 +761,14 @@ def workspace_group_values(
         cls_iri, pred_iri = group_key.split("|", 1)
         if schema_graph_iri:
             subclasses_vars = _get_subclasses_with_variations(cls_iri, schema_graph_iri)
-            in_clause = ", ".join(f"<{s}>" for s in subclasses_vars)
+            values_clause = " ".join(f"<{s}>" for s in subclasses_vars)
             q = f"""
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
             SELECT ?v WHERE {{
               GRAPH <{instance_graph_iri}> {{
+                VALUES ?cls {{ {values_clause} }}
                 ?inst rdf:type ?cls .
-                FILTER(?cls IN ({in_clause}))
                 ?inst <{pred_iri}> ?v .
                 FILTER(isLiteral(?v))
                 FILTER(datatype(?v) IN ({numeric_types}))
@@ -793,18 +797,17 @@ def workspace_group_values(
         cls_iri = group_key
         if schema_graph_iri:
             subclasses_vars = _get_subclasses_with_variations(cls_iri, schema_graph_iri)
-            in_clause = ", ".join(f"<{s}>" for s in subclasses_vars)
+            values_clause = " ".join(f"<{s}>" for s in subclasses_vars)
             q = f"""
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             SELECT ?v WHERE {{
               GRAPH <{instance_graph_iri}> {{
+                VALUES ?cls {{ {values_clause} }}
                 {{
                   ?s rdf:type ?cls .
-                  FILTER(?cls IN ({in_clause}))
                   ?s ?numPred ?v .
                 }} UNION {{
                   ?s ?obsPred ?cls .
-                  FILTER(?cls IN ({in_clause}))
                   ?s ?numPred ?v .
                   FILTER(STRENDS(STR(?obsPred), "observedProperty"))
                 }}
@@ -834,7 +837,10 @@ def workspace_group_values(
             LIMIT {limit}
             """
 
+    import time
+    t0 = time.time()
     res = _exec_select(q)
+    print(f"[PERF] workspace_group_values query took {(time.time() - t0):.3f}s")
 
     values: List[float] = []
     for b in res["results"]["bindings"]:
