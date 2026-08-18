@@ -529,6 +529,35 @@ def _decode_group_node_iri(group_node_iri: str) -> str:
         raise ValueError("Not a workspace group node")
     encoded = group_node_iri[len(base):]
     return urllib.parse.unquote(encoded)
+def _get_subclasses_with_variations(cls_iri: str, schema_graph_iri: str) -> List[str]:
+    """
+    Get all subclasses of cls_iri including HTTP and HTTPS variations to handle mismatch.
+    Performed in Python to avoid slow graph database filter and regex joins.
+    """
+    q = PREFIXES + f"""
+    SELECT DISTINCT ?sub WHERE {{
+      GRAPH <{schema_graph_iri}> {{
+        ?sub rdfs:subClassOf* <{cls_iri}> .
+      }}
+    }}
+    """
+    subclasses = [cls_iri]
+    try:
+        res = _exec_select(q)
+        for b in res.get("results", {}).get("bindings", []):
+            sub = b["sub"]["value"]
+            subclasses.append(sub)
+    except Exception as e:
+        print(f"[Warning] Failed to fetch subclasses for {cls_iri}: {e}")
+    
+    all_vars = set()
+    for s in subclasses:
+        all_vars.add(s)
+        if s.startswith("https://"):
+            all_vars.add(s.replace("https://", "http://", 1))
+        elif s.startswith("http://"):
+            all_vars.add(s.replace("http://", "https://", 1))
+    return list(all_vars)
 
 
 def workspace_instance_groups_for_class(
@@ -558,9 +587,11 @@ def workspace_instance_groups_for_class(
     result_nodes: List[Dict] = []
     result_edges: List[Dict] = []
 
+    subclasses_vars = _get_subclasses_with_variations(class_iri, schema_graph_iri)
+    in_clause = ", ".join(f"<{s}>" for s in subclasses_vars)
+
     # Strategy A: typed parameter nodes or observation nodes
     q_a = f"""
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
     PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
     SELECT ?cls
@@ -572,19 +603,16 @@ def workspace_instance_groups_for_class(
       GRAPH <{instance_graph_iri}> {{
         {{
           ?node rdf:type ?cls .
+          FILTER(?cls IN ({in_clause}))
           ?node ?numPred ?v .
         }} UNION {{
           ?node ?obsPred ?cls .
+          FILTER(?cls IN ({in_clause}))
           ?node ?numPred ?v .
           FILTER(STRENDS(STR(?obsPred), "observedProperty"))
         }}
         FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
       }}
-      GRAPH <{schema_graph_iri}> {{
-        ?schemaCls rdfs:subClassOf* <{class_iri}> .
-      }}
-      FILTER(?cls = ?schemaCls || 
-             REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
     }}
     GROUP BY ?cls
     ORDER BY ?cls
@@ -629,7 +657,6 @@ def workspace_instance_groups_for_class(
     # Only run when Strategy A returned nothing (avoids double-counting).
     if not result_nodes:
         q_b = f"""
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
         SELECT ?pred
@@ -640,6 +667,7 @@ def workspace_instance_groups_for_class(
         WHERE {{
           GRAPH <{instance_graph_iri}> {{
             ?inst rdf:type ?cls .
+            FILTER(?cls IN ({in_clause}))
             ?inst ?pred ?v .
             FILTER(isLiteral(?v))
             FILTER(datatype(?v) IN ({numeric_types}))
@@ -647,11 +675,6 @@ def workspace_instance_groups_for_class(
             FILTER(!STRSTARTS(STR(?pred), "http://www.w3.org/"))
             FILTER(!STRENDS(STR(?pred), "hasNumericValue") && !STRENDS(STR(?pred), "hasSimpleResult") && ?pred != <{has_numeric_value}>)
           }}
-          GRAPH <{schema_graph_iri}> {{
-            ?schemaCls rdfs:subClassOf* <{class_iri}> .
-          }}
-          FILTER(?cls = ?schemaCls || 
-                 REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
         }}
         GROUP BY ?pred
         HAVING (COUNT(?v) > 1)
@@ -733,22 +756,19 @@ def workspace_group_values(
         # Strategy B: predicate-based group
         cls_iri, pred_iri = group_key.split("|", 1)
         if schema_graph_iri:
+            subclasses_vars = _get_subclasses_with_variations(cls_iri, schema_graph_iri)
+            in_clause = ", ".join(f"<{s}>" for s in subclasses_vars)
             q = f"""
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
             SELECT ?v WHERE {{
               GRAPH <{instance_graph_iri}> {{
                 ?inst rdf:type ?cls .
+                FILTER(?cls IN ({in_clause}))
                 ?inst <{pred_iri}> ?v .
                 FILTER(isLiteral(?v))
                 FILTER(datatype(?v) IN ({numeric_types}))
               }}
-              GRAPH <{schema_graph_iri}> {{
-                ?schemaCls rdfs:subClassOf* <{cls_iri}> .
-              }}
-              FILTER(?cls = ?schemaCls || 
-                     REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
             }}
             ORDER BY ?inst
             LIMIT {limit}
@@ -772,26 +792,24 @@ def workspace_group_values(
         # Strategy A: class-based group with <hasNumericValue>
         cls_iri = group_key
         if schema_graph_iri:
+            subclasses_vars = _get_subclasses_with_variations(cls_iri, schema_graph_iri)
+            in_clause = ", ".join(f"<{s}>" for s in subclasses_vars)
             q = f"""
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             SELECT ?v WHERE {{
               GRAPH <{instance_graph_iri}> {{
                 {{
                   ?s rdf:type ?cls .
+                  FILTER(?cls IN ({in_clause}))
                   ?s ?numPred ?v .
                 }} UNION {{
                   ?s ?obsPred ?cls .
+                  FILTER(?cls IN ({in_clause}))
                   ?s ?numPred ?v .
                   FILTER(STRENDS(STR(?obsPred), "observedProperty"))
                 }}
                 FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
               }}
-              GRAPH <{schema_graph_iri}> {{
-                ?schemaCls rdfs:subClassOf* <{cls_iri}> .
-              }}
-              FILTER(?cls = ?schemaCls || 
-                     REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
             }}
             ORDER BY ?s
             LIMIT {limit}
