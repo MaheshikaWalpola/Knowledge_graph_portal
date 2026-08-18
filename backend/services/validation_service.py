@@ -641,7 +641,7 @@ class ValidationService:
         else:
             status_summary = f"{passed_questions} of {total_questions} Questions Passed ({pass_percentage}%)"
 
-        # ── Compute six KPI metrics for compact report cards ──
+        # Compute KPI metrics for report cards
         violation_count = sum(1 for v in violations if v.get("severity", "Violation") == "Violation")
         warning_count = sum(1 for v in violations if v.get("severity", "Violation") == "Warning")
 

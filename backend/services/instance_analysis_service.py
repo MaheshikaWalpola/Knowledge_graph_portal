@@ -1,13 +1,4 @@
-"""
-Instance Analysis Service
-
-Handles:
-- Extracting schema terms from RDF files
-- Extracting schema structure (classes, properties, SOSA patterns)
-- Analyzing CSV headers
-- Matching CSV headers to schema terms using AI service or skos:altLabel
-- Generating matching reports
-"""
+"""Instance analysis: schema extraction, CSV header matching, and report generation."""
 
 from typing import Dict, List, Any, Set, Optional
 from io import BytesIO

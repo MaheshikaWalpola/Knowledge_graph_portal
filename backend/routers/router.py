@@ -4,14 +4,14 @@ from fastapi import APIRouter, Query, Body, Depends, Response, UploadFile, File,
 from fastapi.responses import StreamingResponse
 
 from controllers.controller import (
-    # base ontology (read-only)
+
     ctrl_full_schema_graph,
     ctrl_neighbors_schema,
     ctrl_neighbors_both,
     ctrl_neighbors_schema_and_instances,
     ctrl_instance_details,
 
-    # multi-schema workspace (per-user-per-schema)
+    # workspace (per-user-per-schema)
     ctrl_init_workspace,
     ctrl_workspace_neighbors,
     ctrl_workspace_add_relation,
@@ -20,7 +20,7 @@ from controllers.controller import (
     ctrl_export_workspace,
     ctrl_workspace_upload_instances,
 
-    # custom uploaded schemas
+    # uploaded schemas
     ctrl_list_user_schemas,
     ctrl_delete_user_schema,
     ctrl_delete_schema,
@@ -38,7 +38,7 @@ from core.auth import get_current_user
 
 router = APIRouter()
 
-# -------------------------- BASE ONTOLOGY ------------------------------
+# --- Base ontology ---
 
 @router.get("/schema/graph")
 def api_full_schema_graph(
@@ -75,8 +75,7 @@ def api_instance_details(
     return ctrl_instance_details(iri)
 
 
-# ---------------------------- WORKSPACE --------------------------------
-# ---------------------- USER-SPECIFIC MULTI-SCHEMA ----------------------
+# --- Workspace (user-specific multi-schema) ---
 
 @router.post("/workspace/init")
 def api_workspace_init(
@@ -247,7 +246,7 @@ def api_upload_schema(
     )
 
 
-# ────────────────── CANVAS (import / export) ──────────────────
+# --- Canvas (import / export) ---
 
 from core.parse_errors import friendly_parse_error as _friendly_parse_error
 
@@ -265,7 +264,7 @@ async def api_canvas_import(
     content = await file.read()
     g = RDFGraph()
 
-    # guess format from filename
+    # Guess format from filename
     fname = (file.filename or "").lower()
     fmt = "turtle"
     if fname.endswith(".rdf") or fname.endswith(".owl"):
@@ -285,8 +284,8 @@ async def api_canvas_import(
             "technical": raw,
         })
 
-    # Build nodes from all subjects/objects that are URIs
-    node_map = {}  # iri -> node dict
+    # Detect node types from rdf:type
+    node_map = {}
     edge_list = []
 
     TYPE_MAP = {
@@ -368,7 +367,7 @@ async def api_canvas_import(
         }
         col += 1
 
-    # Build edges (skip rdf:type edges)
+    # Build edges (skip rdf:type, label, comment edges)
     edge_idx = 0
     for s, p, o in g:
         s_str, p_str, o_str = str(s), str(p), str(o)
@@ -410,7 +409,7 @@ async def api_canvas_import(
     }
 
 
-# ────────────────── INSTANCE GENERATION WORKFLOW ──────────────────
+# --- Instance generation workflow ---
 
 @router.post("/instance-generation/analyze")
 async def api_analyze_schema_and_data(

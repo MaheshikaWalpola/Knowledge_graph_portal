@@ -13,7 +13,7 @@ from typing import Optional
 from rdflib import Graph, URIRef, OWL, RDF, RDFS
 
 
-# ── format detection ────────────────────────────────────────────────
+# --- Format detection ---
 
 EXT_FORMAT = {
     ".ttl":    "turtle",
@@ -36,7 +36,7 @@ def _guess_format(filename: str) -> str:
     return "turtle"  # default fallback
 
 
-# ── namespace detection ─────────────────────────────────────────────
+# --- Namespace detection ---
 
 def detect_primary_namespace(g: Graph) -> Optional[str]:
     """
@@ -73,7 +73,7 @@ def detect_primary_namespace(g: Graph) -> Optional[str]:
     return None
 
 
-# ── parse helpers ───────────────────────────────────────────────────
+# --- Parse helpers ---
 
 @dataclass
 class ParsedRDF:

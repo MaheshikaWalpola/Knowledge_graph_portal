@@ -350,16 +350,13 @@ def _classify_predicate_semantics(
     """
     local_pred = pred_iri.rsplit("/", 1)[-1].rsplit("#", 1)[-1].lower()
 
-    # ── Fast path: local-name exclusion ──────────────────────────────────
     if any(skip == local_pred or local_pred.endswith(skip) for skip in _SKIP_PRED_FRAGMENTS):
         return "identifier"
 
-    # ── Fast path: local-name positive signal ────────────────────────────
     has_measurement_signal = any(
         sig in local_pred for sig in _MEASUREMENT_PRED_SIGNALS
     )
 
-    # ── Schema query: type + range + label + comment ─────────────────────
     try:
         q = f"""
         PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -396,18 +393,14 @@ def _classify_predicate_semantics(
         label_text  = b.get("lbl",      {}).get("value", "").lower()
         comment_text = b.get("cmt",     {}).get("value", "").lower()
 
-    # ── Rule 1: ObjectProperty → cannot be a numeric measurement ─────────
     if prop_type == "http://www.w3.org/2002/07/owl#ObjectProperty":
         return "identifier"
 
-    # ── Rule 2: Range is a non-measurement XSD type → exclude ────────────
     if range_iri in _NON_MEASUREMENT_XSD_TYPES:
         return "identifier"
 
-    # ── Rule 3: Range is a numeric XSD type → strong measurement signal ──
     range_is_numeric = range_iri in set(_NUMERIC_XSD_TYPES)
 
-    # ── Rule 4: Label / comment keyword analysis ──────────────────────────
     combined_text = label_text + " " + comment_text
     label_has_measurement = any(sig in combined_text for sig in _MEASUREMENT_PRED_SIGNALS)
     label_has_identifier  = any(skip in combined_text for skip in {
@@ -418,19 +411,19 @@ def _classify_predicate_semantics(
     if label_has_identifier:
         return "identifier"
 
-    # ── Rule 5: DatatypeProperty + numeric range → measurement ───────────
+    # Rule 5: DatatypeProperty + numeric range - measurement
     if prop_type == "http://www.w3.org/2002/07/owl#DatatypeProperty" and range_is_numeric:
         return "measurement"
 
-    # ── Rule 6: Any combination of positive signals → measurement ────────
+    # Rule 6: Any combination of positive signals - measurement
     if range_is_numeric or has_measurement_signal or label_has_measurement:
         return "measurement"
 
-    # ── Rule 7: DatatypeProperty with no range → rely on name signals ────
+    # Rule 7: DatatypeProperty with no range - rely on name signals
     if prop_type == "http://www.w3.org/2002/07/owl#DatatypeProperty":
         return "measurement" if has_measurement_signal else "unknown"
 
-    # ── Default: unknown (conservative – will be excluded from charting) ──
+    # Default: unknown (conservative - excluded from charting)
     return "unknown"
 
 def _is_workspace_instances_graph(graph_iri: str) -> bool:
@@ -481,7 +474,7 @@ def workspace_instance_groups_for_class(
     result_nodes: List[Dict] = []
     result_edges: List[Dict] = []
 
-    # ── Strategy A: typed parameter nodes or observation nodes with observedProperty ──────────
+    # Strategy A: typed parameter nodes or observation nodes
     q_a = f"""
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -548,7 +541,7 @@ def workspace_instance_groups_for_class(
     except Exception as exc:  # noqa: BLE001
         print(f"[workspace_groups] Strategy A failed for <{class_iri}>: {exc}")
 
-    # ── Strategy B: direct numeric predicates on instances ────────────────
+    # Strategy B: direct numeric predicates on instances
     # Only run when Strategy A returned nothing (avoids double-counting).
     if not result_nodes:
         q_b = f"""
@@ -588,7 +581,7 @@ def workspace_instance_groups_for_class(
             for b in res_b["results"]["bindings"]:
                 pred_iri = b["pred"]["value"]
 
-                # ── Semantic classification: only include real measurements ──
+                # Semantic classification: only include real measurements
                 # Uses ontology property type, rdfs:range, label/comment and
                 # keyword heuristics – NOT just XSD type alone.
                 semantic_class = _classify_predicate_semantics(
@@ -1577,9 +1570,7 @@ def update_schema_triple_in_graph(
     add_schema_triple_in_graph(subject_iri, predicate_iri, new_object_iri, graph_iri)
 
 
-# ──────────────────────────────────────────────────────────────────────
-# UPLOADED SCHEMA SUPPORT (NAMESPACE-AGNOSTIC)
-# ──────────────────────────────────────────────────────────────────────
+# --- Uploaded schema support (namespace-agnostic) ---
 
 def full_uploaded_schema_graph(graph_iri: str, limit: int = 20000, schema_only: bool = False) -> Dict:
     """

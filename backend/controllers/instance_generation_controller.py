@@ -1,6 +1,4 @@
-"""
-Instance Generation Workflow Controllers
-"""
+"""Instance generation workflow controllers."""
 
 from typing import Dict, List, Any
 from fastapi import HTTPException, UploadFile

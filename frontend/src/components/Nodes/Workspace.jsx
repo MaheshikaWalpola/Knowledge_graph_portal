@@ -628,7 +628,7 @@ const Workspace = () => {
       });
     }
 
-    // ── Post-processing: hide empty data nodes & schema property nodes ──
+    // Post-processing: hide empty data nodes & schema property nodes
     const hiddenIds = new Set();
 
     for (const [id, el] of nodes) {

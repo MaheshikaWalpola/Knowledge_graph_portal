@@ -60,7 +60,7 @@ export default function CanvasEditor({ onOpenAuth }) {
     }
   }, []);
 
-  // ── Auto-load schema from query param ──
+  // Auto-load schema from query param
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const schemaId = params.get("schema_id");

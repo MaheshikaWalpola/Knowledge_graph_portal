@@ -13,7 +13,7 @@ from services.chat_service import (
 router = APIRouter(prefix="/chats", tags=["chats"])
 
 
-# ── Pydantic models ───────────────────────────────────────────────────────────
+# Pydantic models
 
 class MessageSchema(BaseModel):
     role: str
@@ -27,7 +27,7 @@ class ConversationUpsertBody(BaseModel):
     messages: List[MessageSchema]
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# Endpoints
 
 @router.get("")
 def api_get_conversations(

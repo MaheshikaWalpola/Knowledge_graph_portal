@@ -1,9 +1,4 @@
-"""
-LLM Matching Suggestions - Extends local_llm_service.py
-
-This module provides functions for matching CSV headers to schema terms using LLM.
-Can be imported and used independently or integrated into LocalLLMService.
-"""
+"""LLM matching suggestions for CSV headers and schema terms."""
 
 from typing import Dict, List
 from services.local_llm_service import LocalLLMService

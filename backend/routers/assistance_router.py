@@ -44,8 +44,7 @@ SCHEMA_HINTS = {
     "type", "subclass", "domain", "range", "connected"
 }
 
-# General KG/semantic-web concepts that can be answered from common knowledge
-# without querying the user's graph database.
+# General KG concepts answered from common knowledge without querying GraphDB
 GENERAL_KG_CONCEPTS = {
     "knowledge graph", "kg", "ontology", "rdf", "sparql", "owl", "triple",
     "turtle", "json-ld", "n-triples", "n3", "semantic web", "linked data",
@@ -57,11 +56,7 @@ GENERAL_KG_CONCEPTS = {
 
 
 def is_general_concept_question(entity_term: str, question: str) -> bool:
-    """
-    Conservative keyword safety net: returns True ONLY for pure definitional
-    questions like 'What is a KG?' that have no specific entity/ontology context.
-    This fires ONLY when the LLM also sets requires_graphdb=False.
-    """
+    """Returns True for pure definitional questions with no entity/ontology context."""
     q = question.lower().strip().rstrip("?").rstrip(".")
 
     # If the question contains any specific-context signals, it is NOT general
@@ -78,10 +73,7 @@ def is_general_concept_question(entity_term: str, question: str) -> bool:
 
 
 def extract_connected_to_term(q: str) -> str:
-    """
-    Extract term after 'connected to ...' for questions like:
-      'What classes are connected to Pressure'
-    """
+    """Extract term after 'connected to ...' in questions."""
     m = re.search(r"connected\s+to\s+([A-Za-z0-9_:-]+)", q, flags=re.IGNORECASE)
     if m:
         return m.group(1).strip()
@@ -89,11 +81,7 @@ def extract_connected_to_term(q: str) -> str:
 
 
 def generate_options_for_stats(term: str, iri: str, graph_name: str = "") -> List[str]:
-    """
-    Generate meaningful follow-up options based on connected classes/entities.
-    For example, if user asks for "average of Ripple Air Bag Pressure",
-    suggest "average of [related_class]" from connected entities.
-    """
+    """Generate follow-up options from connected classes."""
     options = []
     
     try:
@@ -175,14 +163,14 @@ def build_evidence_for_term(term: str, graph_name: str = "") -> str:
     return "\n".join(out)
 
 
-#  SSE helpers
+# --- SSE helpers ---
 
 def _sse(event: str, data: dict) -> str:
     """Format a single SSE message."""
     payload = json.dumps(data, ensure_ascii=False)
     return f"event: {event}\ndata: {payload}\n\n"
 
-# Structured thinking event helpers
+
 def _phase(label: str) -> str:
     return _sse("thinking", {"type": "phase", "label": label})
 
@@ -199,7 +187,7 @@ def _log(tag: str, text: str) -> str:
     return _sse("thinking", {"type": "log", "tag": tag, "text": text})
 
 
-#  Streaming chat endpoint
+# --- Streaming chat endpoint ---
 
 @router.post("/chat/stream")
 async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user)):
@@ -229,7 +217,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
             return _sse("thinking", {"type": "para", "phase": phase, "text": text})
 
         try:
-            # ── Step 1: Intent analysis ──────────────────────────────────────
+            # Intent analysis
             yield _log("SYS", "Initializing reasoning engine context")
             yield _log("NLP", f"Analyzing query tokens; sequence payload: {len(last_user)} characters")
 
@@ -271,7 +259,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                 yield _sse("result", {"answer": answer, "options": []})
                 return
 
-            # ── Step 2: Resolve ontology ─────────────────────────────────────
+            # Resolve ontology
             yield _log("GRAPH", "Searching active ontology metadata mappings in repository")
 
             target_graphs = []
@@ -343,7 +331,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
             yield _log("GRAPH", "Ontology definition loaded successfully")
             yield _log("GRAPH", f"Workspace bound: schema_graph='{short_schema or 'default'}', instance_graph='{short_inst or 'none'}'")
 
-            # ── Step 3: Resolve entity IRI ───────────────────────────────────
+            # Resolve entity IRI
             entity_iri = None
             if entity_term:
                 yield _log("NLP", f"Resolving entity token sequence against schema vocabulary")
@@ -356,7 +344,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                 else:
                     yield _log("GRAPH", "No direct IRI mapping found; enabling lexical fallback query")
 
-            # ── Step 4: Build SPARQL query ────────────────────────────────────
+            # Build SPARQL query
             yield _log("SPARQL", "Compiling SPARQL query template constraints")
 
             try:
@@ -373,7 +361,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                         sparql_query = sparql_query.replace(f"<GRAPH_{i}>", f"<{graph_iri}>")
                     yield _log("SPARQL", "Synthesizing LLM-generated query structure")
 
-                # ── Step 5: Execute SPARQL ────────────────────────────────────
+                # Execute SPARQL
                 yield _log("DB", "Dispatching query payload to GraphDB server endpoint")
                 raw_results = execute_safe_select(sparql_query)
                 result_count = len(raw_results)
@@ -386,7 +374,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                     })
                     return
 
-                # ── Step 6: Format or explain results ────────────────────────
+                # Format or explain results
                 if sparql_query and intent_type == "get_numeric_stat":
                     if stat == "plot":
                         yield _log("SYS", "Generating plot coordinate arrays and value sequences")
@@ -440,7 +428,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
                         yield _sse("result", {"answer": "\n".join(ans), "options": []})
                         return
 
-                # Simple list results — format locally
+                # Simple list results - format locally
                 if sparql_query and intent_type != "complex_query" and 0 < result_count <= 100:
                     yield _log("SYS", "Applying schematic result list parsing templates")
                     lines = []
@@ -483,7 +471,7 @@ async def chat_stream(req: ChatReq, current_user: Any = Depends(get_current_user
     )
 
 
-#  Original (non-streaming) chat endpoint — kept unchanged
+# --- Non-streaming chat endpoint ---
 
 @router.post("/chat")
 def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
@@ -504,7 +492,7 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
         m_avg = re.search(r"\b(average|avg|mean)\b", qlow)
         is_connected_q = "classes" in qlow and "connected to" in qlow
 
-        # Always analyze intent to extract entity_term or clarify
+        # Analyze intent
         intent = svc.analyze_intent_and_clarify(last_user, history=history)
         
         needs_clarification = intent.get("needs_clarification", False)
@@ -527,7 +515,7 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
         entity_term = intent.get("entity", "").strip()
         property_term = intent.get("property", "").strip()
 
-        # Check if it's a general concept question not needing GraphDB
+        # Check if general concept question
         is_general = (
             not requires_graphdb
             or is_general_concept_question(entity_term, last_user)
@@ -537,7 +525,7 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
             answer = svc.chat_general(last_user, history=history)
             return {"answer": answer, "options": []}
 
-        # --- Resolve Ontology ---
+        # --- Resolve ontology ---
         target_graphs = []
         schema_id = req.selected_schema_id
         graph_name = extracted_ontology_name
@@ -609,7 +597,7 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
         print(f"[DEBUG] stat: {stat}")
         print(f"[DEBUG] entity: {entity_term}")
         
-        # --- Resolve Entity ---
+        # --- Resolve entity ---
         entity_iri = None
         if entity_term:
             primary_graph = target_graphs[0]
@@ -619,7 +607,7 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
             
         print(f"[DEBUG] resolved entity IRI: {entity_iri}")
 
-        # --- Dynamic SPARQL Generation Pipeline ---
+        # --- Dynamic SPARQL pipeline ---
         try:
             print(f"[DEBUG] Starting dynamic SPARQL pipeline for graph: {graph_name}")
             
@@ -702,7 +690,7 @@ def chat(req: ChatReq, current_user: Any = Depends(get_current_user)):
                     if row.get("avg"): ans.append(f"Average: {float(row.get('avg')):.2f}")
                     return {"answer": "\n".join(ans), "options": []}
                     
-            # For simple list results from our builders, format them locally without LLM overhead
+            # Simple list results - format locally
             if sparql_query and intent_type != "complex_query" and len(raw_results) > 0 and len(raw_results) <= 100:
                 lines = []
                 for row in raw_results:

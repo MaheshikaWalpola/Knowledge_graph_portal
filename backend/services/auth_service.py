@@ -38,7 +38,7 @@ def generate_verification_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-# ------------------ DB operations ------------------
+# --- DB operations ---
 
 
 def get_user_by_email(email: str) -> Optional[dict]:
