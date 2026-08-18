@@ -1,7 +1,4 @@
-"""
-Helpers for translating raw rdflib (or similar) parse exceptions
-into human-readable error messages.
-"""
+"""Friendly RDF parse error formatting."""
 import re
 
 

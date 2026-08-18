@@ -628,7 +628,7 @@ const Workspace = () => {
       });
     }
 
-    // ── Post-processing: hide empty data nodes & schema property nodes ──
+    // Post-processing: hide empty data nodes & schema property nodes
     const hiddenIds = new Set();
 
     for (const [id, el] of nodes) {
@@ -953,10 +953,10 @@ const Workspace = () => {
             )}
           </div>
 
-          {loading && (
-            <div className="workspace-loading-inline">
-              <div className="loading-spinner small"></div>
-              <span>Searching...</span>
+          {loading && !data && (
+            <div className="workspace-loading-full">
+              <div className="loading-spinner-premium"></div>
+              <p className="loading-text">Searching Knowledge Graph...</p>
             </div>
           )}
 
@@ -964,7 +964,15 @@ const Workspace = () => {
 
 
           {data && (
-            <div className="workspace-results">
+            <div className="workspace-results" style={{ position: "relative" }}>
+              {loading && (
+                <div className="workspace-results-loader-overlay">
+                  <div className="workspace-results-loader-card">
+                    <div className="loading-spinner-premium"></div>
+                    <p className="loading-text">Updating results...</p>
+                  </div>
+                </div>
+              )}
 
               {view === "graph" && cyElements.length > 0 && (
                 <div className="workspace-graph" style={{ position: "relative" }}>

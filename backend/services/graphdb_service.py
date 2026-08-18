@@ -350,16 +350,13 @@ def _classify_predicate_semantics(
     """
     local_pred = pred_iri.rsplit("/", 1)[-1].rsplit("#", 1)[-1].lower()
 
-    # ── Fast path: local-name exclusion ──────────────────────────────────
     if any(skip == local_pred or local_pred.endswith(skip) for skip in _SKIP_PRED_FRAGMENTS):
         return "identifier"
 
-    # ── Fast path: local-name positive signal ────────────────────────────
     has_measurement_signal = any(
         sig in local_pred for sig in _MEASUREMENT_PRED_SIGNALS
     )
 
-    # ── Schema query: type + range + label + comment ─────────────────────
     try:
         q = f"""
         PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -396,18 +393,14 @@ def _classify_predicate_semantics(
         label_text  = b.get("lbl",      {}).get("value", "").lower()
         comment_text = b.get("cmt",     {}).get("value", "").lower()
 
-    # ── Rule 1: ObjectProperty → cannot be a numeric measurement ─────────
     if prop_type == "http://www.w3.org/2002/07/owl#ObjectProperty":
         return "identifier"
 
-    # ── Rule 2: Range is a non-measurement XSD type → exclude ────────────
     if range_iri in _NON_MEASUREMENT_XSD_TYPES:
         return "identifier"
 
-    # ── Rule 3: Range is a numeric XSD type → strong measurement signal ──
     range_is_numeric = range_iri in set(_NUMERIC_XSD_TYPES)
 
-    # ── Rule 4: Label / comment keyword analysis ──────────────────────────
     combined_text = label_text + " " + comment_text
     label_has_measurement = any(sig in combined_text for sig in _MEASUREMENT_PRED_SIGNALS)
     label_has_identifier  = any(skip in combined_text for skip in {
@@ -418,20 +411,104 @@ def _classify_predicate_semantics(
     if label_has_identifier:
         return "identifier"
 
-    # ── Rule 5: DatatypeProperty + numeric range → measurement ───────────
+    # Rule 5: DatatypeProperty + numeric range - measurement
     if prop_type == "http://www.w3.org/2002/07/owl#DatatypeProperty" and range_is_numeric:
         return "measurement"
 
-    # ── Rule 6: Any combination of positive signals → measurement ────────
+    # Rule 6: Any combination of positive signals - measurement
     if range_is_numeric or has_measurement_signal or label_has_measurement:
         return "measurement"
 
-    # ── Rule 7: DatatypeProperty with no range → rely on name signals ────
+    # Rule 7: DatatypeProperty with no range - rely on name signals
     if prop_type == "http://www.w3.org/2002/07/owl#DatatypeProperty":
         return "measurement" if has_measurement_signal else "unknown"
 
-    # ── Default: unknown (conservative – will be excluded from charting) ──
+    # Default: unknown (conservative - excluded from charting)
     return "unknown"
+
+
+def _get_schema_predicates_metadata(schema_graph_iri: str) -> Dict[str, Dict[str, str]]:
+    """
+    Fetch types, ranges, labels, and comments for all properties in the schema graph.
+    Returns a dict mapping pred_iri -> {propType, range, lbl, cmt}.
+    """
+    q = PREFIXES + f"""
+    SELECT ?prop ?propType ?range ?lbl ?cmt
+    WHERE {{
+      GRAPH <{schema_graph_iri}> {{
+        ?prop rdf:type ?propType .
+        FILTER(?propType IN (rdf:Property, <http://www.w3.org/2002/07/owl#ObjectProperty>, <http://www.w3.org/2002/07/owl#DatatypeProperty>))
+        OPTIONAL {{ ?prop rdfs:range ?range }}
+        OPTIONAL {{ ?prop rdfs:label ?lbl }}
+        OPTIONAL {{ ?prop rdfs:comment ?cmt }}
+      }}
+    }}
+    """
+    metadata = {}
+    try:
+        res = _exec_select(q)
+        for b in res.get("results", {}).get("bindings", []):
+            prop = b["prop"]["value"]
+            metadata[prop] = {
+                "propType": b.get("propType", {}).get("value", ""),
+                "range": b.get("range", {}).get("value", ""),
+                "lbl": b.get("lbl", {}).get("value", ""),
+                "cmt": b.get("cmt", {}).get("value", ""),
+            }
+    except Exception as e:
+        print(f"[Warning] Failed to fetch batch schema properties metadata: {e}")
+    return metadata
+
+
+def _classify_predicate_semantics_local(
+    pred_iri: str,
+    metadata: Dict[str, Dict[str, str]],
+) -> str:
+    """Classifies predicate semantics locally using batched schema metadata."""
+    local_pred = pred_iri.rsplit("/", 1)[-1].rsplit("#", 1)[-1].lower()
+
+    if any(skip == local_pred or local_pred.endswith(skip) for skip in _SKIP_PRED_FRAGMENTS):
+        return "identifier"
+
+    has_measurement_signal = any(
+        sig in local_pred for sig in _MEASUREMENT_PRED_SIGNALS
+    )
+
+    prop_meta = metadata.get(pred_iri, {})
+    prop_type = prop_meta.get("propType", "")
+    range_iri = prop_meta.get("range", "")
+    label_text = prop_meta.get("lbl", "").lower()
+    comment_text = prop_meta.get("cmt", "").lower()
+
+    if prop_type == "http://www.w3.org/2002/07/owl#ObjectProperty":
+        return "identifier"
+
+    if range_iri in _NON_MEASUREMENT_XSD_TYPES:
+        return "identifier"
+
+    range_is_numeric = range_iri in set(_NUMERIC_XSD_TYPES)
+
+    combined_text = label_text + " " + comment_text
+    label_has_measurement = any(sig in combined_text for sig in _MEASUREMENT_PRED_SIGNALS)
+    label_has_identifier  = any(skip in combined_text for skip in {
+        "identifier", " id ", " index", "sequence", "ordinal", "rank",
+        "flag", "status", "category", "code", "key", "name", "label",
+    })
+
+    if label_has_identifier:
+        return "identifier"
+
+    if prop_type == "http://www.w3.org/2002/07/owl#DatatypeProperty" and range_is_numeric:
+        return "measurement"
+
+    if range_is_numeric or has_measurement_signal or label_has_measurement:
+        return "measurement"
+
+    if prop_type == "http://www.w3.org/2002/07/owl#DatatypeProperty":
+        return "measurement" if has_measurement_signal else "unknown"
+
+    return "unknown"
+
 
 def _is_workspace_instances_graph(graph_iri: str) -> bool:
     return ("/workspace/" in graph_iri) and graph_iri.endswith("/instances")
@@ -452,6 +529,35 @@ def _decode_group_node_iri(group_node_iri: str) -> str:
         raise ValueError("Not a workspace group node")
     encoded = group_node_iri[len(base):]
     return urllib.parse.unquote(encoded)
+def _get_subclasses_with_variations(cls_iri: str, schema_graph_iri: str) -> List[str]:
+    """
+    Get all subclasses of cls_iri including HTTP and HTTPS variations to handle mismatch.
+    Performed in Python to avoid slow graph database filter and regex joins.
+    """
+    q = PREFIXES + f"""
+    SELECT DISTINCT ?sub WHERE {{
+      GRAPH <{schema_graph_iri}> {{
+        ?sub rdfs:subClassOf* <{cls_iri}> .
+      }}
+    }}
+    """
+    subclasses = [cls_iri]
+    try:
+        res = _exec_select(q)
+        for b in res.get("results", {}).get("bindings", []):
+            sub = b["sub"]["value"]
+            subclasses.append(sub)
+    except Exception as e:
+        print(f"[Warning] Failed to fetch subclasses for {cls_iri}: {e}")
+    
+    all_vars = set()
+    for s in subclasses:
+        all_vars.add(s)
+        if s.startswith("https://"):
+            all_vars.add(s.replace("https://", "http://", 1))
+        elif s.startswith("http://"):
+            all_vars.add(s.replace("http://", "https://", 1))
+    return list(all_vars)
 
 
 def workspace_instance_groups_for_class(
@@ -481,9 +587,11 @@ def workspace_instance_groups_for_class(
     result_nodes: List[Dict] = []
     result_edges: List[Dict] = []
 
-    # ── Strategy A: typed parameter nodes or observation nodes with observedProperty ──────────
+    subclasses_vars = _get_subclasses_with_variations(class_iri, schema_graph_iri)
+    values_clause = " ".join(f"<{s}>" for s in subclasses_vars)
+
+    # Strategy A: typed parameter nodes or observation nodes
     q_a = f"""
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
     PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
     SELECT ?cls
@@ -493,6 +601,7 @@ def workspace_instance_groups_for_class(
            (AVG(xsd:float(?v)) AS ?avg)
     WHERE {{
       GRAPH <{instance_graph_iri}> {{
+        VALUES ?cls {{ {values_clause} }}
         {{
           ?node rdf:type ?cls .
           ?node ?numPred ?v .
@@ -503,11 +612,6 @@ def workspace_instance_groups_for_class(
         }}
         FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
       }}
-      GRAPH <{schema_graph_iri}> {{
-        ?schemaCls rdfs:subClassOf* <{class_iri}> .
-      }}
-      FILTER(?cls = ?schemaCls || 
-             REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
     }}
     GROUP BY ?cls
     ORDER BY ?cls
@@ -515,7 +619,10 @@ def workspace_instance_groups_for_class(
     """
 
     try:
+        import time
+        t0 = time.time()
         res_a = _exec_select(q_a)
+        print(f"[PERF] workspace_groups Strategy A query took {(time.time() - t0):.3f}s")
         strategy_a_classes: set = set()
 
         for b in res_a["results"]["bindings"]:
@@ -548,11 +655,10 @@ def workspace_instance_groups_for_class(
     except Exception as exc:  # noqa: BLE001
         print(f"[workspace_groups] Strategy A failed for <{class_iri}>: {exc}")
 
-    # ── Strategy B: direct numeric predicates on instances ────────────────
+    # Strategy B: direct numeric predicates on instances
     # Only run when Strategy A returned nothing (avoids double-counting).
     if not result_nodes:
         q_b = f"""
-        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
         SELECT ?pred
@@ -562,6 +668,7 @@ def workspace_instance_groups_for_class(
                (AVG(xsd:float(?v)) AS ?avg)
         WHERE {{
           GRAPH <{instance_graph_iri}> {{
+            VALUES ?cls {{ {values_clause} }}
             ?inst rdf:type ?cls .
             ?inst ?pred ?v .
             FILTER(isLiteral(?v))
@@ -570,11 +677,6 @@ def workspace_instance_groups_for_class(
             FILTER(!STRSTARTS(STR(?pred), "http://www.w3.org/"))
             FILTER(!STRENDS(STR(?pred), "hasNumericValue") && !STRENDS(STR(?pred), "hasSimpleResult") && ?pred != <{has_numeric_value}>)
           }}
-          GRAPH <{schema_graph_iri}> {{
-            ?schemaCls rdfs:subClassOf* <{class_iri}> .
-          }}
-          FILTER(?cls = ?schemaCls || 
-                 REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
         }}
         GROUP BY ?pred
         HAVING (COUNT(?v) > 1)
@@ -583,16 +685,21 @@ def workspace_instance_groups_for_class(
         """
 
         try:
+            t0 = time.time()
             res_b = _exec_select(q_b)
+            print(f"[PERF] workspace_groups Strategy B query took {(time.time() - t0):.3f}s")
+
+            # Batch fetch schema properties metadata to avoid N-plus-1 SPARQL queries
+            schema_metadata = _get_schema_predicates_metadata(schema_graph_iri)
 
             for b in res_b["results"]["bindings"]:
                 pred_iri = b["pred"]["value"]
 
-                # ── Semantic classification: only include real measurements ──
+                # Semantic classification: only include real measurements
                 # Uses ontology property type, rdfs:range, label/comment and
                 # keyword heuristics – NOT just XSD type alone.
-                semantic_class = _classify_predicate_semantics(
-                    pred_iri, schema_graph_iri
+                semantic_class = _classify_predicate_semantics_local(
+                    pred_iri, schema_metadata
                 )
                 if semantic_class in ("identifier", "unknown"):
                     print(
@@ -653,22 +760,19 @@ def workspace_group_values(
         # Strategy B: predicate-based group
         cls_iri, pred_iri = group_key.split("|", 1)
         if schema_graph_iri:
+            subclasses_vars = _get_subclasses_with_variations(cls_iri, schema_graph_iri)
+            values_clause = " ".join(f"<{s}>" for s in subclasses_vars)
             q = f"""
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
             SELECT ?v WHERE {{
               GRAPH <{instance_graph_iri}> {{
+                VALUES ?cls {{ {values_clause} }}
                 ?inst rdf:type ?cls .
                 ?inst <{pred_iri}> ?v .
                 FILTER(isLiteral(?v))
                 FILTER(datatype(?v) IN ({numeric_types}))
               }}
-              GRAPH <{schema_graph_iri}> {{
-                ?schemaCls rdfs:subClassOf* <{cls_iri}> .
-              }}
-              FILTER(?cls = ?schemaCls || 
-                     REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
             }}
             ORDER BY ?inst
             LIMIT {limit}
@@ -692,11 +796,13 @@ def workspace_group_values(
         # Strategy A: class-based group with <hasNumericValue>
         cls_iri = group_key
         if schema_graph_iri:
+            subclasses_vars = _get_subclasses_with_variations(cls_iri, schema_graph_iri)
+            values_clause = " ".join(f"<{s}>" for s in subclasses_vars)
             q = f"""
             PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             SELECT ?v WHERE {{
               GRAPH <{instance_graph_iri}> {{
+                VALUES ?cls {{ {values_clause} }}
                 {{
                   ?s rdf:type ?cls .
                   ?s ?numPred ?v .
@@ -707,11 +813,6 @@ def workspace_group_values(
                 }}
                 FILTER(STRENDS(STR(?numPred), "hasNumericValue") || STRENDS(STR(?numPred), "hasSimpleResult") || ?numPred = <{has_numeric_value}>)
               }}
-              GRAPH <{schema_graph_iri}> {{
-                ?schemaCls rdfs:subClassOf* <{cls_iri}> .
-              }}
-              FILTER(?cls = ?schemaCls || 
-                     REPLACE(STR(?cls), "^https?://", "http://") = REPLACE(STR(?schemaCls), "^https?://", "http://"))
             }}
             ORDER BY ?s
             LIMIT {limit}
@@ -736,7 +837,10 @@ def workspace_group_values(
             LIMIT {limit}
             """
 
+    import time
+    t0 = time.time()
     res = _exec_select(q)
+    print(f"[PERF] workspace_group_values query took {(time.time() - t0):.3f}s")
 
     values: List[float] = []
     for b in res["results"]["bindings"]:
@@ -1577,9 +1681,7 @@ def update_schema_triple_in_graph(
     add_schema_triple_in_graph(subject_iri, predicate_iri, new_object_iri, graph_iri)
 
 
-# ──────────────────────────────────────────────────────────────────────
-# UPLOADED SCHEMA SUPPORT (NAMESPACE-AGNOSTIC)
-# ──────────────────────────────────────────────────────────────────────
+# --- Uploaded schema support (namespace-agnostic) ---
 
 def full_uploaded_schema_graph(graph_iri: str, limit: int = 20000, schema_only: bool = False) -> Dict:
     """

@@ -14,14 +14,14 @@ const INITIAL_MESSAGE = {
 // Generate a unique numeric-ish ID (float so it round-trips through the DB float path_id)
 const genId = () => Date.now() + Math.random();
 
-// ── Axios helper (adds auth header) 
+// Axios helper (adds auth header)
 const authHeaders = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
 
 export default function AIAssistance({ onOpenAuth }) {
-  // ── Auth gate 
+  // Auth gate
   const token = localStorage.getItem("token");
 
-  // ── State 
+  // State
   const [chats, setChats]                   = useState([]);
   const [currentChatId, setCurrentChatId]   = useState(null);
   const [chatsLoading, setChatsLoading]     = useState(true);   // initial fetch
@@ -38,7 +38,7 @@ export default function AIAssistance({ onOpenAuth }) {
   const prevChatIdRef  = useRef(null);
   const esRef          = useRef(null);   // EventSource ref
 
-  // ── Derived ──
+  // Derived
   // Only saved conversations appear in the sidebar (unsaved = new empty chat)
   const savedChats  = chats.filter((c) => c.saved);
   const currentChat = chats.find((c) => c.id === currentChatId) ?? chats[0];
@@ -48,7 +48,7 @@ export default function AIAssistance({ onOpenAuth }) {
   const prevMsgCountRef = useRef(0);
   const prevLoadingRef  = useRef(false);
 
-  // ── Load conversations from MongoDB on mount 
+  // Load conversations from MongoDB on mount
   const loadChats = useCallback(async () => {
     if (!token) return;
     setChatsLoading(true);
@@ -88,18 +88,18 @@ export default function AIAssistance({ onOpenAuth }) {
 
   useEffect(() => { loadChats(); }, [loadChats]);
 
-  // ── Persist active tab locally 
+  // Persist active tab locally
   useEffect(() => {
     if (currentChatId !== null)
       localStorage.setItem("kg_current_chat", String(currentChatId));
   }, [currentChatId]);
 
-  // ── Rename input focus 
+  // Rename input focus
   useEffect(() => {
     if (renaming) renameInputRef.current?.focus();
   }, [renaming]);
 
-  // ── Scroll — only on new content or chat changes
+  // Scroll - only on new content or chat changes
   useEffect(() => {
     const chatBody = chatBodyRef.current;
     if (!chatBody) return;
@@ -121,10 +121,10 @@ export default function AIAssistance({ onOpenAuth }) {
     }
   }, [messages.length, loading, currentChatId]);
 
-  // ── Cleanup SSE on unmount ──
+  // Cleanup SSE on unmount
   useEffect(() => () => esRef.current?.close(), []);
 
-  // ── Inline markdown renderer (**bold** and `code`) ──
+  // Inline markdown renderer (**bold** and `code`)
   const renderInline = (text) => {
     const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
     return parts.map((part, i) => {
@@ -136,14 +136,14 @@ export default function AIAssistance({ onOpenAuth }) {
     });
   };
 
-  // ── Auth gate useEffect ──
+  // Auth gate useEffect
   useEffect(() => {
     if (!token) onOpenAuth?.();
   }, [token, onOpenAuth]);
 
   if (!token) return null;
 
-  // ── Helpers ──
+  // Helpers
   const updateCurrentChat = (newMessages) => {
     setChats((prev) =>
       prev.map((chat) =>
@@ -173,7 +173,7 @@ export default function AIAssistance({ onOpenAuth }) {
     }
   };
 
-  // ── Send message via SSE stream ─
+  // Send message via SSE stream
   const sendMessage = (text) => {
     const trimmed = (text || input).trim();
     if (!trimmed || loading) return;
@@ -283,7 +283,7 @@ export default function AIAssistance({ onOpenAuth }) {
 
   const send = () => sendMessage(input);
 
-  // ── New chat ─
+  // New chat
   const handleNewChat = () => {
     const newId    = genId();
     const newIndex = savedChats.length + 1;
@@ -300,7 +300,7 @@ export default function AIAssistance({ onOpenAuth }) {
     setSidebarOpen(false);
   };
 
-  // ── Delete chat ──
+  // Delete chat
   const triggerDeleteChat = (e, chatId) => {
     e.stopPropagation();
     setDeleteConfirmId(chatId);
@@ -337,7 +337,7 @@ export default function AIAssistance({ onOpenAuth }) {
     }
   };
 
-  // ── Rename 
+  // Rename
   const startRename = (e, chatId, currentTitle) => {
     e.stopPropagation();
     setRenaming({ id: chatId, value: currentTitle });
@@ -361,7 +361,7 @@ export default function AIAssistance({ onOpenAuth }) {
 
   const cancelRename = () => setRenaming(null);
 
-  // ── Render 
+  // Render
   if (chatsLoading) {
     return (
       <div className="ai-workspace theme-light">
@@ -377,7 +377,7 @@ export default function AIAssistance({ onOpenAuth }) {
   return (
     <div className="ai-workspace theme-light">
 
-      {/* ── Conversations Sidebar  */}
+      {/* Conversations Sidebar */}
       <div className={`ai-sidebar ${sidebarOpen ? "open" : "closed"}`}>
         <div className="sidebar-header">
           <button type="button" className="new-chat-btn" onClick={handleNewChat} title="Start new conversation">
@@ -442,7 +442,7 @@ export default function AIAssistance({ onOpenAuth }) {
       {/* Overlay */}
       {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
 
-      {/* ── Main Chat Card ─ */}
+      {/* Main Chat Card */}
       <div className="ai-main">
         <div className="ai-card">
 
@@ -576,7 +576,7 @@ export default function AIAssistance({ onOpenAuth }) {
         </div>
       </div>
 
-      {/* ── Delete Confirmation Modal ───────────────────────────────── */}
+      {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
         <div className="ai-modal-overlay" onClick={cancelDelete}>
           <div className="ai-modal" onClick={(e) => e.stopPropagation()}>

@@ -10,7 +10,7 @@ def send_verification_email(to_email: str, token: str):
     msg["From"] = settings.MAIL_FROM
     msg["To"] = to_email
 
-    # -------- HTML email version ----------
+    # HTML email version
     msg.add_alternative(
         f"""
 <!DOCTYPE html>

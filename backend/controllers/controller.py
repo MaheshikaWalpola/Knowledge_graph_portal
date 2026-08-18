@@ -13,7 +13,7 @@ from services.user_schema_service import (
 )
 
 from services.graphdb_service import (
-    # base ontology (read-only)
+
     full_schema_graph,
     resolve_schema_term_to_iri,
     neighbors_schema,
@@ -21,7 +21,7 @@ from services.graphdb_service import (
     neighbors_schema_and_instances,
     get_instance_summary,
 
-    # NEW: workspace group details (virtual node click)
+    # workspace group details
     workspace_group_values,
     workspace_instance_groups_for_class,
 
@@ -54,7 +54,7 @@ from services.graphdb_service import (
     graph_has_triples,
 )
 
-#  BASE ONTOLOGY (READ) -
+# --- Base ontology (read) ---
 
 def ctrl_full_schema_graph(limit: int) -> Dict:
     """Return the whole base schema graph (no instances)."""
@@ -124,8 +124,7 @@ def ctrl_neighbors_both(q: str, limit: int) -> Dict:
     return neighbors_both(node_iri, limit=limit)
 
 
-# USER WORKSPACE (MULTI-SCHEMA) # Each user can have multiple schema graphs:
-#   graph = user_schema_graph(user_key, schema_id)
+# --- User workspace (multi-schema) ---
 
 def ctrl_init_workspace(user_key: str, schema_id: str) -> Dict:
     """
@@ -192,10 +191,10 @@ def ctrl_workspace_neighbors(
     if _is_uploaded_schema(meta):
         return _uploaded_workspace_neighbors(meta, q, limit, level)
 
-    # ─── ORIGINAL BASE-DERIVED WORKSPACE FLOW (unchanged) ───
+    # Base-derived workspace flow
     schema_graph_iri = user_schema_graph(user_key, schema_id)
 
-    # schema-only (unchanged)
+    # Schema-only
     if level != "both":
         node_iri = _resolve_node_iri_or_404(q)
         return neighbors_schema_in_graph(node_iri, schema_graph_iri, limit=limit)
@@ -203,7 +202,7 @@ def ctrl_workspace_neighbors(
     # schema + workspace instances
     instance_graph_iri = user_schema_instance_graph(user_key, schema_id)
 
-    # 1) If user clicked an aggregated workspace group node, return its values/details.
+    # Aggregated workspace group node click
     if _is_workspace_group_node(q):
         details = workspace_group_values(
             group_node_iri=q,
@@ -230,7 +229,7 @@ def ctrl_workspace_neighbors(
             "details": details,
         }
 
-    # 2) Otherwise resolve q as schema term/IRI and return neighborhood.
+    # Resolve schema term/IRI and return neighborhood
     node_iri = _resolve_node_iri_or_404(q)
 
     full_res = neighbors_schema_and_instances_in_two_graphs(
@@ -286,8 +285,7 @@ def _uploaded_workspace_neighbors(
                     "groupKey": details.get("groupKey"),
                     "summary": details.get("summary"),
                     "values": details.get("values"),
-                    # Forward semantic metadata so the frontend can decide whether
-                    # to render a chart (is_measurement) and label the predicate.
+                    # Semantic metadata for chart rendering
                     "is_measurement": details.get("is_measurement", True),
                     "predicate_iri": details.get("predicate_iri"),
                 }
@@ -330,7 +328,7 @@ def _uploaded_workspace_neighbors(
         print(f"[ctrl_workspace_neighbors] instance group query FAILED: {e}")
         _tb.print_exc()
 
-    # Data only: Return ONLY searched node + data nodes (no schema neighbors)
+    # Data-only: searched node + data nodes
     if level == "data":
         center_node = {
             "iri": node_iri,
@@ -349,14 +347,14 @@ def _uploaded_workspace_neighbors(
             "edges": filtered_edges,
         }
 
-    # Schema + Data: merge schema neighbors and data nodes
+    # Schema + data: merge neighbors and data nodes
     schema_result = neighbors_in_uploaded_graph(node_iri, graph_iri, limit=limit)
     schema_result["nodes"].extend(group_nodes)
     schema_result["edges"].extend(group_edges)
     return schema_result
 
 
-# helpers 
+# --- Helpers ---
 def _validate_payload_fields(payload: Dict, required: Dict[str, str]) -> None:
     """
     Helper to ensure required keys exist in a JSON body.
@@ -373,7 +371,7 @@ def _graph_for(user_key: str, schema_id: str) -> str:
     return user_schema_graph(user_key, schema_id)
 
 
-# workspace writes 
+# --- Workspace writes ---
 def ctrl_workspace_add_relation(user_key: str, schema_id: str, payload: Dict) -> Dict:
     """
     Add a schema triple in the user's selected workspace schema graph.
@@ -516,7 +514,7 @@ def ctrl_delete_user_schema(user_email: str, schema_id: str) -> Dict:
         except Exception as e:
             print(f"Warning: could not drop graph {meta['instance_graph_iri']}: {e}")
 
-    # Remove from MongoDB (fallback to generic instance graph if not uploaded)
+    # Remove from MongoDB; fallback to generic instance graph if not uploaded
     if not meta.get("upload_mode") or meta.get("upload_mode") == "base":
         inst_graph = user_schema_instance_graph(user_email, schema_id)
         try:
@@ -546,7 +544,7 @@ def ctrl_upload_schema(
     if not name.strip():
         raise HTTPException(422, detail="Schema name is required")
 
-    # Prevent duplicate ontology names per user (allow if updating self)
+    # Prevent duplicate names per user (allow if updating self)
     existing = list_user_schemas(user_email)
     for s in existing:
         if s.get("name", "").strip().lower() == name.strip().lower() and s.get("schema_id") != update_schema_id:
@@ -555,7 +553,7 @@ def ctrl_upload_schema(
                 detail=f"An ontology named '{name.strip()}' already exists. Please choose a different name.",
             )
             
-    # Handle overwrite: delete old graphs and metadata if updating
+    # Overwrite: delete old graphs if updating
     if update_schema_id:
         ctrl_delete_user_schema(user_email, update_schema_id)
         schema_id = update_schema_id
@@ -654,12 +652,12 @@ def ctrl_delete_schema(user_email: str, schema_id: str) -> Dict:
     """
     Deletes the schema metadata from MongoDB and clears its matching named graphs from GraphDB.
     """
-    # 1. Get metadata to fetch the GraphDB iris
+    # Get metadata
     meta = get_user_schema(user_email, schema_id)
     if not meta:
         raise HTTPException(404, detail="Schema not found")
 
-    # 2. Delete actual graphs from GraphDB
+    # Delete graphs from GraphDB
     if meta.get("graph_iri"):
         try:
             delete_named_graph(meta["graph_iri"])
@@ -672,7 +670,7 @@ def ctrl_delete_schema(user_email: str, schema_id: str) -> Dict:
         except Exception as e:
             print(f"Failed to drop instance graph {meta['instance_graph_iri']}: {e}")
 
-    # 3. Delete from MongoDB
+    # Delete from MongoDB
     success = delete_user_schema(user_email, schema_id)
     if not success:
         raise HTTPException(500, detail="Failed to delete schema record")
