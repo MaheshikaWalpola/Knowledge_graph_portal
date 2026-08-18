@@ -426,6 +426,90 @@ def _classify_predicate_semantics(
     # Default: unknown (conservative - excluded from charting)
     return "unknown"
 
+
+def _get_schema_predicates_metadata(schema_graph_iri: str) -> Dict[str, Dict[str, str]]:
+    """
+    Fetch types, ranges, labels, and comments for all properties in the schema graph.
+    Returns a dict mapping pred_iri -> {propType, range, lbl, cmt}.
+    """
+    q = PREFIXES + f"""
+    SELECT ?prop ?propType ?range ?lbl ?cmt
+    WHERE {{
+      GRAPH <{schema_graph_iri}> {{
+        ?prop rdf:type ?propType .
+        FILTER(?propType IN (rdf:Property, <http://www.w3.org/2002/07/owl#ObjectProperty>, <http://www.w3.org/2002/07/owl#DatatypeProperty>))
+        OPTIONAL {{ ?prop rdfs:range ?range }}
+        OPTIONAL {{ ?prop rdfs:label ?lbl }}
+        OPTIONAL {{ ?prop rdfs:comment ?cmt }}
+      }}
+    }}
+    """
+    metadata = {}
+    try:
+        res = _exec_select(q)
+        for b in res.get("results", {}).get("bindings", []):
+            prop = b["prop"]["value"]
+            metadata[prop] = {
+                "propType": b.get("propType", {}).get("value", ""),
+                "range": b.get("range", {}).get("value", ""),
+                "lbl": b.get("lbl", {}).get("value", ""),
+                "cmt": b.get("cmt", {}).get("value", ""),
+            }
+    except Exception as e:
+        print(f"[Warning] Failed to fetch batch schema properties metadata: {e}")
+    return metadata
+
+
+def _classify_predicate_semantics_local(
+    pred_iri: str,
+    metadata: Dict[str, Dict[str, str]],
+) -> str:
+    """Classifies predicate semantics locally using batched schema metadata."""
+    local_pred = pred_iri.rsplit("/", 1)[-1].rsplit("#", 1)[-1].lower()
+
+    if any(skip == local_pred or local_pred.endswith(skip) for skip in _SKIP_PRED_FRAGMENTS):
+        return "identifier"
+
+    has_measurement_signal = any(
+        sig in local_pred for sig in _MEASUREMENT_PRED_SIGNALS
+    )
+
+    prop_meta = metadata.get(pred_iri, {})
+    prop_type = prop_meta.get("propType", "")
+    range_iri = prop_meta.get("range", "")
+    label_text = prop_meta.get("lbl", "").lower()
+    comment_text = prop_meta.get("cmt", "").lower()
+
+    if prop_type == "http://www.w3.org/2002/07/owl#ObjectProperty":
+        return "identifier"
+
+    if range_iri in _NON_MEASUREMENT_XSD_TYPES:
+        return "identifier"
+
+    range_is_numeric = range_iri in set(_NUMERIC_XSD_TYPES)
+
+    combined_text = label_text + " " + comment_text
+    label_has_measurement = any(sig in combined_text for sig in _MEASUREMENT_PRED_SIGNALS)
+    label_has_identifier  = any(skip in combined_text for skip in {
+        "identifier", " id ", " index", "sequence", "ordinal", "rank",
+        "flag", "status", "category", "code", "key", "name", "label",
+    })
+
+    if label_has_identifier:
+        return "identifier"
+
+    if prop_type == "http://www.w3.org/2002/07/owl#DatatypeProperty" and range_is_numeric:
+        return "measurement"
+
+    if range_is_numeric or has_measurement_signal or label_has_measurement:
+        return "measurement"
+
+    if prop_type == "http://www.w3.org/2002/07/owl#DatatypeProperty":
+        return "measurement" if has_measurement_signal else "unknown"
+
+    return "unknown"
+
+
 def _is_workspace_instances_graph(graph_iri: str) -> bool:
     return ("/workspace/" in graph_iri) and graph_iri.endswith("/instances")
 
@@ -578,14 +662,17 @@ def workspace_instance_groups_for_class(
         try:
             res_b = _exec_select(q_b)
 
+            # Batch fetch schema properties metadata to avoid N-plus-1 SPARQL queries
+            schema_metadata = _get_schema_predicates_metadata(schema_graph_iri)
+
             for b in res_b["results"]["bindings"]:
                 pred_iri = b["pred"]["value"]
 
                 # Semantic classification: only include real measurements
                 # Uses ontology property type, rdfs:range, label/comment and
                 # keyword heuristics – NOT just XSD type alone.
-                semantic_class = _classify_predicate_semantics(
-                    pred_iri, schema_graph_iri
+                semantic_class = _classify_predicate_semantics_local(
+                    pred_iri, schema_metadata
                 )
                 if semantic_class in ("identifier", "unknown"):
                     print(
