@@ -27,6 +27,7 @@ export default function Profile({ user, onUserUpdated }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
 
   // Schema Change History state
   const [historyList, setHistoryList] = useState([]);
@@ -34,6 +35,7 @@ export default function Profile({ user, onUserUpdated }) {
   const [historyError, setHistoryError] = useState("");
   const [selectedSchemaFilter, setSelectedSchemaFilter] = useState("all");
   const [expandedEntries, setExpandedEntries] = useState({});
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [deletingEntryId, setDeletingEntryId] = useState(null);
 
   // banners
@@ -79,14 +81,19 @@ export default function Profile({ user, onUserUpdated }) {
     }));
   };
 
-  const handleDeleteHistoryEntry = async (entryId) => {
-    if (!window.confirm("Are you sure you want to delete this history log?")) return;
+  const confirmInlineDelete = async (item) => {
+    const entryId = item.entry_id || item._id || item.id;
+    if (!entryId) return;
+
     setDeletingEntryId(entryId);
     try {
       await axios.delete(`${API}/history/entry/${entryId}`, {
         headers: authHeaders(),
       });
-      setHistoryList((prev) => prev.filter((e) => e.entry_id !== entryId));
+      setHistoryList((prev) =>
+        prev.filter((e) => (e.entry_id || e._id || e.id) !== entryId)
+      );
+      setPendingDeleteId(null);
     } catch (err) {
       alert(err?.response?.data?.detail || "Failed to delete history log.");
     } finally {
@@ -397,117 +404,131 @@ export default function Profile({ user, onUserUpdated }) {
           </div>
         </div>
 
-        {/* Section 2: Change Password (Below Account Details) */}
-        <div className="section">
-          <div className="section-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-            Change password
+        {/* Section 2: Change Password (Collapsible & Compact) */}
+        <div className="section password-section">
+          <div className="section-header-row">
+            <div className="section-title" style={{ margin: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              Security & Password
+            </div>
+            <button
+              type="button"
+              className="btn-outline-small"
+              onClick={() => setShowPasswordSection(!showPasswordSection)}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}>
+                <key x="0" y="0"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></key>
+              </svg>
+              {showPasswordSection ? "Hide Password Form" : "Change Password"}
+            </button>
           </div>
 
-          <form className="form" onSubmit={submitChangePassword}>
-            <div className="password-input-wrapper">
-              <span className="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              </span>
-              <input
-                className="input input-with-icon"
-                type={showPasswords ? "text" : "password"}
-                placeholder="Current password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPasswords(!showPasswords)}
-                title={showPasswords ? "Hide password" : "Show password"}
-              >
-                {showPasswords ? (
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22" />
-                  </svg>
-                ) : (
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
-            </div>
-            
-            <div className="password-input-wrapper">
-              <span className="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><key x="0" y="0"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></key></svg>
-              </span>
-              <input
-                className="input input-with-icon"
-                type={showPasswords ? "text" : "password"}
-                placeholder="New password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPasswords(!showPasswords)}
-                title={showPasswords ? "Hide password" : "Show password"}
-              >
-                {showPasswords ? (
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22" />
-                  </svg>
-                ) : (
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
-            </div>
+          {showPasswordSection && (
+            <form className="form password-form-compact" onSubmit={submitChangePassword} style={{ marginTop: "16px" }}>
+              <div className="password-input-wrapper">
+                <span className="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </span>
+                <input
+                  className="input input-with-icon"
+                  type={showPasswords ? "text" : "password"}
+                  placeholder="Current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPasswords(!showPasswords)}
+                  title={showPasswords ? "Hide password" : "Show password"}
+                >
+                  {showPasswords ? (
+                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              
+              <div className="password-input-wrapper">
+                <span className="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><key x="0" y="0"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></key></svg>
+                </span>
+                <input
+                  className="input input-with-icon"
+                  type={showPasswords ? "text" : "password"}
+                  placeholder="New password (min 8 chars)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPasswords(!showPasswords)}
+                  title={showPasswords ? "Hide password" : "Show password"}
+                >
+                  {showPasswords ? (
+                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
 
-            <div className="password-input-wrapper">
-              <span className="input-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-              </span>
-              <input
-                className="input input-with-icon"
-                type={showPasswords ? "text" : "password"}
-                placeholder="Confirm new password"
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPasswords(!showPasswords)}
-                title={showPasswords ? "Hide password" : "Show password"}
-              >
-                {showPasswords ? (
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22" />
-                  </svg>
-                ) : (
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
-            </div>
+              <div className="password-input-wrapper">
+                <span className="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </span>
+                <input
+                  className="input input-with-icon"
+                  type={showPasswords ? "text" : "password"}
+                  placeholder="Confirm new password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPasswords(!showPasswords)}
+                  title={showPasswords ? "Hide password" : "Show password"}
+                >
+                  {showPasswords ? (
+                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
 
-            <div className="actions">
-              <button className="btn" type="submit" disabled={savingPwd}>
-                {savingPwd ? (
-                  "Saving..."
-                ) : (
-                  <>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    Update password
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+              <div className="actions">
+                <button className="btn" type="submit" disabled={savingPwd}>
+                  {savingPwd ? (
+                    "Saving..."
+                  ) : (
+                    <>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "4px" }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      Update password
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* Section 3: Schema Change History (Minimal & Space-Efficient) */}
@@ -582,11 +603,10 @@ export default function Profile({ user, onUserUpdated }) {
           ) : (
             <div className="history-compact-list">
               {filteredHistory.map((item) => {
-                const isExpanded = !!expandedEntries[item.entry_id];
+                const entryKey = item.entry_id || item._id || item.id;
+                const isExpanded = !!expandedEntries[entryKey];
+                const isPendingDelete = pendingDeleteId === entryKey;
                 const changes = item.changes || {};
-                const addedCount = (changes.nodes_added?.length || 0) + (changes.edges_added?.length || 0);
-                const removedCount = (changes.nodes_removed?.length || 0) + (changes.edges_removed?.length || 0);
-                const modifiedCount = (changes.nodes_modified?.length || 0) + (changes.edges_modified?.length || 0);
                 const hasDetailedDiff =
                   (changes.nodes_added?.length || 0) > 0 ||
                   (changes.nodes_removed?.length || 0) > 0 ||
@@ -596,11 +616,11 @@ export default function Profile({ user, onUserUpdated }) {
                   (changes.edges_modified?.length || 0) > 0;
 
                 return (
-                  <div key={item.entry_id} className="history-row-container">
+                  <div key={entryKey} className="history-row-container">
                     <div
                       className="history-row"
-                      onClick={() => hasDetailedDiff && toggleExpandEntry(item.entry_id)}
-                      style={{ cursor: hasDetailedDiff ? "pointer" : "default" }}
+                      onClick={() => !isPendingDelete && hasDetailedDiff && toggleExpandEntry(entryKey)}
+                      style={{ cursor: hasDetailedDiff && !isPendingDelete ? "pointer" : "default" }}
                     >
                       {/* Left: Version + Action + Name + Summary */}
                       <div className="history-row-left">
@@ -626,53 +646,76 @@ export default function Profile({ user, onUserUpdated }) {
                         </span>
                       </div>
 
-                      {/* Right: Date + Toggle Icon + Delete */}
+                      {/* Right: Date + Toggle Icon + Delete / Inline Delete Prompt */}
                       <div className="history-row-right" onClick={(e) => e.stopPropagation()}>
-                        <span className="history-timestamp">
-                          {formatDate(item.saved_at)}
-                        </span>
-
-                        {hasDetailedDiff && (
-                          <button
-                            type="button"
-                            className="history-expand-icon-btn"
-                            onClick={() => toggleExpandEntry(item.entry_id)}
-                            title={isExpanded ? "Collapse" : "Expand"}
-                          >
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.5"
-                              style={{
-                                transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                                transition: "transform 0.15s ease",
-                              }}
+                        {isPendingDelete ? (
+                          <div className="history-inline-delete-box">
+                            <span className="history-inline-delete-text">Delete log?</span>
+                            <button
+                              type="button"
+                              className="history-inline-btn cancel"
+                              onClick={() => setPendingDeleteId(null)}
+                              disabled={deletingEntryId === entryKey}
                             >
-                              <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                          </button>
-                        )}
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              className="history-inline-btn confirm"
+                              onClick={() => confirmInlineDelete(item)}
+                              disabled={deletingEntryId === entryKey}
+                            >
+                              {deletingEntryId === entryKey ? "..." : "Yes, Delete"}
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="history-timestamp">
+                              {formatDate(item.saved_at)}
+                            </span>
 
-                        <button
-                          type="button"
-                          className="history-delete-btn"
-                          onClick={() => handleDeleteHistoryEntry(item.entry_id)}
-                          disabled={deletingEntryId === item.entry_id}
-                          title="Delete log"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
+                            {hasDetailedDiff && (
+                              <button
+                                type="button"
+                                className="history-expand-icon-btn"
+                                onClick={() => toggleExpandEntry(entryKey)}
+                                title={isExpanded ? "Collapse" : "Expand"}
+                              >
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  style={{
+                                    transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                    transition: "transform 0.15s ease",
+                                  }}
+                                >
+                                  <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              className="history-delete-btn"
+                              onClick={() => setPendingDeleteId(entryKey)}
+                              title="Delete log"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
 
                     {/* Compact Expandable Details */}
-                    {isExpanded && hasDetailedDiff && (
+                    {isExpanded && hasDetailedDiff && !isPendingDelete && (
                       <div className="history-row-expanded">
                         {changes.nodes_added?.map((n) => (
                           <div key={`hna_${n.id}`} className="ce-diff-item add">
@@ -722,3 +765,4 @@ export default function Profile({ user, onUserUpdated }) {
     </div>
   );
 }
+
