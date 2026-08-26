@@ -42,7 +42,7 @@ def create_history_entry(
         "action": action,
         "changes": changes,
         "version": version,
-        "saved_at": datetime.utcnow(),
+        "saved_at": datetime.utcnow().isoformat(),
     }
 
     schema_history_collection.insert_one(doc)
@@ -64,9 +64,31 @@ def list_schema_history(
     return list(cursor)
 
 
+def list_user_all_history(
+    user_email: str,
+    limit: int = 100,
+) -> List[Dict]:
+    """Return all recent history entries for a user across all schemas, newest first."""
+    cursor = schema_history_collection.find(
+        {"user_email": user_email},
+        {"_id": 0},
+    ).sort("saved_at", -1).limit(limit)
+
+    return list(cursor)
+
+
 def get_history_entry(user_email: str, entry_id: str) -> Optional[Dict]:
     """Return a single history entry by its entry_id."""
     return schema_history_collection.find_one(
         {"user_email": user_email, "entry_id": entry_id},
         {"_id": 0},
     )
+
+
+def delete_history_entry(user_email: str, entry_id: str) -> bool:
+    """Delete a single history entry by ID."""
+    res = schema_history_collection.delete_one(
+        {"user_email": user_email, "entry_id": entry_id}
+    )
+    return res.deleted_count > 0
+

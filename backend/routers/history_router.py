@@ -6,7 +6,9 @@ from core.auth import get_current_user
 from services.history_service import (
     create_history_entry,
     list_schema_history,
+    list_user_all_history,
     get_history_entry,
+    delete_history_entry,
 )
 
 router = APIRouter(prefix="/history", tags=["history"])
@@ -57,6 +59,19 @@ def api_log_history(
     return {"status": "ok", "entry": entry}
 
 
+@router.get("/user/all")
+def api_get_all_user_history(
+    limit: int = Query(100, ge=1, le=500),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """Return all schema change history entries for the current user."""
+    entries = list_user_all_history(
+        user_email=current_user["email"],
+        limit=limit,
+    )
+    return {"entries": entries, "count": len(entries)}
+
+
 @router.get("/{schema_id}")
 def api_get_schema_history(
     schema_id: str,
@@ -86,3 +101,20 @@ def api_get_history_entry(
         from fastapi import HTTPException
         raise HTTPException(404, detail="History entry not found")
     return entry
+
+
+@router.delete("/entry/{entry_id}")
+def api_delete_history_entry(
+    entry_id: str,
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """Delete a single history entry."""
+    success = delete_history_entry(
+        user_email=current_user["email"],
+        entry_id=entry_id,
+    )
+    if not success:
+        from fastapi import HTTPException
+        raise HTTPException(404, detail="History entry not found or already deleted")
+    return {"status": "ok", "message": "History entry deleted"}
+

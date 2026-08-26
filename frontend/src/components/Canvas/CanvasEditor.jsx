@@ -507,37 +507,81 @@ export default function CanvasEditor({ onOpenAuth }) {
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [model, onOpenAuth]);
 
-  // Called by PropertyPanel's save button
-  const handleTriggerSave = useCallback(() => {
-    setSaveDialogSource("button");
+  // Save dialog name input & UI state
+  const [modalSaveName, setModalSaveName] = useState(originalName || "");
+  const [modalNameError, setModalNameError] = useState("");
+  const [showDetailedChanges, setShowDetailedChanges] = useState(false);
+
+  // Sync modalSaveName when originalName changes
+  useEffect(() => {
+    setModalSaveName(originalName || "");
+  }, [originalName]);
+
+  // Open save dialog helper
+  const openSaveDialog = useCallback((source = "button") => {
+    setModalSaveName(originalName || "");
+    setModalNameError("");
+    setSaveDialogSource(source);
     setShowSaveDialog(true);
-  }, []);
+  }, [originalName]);
+
+  // Called by PropertyPanel's save button or dock button
+  const handleTriggerSave = useCallback(() => {
+    openSaveDialog("button");
+  }, [openSaveDialog]);
+
+  // ─── Ctrl+S Keyboard Shortcut ──────────────────────────────
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const token = localStorage.getItem("token");
+        if (!token) {
+          if (onOpenAuth) onOpenAuth();
+          return;
+        }
+
+        const hasContent = model && (model.nodes?.length || 0) > 0;
+        if (!hasContent) return;
+
+        openSaveDialog("ctrlS");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [model, onOpenAuth, openSaveDialog]);
 
   // ─── Save Dialog Handlers ──────────────────────────────────
 
   const handleSaveConfirm = useCallback(async () => {
-    const name = originalName || "";
-    setShowSaveDialog(false);
-
-    if (!name) {
-      // No name set — let PropertyPanel handle name input and save directly
-      // For Ctrl+S without a name, we just trigger the save from PropertyPanel
-      setSaveDialogSource(null);
+    const nameToSave = modalSaveName.trim() || originalName?.trim();
+    if (!nameToSave) {
+      setModalNameError("Please enter a name for the ontology.");
       return;
     }
 
-    await performSave(name);
-    setSaveDialogSource(null);
-  }, [originalName, performSave]);
+    setModalNameError("");
+    const success = await performSave(nameToSave);
+    if (success) {
+      setShowSaveDialog(false);
+      setSaveDialogSource(null);
+    }
+  }, [modalSaveName, originalName, performSave]);
 
   const handleDontSave = useCallback(() => {
     setShowSaveDialog(false);
     setSaveDialogSource(null);
+    setModalNameError("");
   }, []);
 
   const handleSaveCancel = useCallback(() => {
     setShowSaveDialog(false);
     setSaveDialogSource(null);
+    setModalNameError("");
   }, []);
 
   // ─── Compute current diff for display ──────────────────────
@@ -545,6 +589,15 @@ export default function CanvasEditor({ onOpenAuth }) {
   const currentDiff = showSaveDialog
     ? computeModelDiff(lastSavedSnapshot.current, model)
     : null;
+
+  const totalChangeCount = currentDiff
+    ? currentDiff.nodes_added.length +
+      currentDiff.nodes_removed.length +
+      currentDiff.nodes_modified.length +
+      currentDiff.edges_added.length +
+      currentDiff.edges_removed.length +
+      currentDiff.edges_modified.length
+    : 0;
 
   return (
     <div className={`canvas-editor ${!leftOpen ? "left-collapsed" : ""} ${!rightOpen ? "right-collapsed" : ""}`}>
@@ -777,67 +830,241 @@ export default function CanvasEditor({ onOpenAuth }) {
 
       {/* ─── Save / Don't Save / Cancel Dialog ─────────────── */}
       {showSaveDialog && (
-        <div className="ce-modal-overlay ce-save-overlay">
-          <div className="ce-modal ce-save-modal">
-            <div className="ce-save-modal-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                <polyline points="17 21 17 13 7 13 7 21" />
-                <polyline points="7 3 7 8 15 8" />
-              </svg>
+        <div className="ce-modal-overlay ce-save-overlay" onClick={handleSaveCancel}>
+          <div className="ce-modal ce-save-modal" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="ce-save-modal-header">
+              <div className="ce-save-modal-title-group">
+                <div className="ce-save-modal-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="ce-save-modal-title">Save Changes</h3>
+                  <p className="ce-save-modal-subtitle">
+                    {originalName ? "Save modifications to your ontology workspace" : "Save this schema to your workspace"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="ce-save-modal-close"
+                onClick={handleSaveCancel}
+                title="Close"
+              >
+                <ClearIcon sx={{ fontSize: 18 }} />
+              </button>
             </div>
-            <h3>Save Changes?</h3>
-            <p>
-              Do you want to save the current canvas to your workspace?
-              {originalName && (
-                <span className="ce-save-schema-name"> — <strong>{originalName}</strong></span>
+
+            {/* Modal Body */}
+            <div className="ce-save-modal-body">
+              {/* Ontology Name Input / Display */}
+              <div className="ce-save-name-section">
+                <label className="ce-save-input-label">
+                  Ontology Name
+                  {originalName && <span className="ce-save-badge-status">Existing Schema</span>}
+                </label>
+                <input
+                  type="text"
+                  className={`ce-save-input ${modalNameError ? "has-error" : ""}`}
+                  value={modalSaveName}
+                  onChange={(e) => {
+                    setModalSaveName(e.target.value);
+                    if (modalNameError) setModalNameError("");
+                  }}
+                  placeholder="e.g., My Custom Ontology"
+                  autoFocus={!originalName}
+                />
+                {modalNameError && (
+                  <span className="ce-save-field-error">{modalNameError}</span>
+                )}
+              </div>
+
+              {/* Changes Detected Card */}
+              {currentDiff && hasChanges(currentDiff) ? (
+                <div className="ce-save-diff-card">
+                  <div className="ce-save-diff-header">
+                    <div className="ce-save-diff-status">
+                      <span className="ce-diff-pulse-dot" />
+                      <strong>Changes Detected</strong>
+                    </div>
+                    <span className="ce-diff-count-badge">
+                      {totalChangeCount} change{totalChangeCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  {/* Summary Pills */}
+                  <div className="ce-save-pills-row">
+                    {currentDiff.nodes_added.length > 0 && (
+                      <span className="ce-diff-pill added">
+                        +{currentDiff.nodes_added.length} Node{currentDiff.nodes_added.length > 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {currentDiff.nodes_removed.length > 0 && (
+                      <span className="ce-diff-pill removed">
+                        -{currentDiff.nodes_removed.length} Node{currentDiff.nodes_removed.length > 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {currentDiff.nodes_modified.length > 0 && (
+                      <span className="ce-diff-pill modified">
+                        ~{currentDiff.nodes_modified.length} Property{currentDiff.nodes_modified.length > 1 ? "ies" : ""}
+                      </span>
+                    )}
+                    {currentDiff.edges_added.length > 0 && (
+                      <span className="ce-diff-pill added">
+                        +{currentDiff.edges_added.length} Edge{currentDiff.edges_added.length > 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {currentDiff.edges_removed.length > 0 && (
+                      <span className="ce-diff-pill removed">
+                        -{currentDiff.edges_removed.length} Edge{currentDiff.edges_removed.length > 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {currentDiff.edges_modified.length > 0 && (
+                      <span className="ce-diff-pill modified">
+                        ~{currentDiff.edges_modified.length} Edge Type{currentDiff.edges_modified.length > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Toggle Detailed List */}
+                  <button
+                    type="button"
+                    className="ce-diff-toggle-btn"
+                    onClick={() => setShowDetailedChanges((prev) => !prev)}
+                  >
+                    <span>{showDetailedChanges ? "Hide details" : "View change details"}</span>
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ transform: showDetailedChanges ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+
+                  {/* Detailed List */}
+                  {showDetailedChanges && (
+                    <div className="ce-diff-details-list">
+                      {currentDiff.nodes_added.map((n) => (
+                        <div key={`na_${n.id}`} className="ce-diff-item add">
+                          <span className="ce-diff-tag add">+</span>
+                          <span className="ce-diff-item-text">
+                            Added <strong>{n.label || n.id}</strong> ({n.type})
+                          </span>
+                        </div>
+                      ))}
+                      {currentDiff.nodes_removed.map((n) => (
+                        <div key={`nr_${n.id}`} className="ce-diff-item del">
+                          <span className="ce-diff-tag del">-</span>
+                          <span className="ce-diff-item-text">
+                            Removed <strong>{n.label || n.id}</strong>
+                          </span>
+                        </div>
+                      ))}
+                      {currentDiff.nodes_modified.map((m, idx) => (
+                        <div key={`nm_${m.id}_${idx}`} className="ce-diff-item mod">
+                          <span className="ce-diff-tag mod">~</span>
+                          <span className="ce-diff-item-text">
+                            Modified {m.field}: <del>{m.old || "none"}</del> → <ins>{m.new}</ins>
+                          </span>
+                        </div>
+                      ))}
+                      {currentDiff.edges_added.map((e) => (
+                        <div key={`ea_${e.id}`} className="ce-diff-item add">
+                          <span className="ce-diff-tag add">+</span>
+                          <span className="ce-diff-item-text">
+                            Added relation: <strong>{e.edgeType}</strong>
+                          </span>
+                        </div>
+                      ))}
+                      {currentDiff.edges_removed.map((e) => (
+                        <div key={`er_${e.id}`} className="ce-diff-item del">
+                          <span className="ce-diff-tag del">-</span>
+                          <span className="ce-diff-item-text">
+                            Removed relation: <strong>{e.edgeType}</strong>
+                          </span>
+                        </div>
+                      ))}
+                      {currentDiff.edges_modified.map((e, idx) => (
+                        <div key={`em_${e.id}_${idx}`} className="ce-diff-item mod">
+                          <span className="ce-diff-tag mod">~</span>
+                          <span className="ce-diff-item-text">
+                            Relation changed: <del>{e.old}</del> → <ins>{e.new}</ins>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="ce-save-diff-card ce-diff-empty">
+                  <div className="ce-diff-empty-icon">✓</div>
+                  <div className="ce-diff-empty-text">
+                    <strong>Version Up to Date</strong>
+                    <span>No changes detected since last save.</span>
+                  </div>
+                </div>
               )}
-            </p>
 
-            {/* Show a brief summary of what changed */}
-            {currentDiff && hasChanges(currentDiff) && (
-              <div className="ce-save-diff-summary">
-                <span className="ce-save-diff-label">Changes detected:</span>
-                <span className="ce-save-diff-text">{currentDiff.summary}</span>
-              </div>
-            )}
-            {currentDiff && !hasChanges(currentDiff) && (
-              <div className="ce-save-diff-summary ce-save-no-changes">
-                <span className="ce-save-diff-text">No changes since last save.</span>
-              </div>
-            )}
+              {saveError && (
+                <div className="ce-save-error-banner">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span>{saveError.summary || "Save failed"}</span>
+                </div>
+              )}
+            </div>
 
+            {/* Modal Actions */}
             <div className="ce-save-modal-actions">
               <button
+                type="button"
                 className="ce-save-btn ce-save-btn-dont"
                 onClick={handleDontSave}
               >
                 Don't Save
               </button>
-              <button
-                className="ce-save-btn ce-save-btn-cancel"
-                onClick={handleSaveCancel}
-              >
-                Cancel
-              </button>
-              <button
-                className="ce-save-btn ce-save-btn-save"
-                onClick={handleSaveConfirm}
-                disabled={saving}
-              >
-                {saving ? (
-                  <><span className="pp-spinner" />Saving...</>
-                ) : (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                      <polyline points="17 21 17 13 7 13 7 21" />
-                      <polyline points="7 3 7 8 15 8" />
-                    </svg>
-                    Save
-                  </>
-                )}
-              </button>
+              <div className="ce-save-actions-right">
+                <button
+                  type="button"
+                  className="ce-save-btn ce-save-btn-cancel"
+                  onClick={handleSaveCancel}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="ce-save-btn ce-save-btn-save"
+                  onClick={handleSaveConfirm}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <><span className="pp-spinner" />Saving...</>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                      </svg>
+                      {originalName ? "Save Changes" : "Save Ontology"}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Profile.css";
 import { getAvatarColorPair } from "../../utils/avatarUtils";
@@ -14,6 +15,8 @@ const authHeaders = () => {
 };
 
 export default function Profile({ user, onUserUpdated }) {
+  const navigate = useNavigate();
+
   // Local editable fields (initialize from user)
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -24,6 +27,14 @@ export default function Profile({ user, onUserUpdated }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
+
+  // Schema Change History state
+  const [historyList, setHistoryList] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [selectedSchemaFilter, setSelectedSchemaFilter] = useState("all");
+  const [expandedEntries, setExpandedEntries] = useState({});
+  const [deletingEntryId, setDeletingEntryId] = useState(null);
 
   // banners
   const [savingName, setSavingName] = useState(false);
@@ -37,6 +48,51 @@ export default function Profile({ user, onUserUpdated }) {
     setLastName(user?.lastName || "");
     setEditingName(false);
   }, [user]);
+
+  // Fetch schema change history
+  const fetchHistory = useCallback(async () => {
+    if (!user) return;
+    setLoadingHistory(true);
+    setHistoryError("");
+    try {
+      const res = await axios.get(`${API}/history/user/all`, {
+        headers: authHeaders(),
+      });
+      setHistoryList(res.data?.entries || []);
+    } catch (err) {
+      setHistoryError(
+        err?.response?.data?.detail || "Failed to load schema change history."
+      );
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const toggleExpandEntry = (entryId) => {
+    setExpandedEntries((prev) => ({
+      ...prev,
+      [entryId]: !prev[entryId],
+    }));
+  };
+
+  const handleDeleteHistoryEntry = async (entryId) => {
+    if (!window.confirm("Are you sure you want to delete this history log?")) return;
+    setDeletingEntryId(entryId);
+    try {
+      await axios.delete(`${API}/history/entry/${entryId}`, {
+        headers: authHeaders(),
+      });
+      setHistoryList((prev) => prev.filter((e) => e.entry_id !== entryId));
+    } catch (err) {
+      alert(err?.response?.data?.detail || "Failed to delete history log.");
+    } finally {
+      setDeletingEntryId(null);
+    }
+  };
 
   const fullName = useMemo(() => {
     const f = (user?.firstName || "").trim();
@@ -56,6 +112,23 @@ export default function Profile({ user, onUserUpdated }) {
     if (!user) return { light: "#3498db", dark: "#2980b9" };
     return getAvatarColorPair(user.email || `${user.firstName}${user.lastName}`);
   }, [user]);
+
+  // Extract distinct schemas for the filter dropdown
+  const distinctSchemas = useMemo(() => {
+    const map = new Map();
+    historyList.forEach((item) => {
+      if (item.schema_id && !map.has(item.schema_id)) {
+        map.set(item.schema_id, item.schema_name || item.schema_id);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [historyList]);
+
+  // Filtered history list
+  const filteredHistory = useMemo(() => {
+    if (selectedSchemaFilter === "all") return historyList;
+    return historyList.filter((item) => item.schema_id === selectedSchemaFilter);
+  }, [historyList, selectedSchemaFilter]);
 
   const validateName = () => {
     if (!firstName.trim()) return "First name is required.";
@@ -165,6 +238,22 @@ export default function Profile({ user, onUserUpdated }) {
     }
   };
 
+  const formatDate = (isoString) => {
+    if (!isoString) return "";
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return isoString;
+    }
+  };
+
   if (!user) {
     return (
       <div className="profile-container animate-fadeIn">
@@ -183,7 +272,7 @@ export default function Profile({ user, onUserUpdated }) {
       <div className="profile-card">
         <div className="profile-header">
           <h2 className="profile-title">Profile</h2>
-          <p className="profile-sub">Manage your account information.</p>
+          <p className="profile-sub">Manage your account information and view schema history logs.</p>
         </div>
 
         {/* Dynamic Avatar Banner Section */}
@@ -306,6 +395,286 @@ export default function Profile({ user, onUserUpdated }) {
               <div className="hint">Email cannot be changed.</div>
             </div>
           </div>
+        </div>
+
+        {/* ─── Schema Change History Logs Section ─────────── */}
+        <div className="section history-section">
+          <div className="history-section-header">
+            <div className="section-title" style={{ margin: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              Schema Change History
+            </div>
+
+            {/* Controls: Filter & Refresh */}
+            <div className="history-controls">
+              {distinctSchemas.length > 0 && (
+                <div className="history-filter-wrapper">
+                  <label className="history-filter-label">Filter:</label>
+                  <select
+                    className="history-filter-select"
+                    value={selectedSchemaFilter}
+                    onChange={(e) => setSelectedSchemaFilter(e.target.value)}
+                  >
+                    <option value="all">All Ontologies ({historyList.length})</option>
+                    {distinctSchemas.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <button
+                type="button"
+                className={`history-refresh-btn ${loadingHistory ? "loading" : ""}`}
+                onClick={fetchHistory}
+                disabled={loadingHistory}
+                title="Refresh history"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <polyline points="1 20 1 14 7 14" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+                <span>{loadingHistory ? "Loading..." : "Refresh"}</span>
+              </button>
+            </div>
+          </div>
+
+          <p className="section-desc">
+            Granular change logs recorded every time you save modifications on the Ontology Canvas.
+          </p>
+
+          {historyError && (
+            <div className="error-banner" style={{ marginBottom: "16px" }}>
+              {historyError}
+            </div>
+          )}
+
+          {/* History Timeline List */}
+          {loadingHistory && historyList.length === 0 ? (
+            <div className="history-loading-state">
+              <div className="history-spinner" />
+              <span>Loading change history...</span>
+            </div>
+          ) : filteredHistory.length === 0 ? (
+            <div className="history-empty-card">
+              <div className="history-empty-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+              </div>
+              <h4>No Schema History Recorded Yet</h4>
+              <p>
+                When you create or modify an ontology on the Canvas and press <strong>Save</strong> or <strong>Ctrl+S</strong>, version change logs will appear here.
+              </p>
+              <button
+                type="button"
+                className="btn-small"
+                style={{ marginTop: "12px" }}
+                onClick={() => navigate("/canvas")}
+              >
+                Open Canvas Editor
+              </button>
+            </div>
+          ) : (
+            <div className="history-timeline">
+              {filteredHistory.map((item) => {
+                const isExpanded = !!expandedEntries[item.entry_id];
+                const changes = item.changes || {};
+                const addedCount = (changes.nodes_added?.length || 0) + (changes.edges_added?.length || 0);
+                const removedCount = (changes.nodes_removed?.length || 0) + (changes.edges_removed?.length || 0);
+                const modifiedCount = (changes.nodes_modified?.length || 0) + (changes.edges_modified?.length || 0);
+
+                return (
+                  <div key={item.entry_id} className="history-card">
+                    {/* Top Row: Schema Name, Version, Action, Timestamp */}
+                    <div className="history-card-top">
+                      <div className="history-card-title-group">
+                        <span className="history-version-badge">
+                          v{item.version || 1}
+                        </span>
+                        <span
+                          className={`history-action-badge ${
+                            item.action === "created"
+                              ? "created"
+                              : item.action === "imported"
+                              ? "imported"
+                              : "updated"
+                          }`}
+                        >
+                          {item.action || "updated"}
+                        </span>
+                        <h4 className="history-schema-title">
+                          {item.schema_name || item.schema_id}
+                        </h4>
+                      </div>
+
+                      <div className="history-meta-right">
+                        <span className="history-timestamp">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                          </svg>
+                          {formatDate(item.saved_at)}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="history-delete-btn"
+                          onClick={() => handleDeleteHistoryEntry(item.entry_id)}
+                          disabled={deletingEntryId === item.entry_id}
+                          title="Delete this history record"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Summary & Pills */}
+                    <div className="history-card-body">
+                      <div className="history-summary-text">
+                        {changes.summary || "Schema updated"}
+                      </div>
+
+                      <div className="history-pills-row">
+                        {addedCount > 0 && (
+                          <span className="ce-diff-pill added">
+                            +{addedCount} Added
+                          </span>
+                        )}
+                        {removedCount > 0 && (
+                          <span className="ce-diff-pill removed">
+                            -{removedCount} Removed
+                          </span>
+                        )}
+                        {modifiedCount > 0 && (
+                          <span className="ce-diff-pill modified">
+                            ~{modifiedCount} Modified
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Expandable Details */}
+                    {isExpanded && (
+                      <div className="history-expanded-details">
+                        {changes.nodes_added?.map((n) => (
+                          <div key={`hna_${n.id}`} className="ce-diff-item add">
+                            <span className="ce-diff-tag add">+</span>
+                            <span className="ce-diff-item-text">
+                              Added Node: <strong>{n.label || n.id}</strong> ({n.type})
+                            </span>
+                          </div>
+                        ))}
+                        {changes.nodes_removed?.map((n) => (
+                          <div key={`hnr_${n.id}`} className="ce-diff-item del">
+                            <span className="ce-diff-tag del">-</span>
+                            <span className="ce-diff-item-text">
+                              Removed Node: <strong>{n.label || n.id}</strong>
+                            </span>
+                          </div>
+                        ))}
+                        {changes.nodes_modified?.map((m, idx) => (
+                          <div key={`hnm_${m.id}_${idx}`} className="ce-diff-item mod">
+                            <span className="ce-diff-tag mod">~</span>
+                            <span className="ce-diff-item-text">
+                              Modified {m.field}: <del>{m.old || "none"}</del> → <ins>{m.new}</ins>
+                            </span>
+                          </div>
+                        ))}
+                        {changes.edges_added?.map((e) => (
+                          <div key={`hea_${e.id}`} className="ce-diff-item add">
+                            <span className="ce-diff-tag add">+</span>
+                            <span className="ce-diff-item-text">
+                              Added Relation: <strong>{e.edgeType}</strong>
+                            </span>
+                          </div>
+                        ))}
+                        {changes.edges_removed?.map((e) => (
+                          <div key={`her_${e.id}`} className="ce-diff-item del">
+                            <span className="ce-diff-tag del">-</span>
+                            <span className="ce-diff-item-text">
+                              Removed Relation: <strong>{e.edgeType}</strong>
+                            </span>
+                          </div>
+                        ))}
+                        {changes.edges_modified?.map((e, idx) => (
+                          <div key={`hem_${e.id}_${idx}`} className="ce-diff-item mod">
+                            <span className="ce-diff-tag mod">~</span>
+                            <span className="ce-diff-item-text">
+                              Relation Changed: <del>{e.old}</del> → <ins>{e.new}</ins>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Bottom Actions */}
+                    <div className="history-card-footer">
+                      <button
+                        type="button"
+                        className="history-toggle-details-btn"
+                        onClick={() => toggleExpandEntry(item.entry_id)}
+                      >
+                        <span>{isExpanded ? "Hide Details" : "View Details"}</span>
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          style={{
+                            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform 0.2s ease",
+                          }}
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="history-open-canvas-btn"
+                        onClick={() =>
+                          navigate(`/canvas?schema_id=${item.schema_id}`, {
+                            state: { originalName: item.schema_name },
+                          })
+                        }
+                        title="Open this schema on Canvas"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        <span>Open on Canvas</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Change password */}
