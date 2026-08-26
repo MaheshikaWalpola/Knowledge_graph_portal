@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from fastapi import APIRouter, Query, Body, Depends
 
@@ -7,6 +7,7 @@ from services.history_service import (
     create_history_entry,
     list_schema_history,
     list_user_all_history,
+    get_user_distinct_schemas,
     get_history_entry,
     delete_history_entry,
 )
@@ -61,30 +62,44 @@ def api_log_history(
 
 @router.get("/user/all")
 def api_get_all_user_history(
-    limit: int = Query(100, ge=1, le=500),
+    limit: int = Query(10, ge=1, le=100),
+    skip: int = Query(0, ge=0),
+    schema_id: Optional[str] = Query(None),
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
-    """Return all schema change history entries for the current user."""
-    entries = list_user_all_history(
+    """Return paginated schema change history entries for the current user."""
+    return list_user_all_history(
         user_email=current_user["email"],
         limit=limit,
+        skip=skip,
+        schema_id=schema_id,
     )
-    return {"entries": entries, "count": len(entries)}
+
+
+@router.get("/user/schemas")
+def api_get_user_history_schemas(
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """Return distinct schemas for the user for the history filter dropdown."""
+    schemas = get_user_distinct_schemas(user_email=current_user["email"])
+    return {"schemas": schemas}
 
 
 @router.get("/{schema_id}")
 def api_get_schema_history(
     schema_id: str,
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(10, ge=1, le=100),
+    skip: int = Query(0, ge=0),
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
     """Return paginated history entries for a schema, newest first."""
-    entries = list_schema_history(
+    return list_schema_history(
         user_email=current_user["email"],
         schema_id=schema_id,
         limit=limit,
+        skip=skip,
     )
-    return {"schema_id": schema_id, "entries": entries, "count": len(entries)}
+
 
 
 @router.get("/entry/{entry_id}")

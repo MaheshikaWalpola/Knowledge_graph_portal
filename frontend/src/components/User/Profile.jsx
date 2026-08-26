@@ -32,8 +32,11 @@ export default function Profile({ user, onUserUpdated }) {
   // Schema Change History state
   const [historyList, setHistoryList] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [selectedSchemaFilter, setSelectedSchemaFilter] = useState("all");
+  const [distinctSchemas, setDistinctSchemas] = useState([]);
   const [expandedEntries, setExpandedEntries] = useState({});
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [deletingEntryId, setDeletingEntryId] = useState(null);
@@ -51,16 +54,35 @@ export default function Profile({ user, onUserUpdated }) {
     setEditingName(false);
   }, [user]);
 
-  // Fetch schema change history
-  const fetchHistory = useCallback(async () => {
+  // Fetch distinct schemas that have history entries
+  const fetchSchemas = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await axios.get(`${API}/history/user/schemas`, {
+        headers: authHeaders(),
+      });
+      setDistinctSchemas(res.data?.schemas || []);
+    } catch {
+      // ignore schema list errors silently
+    }
+  }, [user]);
+
+  // Fetch initial schema change history (latest 10 entries)
+  const fetchHistory = useCallback(async (filter = selectedSchemaFilter) => {
     if (!user) return;
     setLoadingHistory(true);
     setHistoryError("");
     try {
+      const params = { limit: 10, skip: 0 };
+      if (filter && filter !== "all") {
+        params.schema_id = filter;
+      }
       const res = await axios.get(`${API}/history/user/all`, {
         headers: authHeaders(),
+        params,
       });
       setHistoryList(res.data?.entries || []);
+      setHasMore(Boolean(res.data?.has_more));
     } catch (err) {
       setHistoryError(
         err?.response?.data?.detail || "Failed to load schema change history."
@@ -68,11 +90,42 @@ export default function Profile({ user, onUserUpdated }) {
     } finally {
       setLoadingHistory(false);
     }
-  }, [user]);
+  }, [user, selectedSchemaFilter]);
+
+  // Load next 10 history entries from backend
+  const loadMoreHistory = async () => {
+    if (loadingMore || !hasMore || !user) return;
+    setLoadingMore(true);
+    try {
+      const params = { limit: 10, skip: historyList.length };
+      if (selectedSchemaFilter && selectedSchemaFilter !== "all") {
+        params.schema_id = selectedSchemaFilter;
+      }
+      const res = await axios.get(`${API}/history/user/all`, {
+        headers: authHeaders(),
+        params,
+      });
+      const newEntries = res.data?.entries || [];
+      setHistoryList((prev) => [...prev, ...newEntries]);
+      setHasMore(Boolean(res.data?.has_more));
+    } catch (err) {
+      setHistoryError(
+        err?.response?.data?.detail || "Failed to load more history logs."
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+    fetchHistory(selectedSchemaFilter);
+    fetchSchemas();
+  }, [fetchSchemas, selectedSchemaFilter]);
+
+  const handleRefreshHistory = () => {
+    fetchHistory(selectedSchemaFilter);
+    fetchSchemas();
+  };
 
   const toggleExpandEntry = (entryId) => {
     setExpandedEntries((prev) => ({
@@ -94,6 +147,7 @@ export default function Profile({ user, onUserUpdated }) {
         prev.filter((e) => (e.entry_id || e._id || e.id) !== entryId)
       );
       setPendingDeleteId(null);
+      fetchSchemas();
     } catch (err) {
       alert(err?.response?.data?.detail || "Failed to delete history log.");
     } finally {
@@ -119,23 +173,6 @@ export default function Profile({ user, onUserUpdated }) {
     if (!user) return { light: "#3498db", dark: "#2980b9" };
     return getAvatarColorPair(user.email || `${user.firstName}${user.lastName}`);
   }, [user]);
-
-  // Extract distinct schemas for the filter dropdown
-  const distinctSchemas = useMemo(() => {
-    const map = new Map();
-    historyList.forEach((item) => {
-      if (item.schema_id && !map.has(item.schema_id)) {
-        map.set(item.schema_id, item.schema_name || item.schema_id);
-      }
-    });
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [historyList]);
-
-  // Filtered history list
-  const filteredHistory = useMemo(() => {
-    if (selectedSchemaFilter === "all") return historyList;
-    return historyList.filter((item) => item.schema_id === selectedSchemaFilter);
-  }, [historyList, selectedSchemaFilter]);
 
   const validateName = () => {
     if (!firstName.trim()) return "First name is required.";
@@ -548,9 +585,11 @@ export default function Profile({ user, onUserUpdated }) {
                 <select
                   className="history-filter-select"
                   value={selectedSchemaFilter}
-                  onChange={(e) => setSelectedSchemaFilter(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedSchemaFilter(e.target.value);
+                  }}
                 >
-                  <option value="all">All Ontologies ({historyList.length})</option>
+                  <option value="all">All Ontologies</option>
                   {distinctSchemas.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -562,8 +601,8 @@ export default function Profile({ user, onUserUpdated }) {
               <button
                 type="button"
                 className={`history-refresh-btn ${loadingHistory ? "loading" : ""}`}
-                onClick={fetchHistory}
-                disabled={loadingHistory}
+                onClick={handleRefreshHistory}
+                disabled={loadingHistory || loadingMore}
                 title="Refresh history"
               >
                 <svg
@@ -596,169 +635,196 @@ export default function Profile({ user, onUserUpdated }) {
               <div className="history-spinner" />
               <span>Loading logs...</span>
             </div>
-          ) : filteredHistory.length === 0 ? (
+          ) : historyList.length === 0 ? (
             <div className="history-empty-compact">
               <span>No schema change history recorded yet.</span>
             </div>
           ) : (
-            <div className="history-compact-list">
-              {filteredHistory.map((item) => {
-                const entryKey = item.entry_id || item._id || item.id;
-                const isExpanded = !!expandedEntries[entryKey];
-                const isPendingDelete = pendingDeleteId === entryKey;
-                const changes = item.changes || {};
-                const hasDetailedDiff =
-                  (changes.nodes_added?.length || 0) > 0 ||
-                  (changes.nodes_removed?.length || 0) > 0 ||
-                  (changes.nodes_modified?.length || 0) > 0 ||
-                  (changes.edges_added?.length || 0) > 0 ||
-                  (changes.edges_removed?.length || 0) > 0 ||
-                  (changes.edges_modified?.length || 0) > 0;
+            <>
+              <div className="history-compact-list">
+                {historyList.map((item) => {
+                  const entryKey = item.entry_id || item._id || item.id;
+                  const isExpanded = !!expandedEntries[entryKey];
+                  const isPendingDelete = pendingDeleteId === entryKey;
+                  const changes = item.changes || {};
+                  const hasDetailedDiff =
+                    (changes.nodes_added?.length || 0) > 0 ||
+                    (changes.nodes_removed?.length || 0) > 0 ||
+                    (changes.nodes_modified?.length || 0) > 0 ||
+                    (changes.edges_added?.length || 0) > 0 ||
+                    (changes.edges_removed?.length || 0) > 0 ||
+                    (changes.edges_modified?.length || 0) > 0;
 
-                return (
-                  <div key={entryKey} className="history-row-container">
-                    <div
-                      className="history-row"
-                      onClick={() => !isPendingDelete && hasDetailedDiff && toggleExpandEntry(entryKey)}
-                      style={{ cursor: hasDetailedDiff && !isPendingDelete ? "pointer" : "default" }}
-                    >
-                      {/* Left: Version + Action + Name + Summary */}
-                      <div className="history-row-left">
-                        <span className="history-version-badge">
-                          v{item.version || 1}
-                        </span>
-                        <span
-                          className={`history-action-badge ${
-                            item.action === "created"
-                              ? "created"
-                              : item.action === "imported"
-                              ? "imported"
-                              : "updated"
-                          }`}
-                        >
-                          {item.action || "updated"}
-                        </span>
-                        <span className="history-row-name">
-                          {item.schema_name || item.schema_id}
-                        </span>
-                        <span className="history-row-summary">
-                          {changes.summary || "Schema updated"}
-                        </span>
-                      </div>
+                  return (
+                    <div key={entryKey} className="history-row-container">
+                      <div
+                        className="history-row"
+                        onClick={() => !isPendingDelete && hasDetailedDiff && toggleExpandEntry(entryKey)}
+                        style={{ cursor: hasDetailedDiff && !isPendingDelete ? "pointer" : "default" }}
+                      >
+                        {/* Left: Version + Name + Summary */}
+                        <div className="history-row-left">
+                          <span className="history-version-badge">
+                            v{item.version || 1}
+                          </span>
+                          <span className="history-row-name">
+                            {item.schema_name || item.schema_id}
+                          </span>
+                          <span className="history-row-summary">
+                            {changes.summary || "Schema updated"}
+                          </span>
+                        </div>
 
-                      {/* Right: Date + Toggle Icon + Delete / Inline Delete Prompt */}
-                      <div className="history-row-right" onClick={(e) => e.stopPropagation()}>
-                        {isPendingDelete ? (
-                          <div className="history-inline-delete-box">
-                            <span className="history-inline-delete-text">Delete log?</span>
-                            <button
-                              type="button"
-                              className="history-inline-btn cancel"
-                              onClick={() => setPendingDeleteId(null)}
-                              disabled={deletingEntryId === entryKey}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              className="history-inline-btn confirm"
-                              onClick={() => confirmInlineDelete(item)}
-                              disabled={deletingEntryId === entryKey}
-                            >
-                              {deletingEntryId === entryKey ? "..." : "Yes, Delete"}
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="history-timestamp">
-                              {formatDate(item.saved_at)}
-                            </span>
-
-                            {hasDetailedDiff && (
+                        {/* Right: Date + Toggle Icon + Delete / Inline Delete Prompt */}
+                        <div className="history-row-right" onClick={(e) => e.stopPropagation()}>
+                          {isPendingDelete ? (
+                            <div className="history-inline-delete-box">
+                              <span className="history-inline-delete-text">Delete log?</span>
                               <button
                                 type="button"
-                                className="history-expand-icon-btn"
-                                onClick={() => toggleExpandEntry(entryKey)}
-                                title={isExpanded ? "Collapse" : "Expand"}
+                                className="history-inline-btn cancel"
+                                onClick={() => setPendingDeleteId(null)}
+                                disabled={deletingEntryId === entryKey}
                               >
-                                <svg
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                  style={{
-                                    transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                                    transition: "transform 0.15s ease",
-                                  }}
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                className="history-inline-btn confirm"
+                                onClick={() => confirmInlineDelete(item)}
+                                disabled={deletingEntryId === entryKey}
+                              >
+                                {deletingEntryId === entryKey ? "..." : "Yes, Delete"}
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="history-timestamp">
+                                {formatDate(item.saved_at)}
+                              </span>
+
+                              {hasDetailedDiff && (
+                                <button
+                                  type="button"
+                                  className="history-expand-icon-btn"
+                                  onClick={() => toggleExpandEntry(entryKey)}
+                                  title={isExpanded ? "Collapse" : "Expand"}
                                 >
-                                  <polyline points="6 9 12 15 18 9" />
+                                  <svg
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    style={{
+                                      transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                      transition: "transform 0.15s ease",
+                                    }}
+                                  >
+                                    <polyline points="6 9 12 15 18 9" />
+                                  </svg>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                className="history-delete-btn"
+                                onClick={() => setPendingDeleteId(entryKey)}
+                                title="Delete log"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                                 </svg>
                               </button>
-                            )}
-
-                            <button
-                              type="button"
-                              className="history-delete-btn"
-                              onClick={() => setPendingDeleteId(entryKey)}
-                              title="Delete log"
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="3 6 5 6 21 6" />
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                              </svg>
-                            </button>
-                          </>
-                        )}
+                            </>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Compact Expandable Details */}
+                      {isExpanded && hasDetailedDiff && !isPendingDelete && (
+                        <div className="history-row-expanded">
+                          {changes.nodes_added?.map((n) => (
+                            <div key={`hna_${n.id}`} className="ce-diff-item add">
+                              <span className="ce-diff-tag add">+</span>
+                              <span>Added node: <strong>{n.label || n.id}</strong> ({n.type})</span>
+                            </div>
+                          ))}
+                          {changes.nodes_removed?.map((n) => (
+                            <div key={`hnr_${n.id}`} className="ce-diff-item del">
+                              <span className="ce-diff-tag del">-</span>
+                              <span>Removed node: <strong>{n.label || n.id}</strong></span>
+                            </div>
+                          ))}
+                          {changes.nodes_modified?.map((m, idx) => (
+                            <div key={`hnm_${m.id}_${idx}`} className="ce-diff-item mod">
+                              <span className="ce-diff-tag mod">~</span>
+                              <span>Modified {m.field}: <del>{m.old || "none"}</del> → <ins>{m.new}</ins></span>
+                            </div>
+                          ))}
+                          {changes.edges_added?.map((e) => (
+                            <div key={`hea_${e.id}`} className="ce-diff-item add">
+                              <span className="ce-diff-tag add">+</span>
+                              <span>Added relation: <strong>{e.edgeType}</strong></span>
+                            </div>
+                          ))}
+                          {changes.edges_removed?.map((e) => (
+                            <div key={`her_${e.id}`} className="ce-diff-item del">
+                              <span className="ce-diff-tag del">-</span>
+                              <span>Removed relation: <strong>{e.edgeType}</strong></span>
+                            </div>
+                          ))}
+                          {changes.edges_modified?.map((e, idx) => (
+                            <div key={`hem_${e.id}_${idx}`} className="ce-diff-item mod">
+                              <span className="ce-diff-tag mod">~</span>
+                              <span>Relation changed: <del>{e.old}</del> → <ins>{e.new}</ins></span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
+                  );
+                })}
+              </div>
 
-                    {/* Compact Expandable Details */}
-                    {isExpanded && hasDetailedDiff && !isPendingDelete && (
-                      <div className="history-row-expanded">
-                        {changes.nodes_added?.map((n) => (
-                          <div key={`hna_${n.id}`} className="ce-diff-item add">
-                            <span className="ce-diff-tag add">+</span>
-                            <span>Added node: <strong>{n.label || n.id}</strong> ({n.type})</span>
-                          </div>
-                        ))}
-                        {changes.nodes_removed?.map((n) => (
-                          <div key={`hnr_${n.id}`} className="ce-diff-item del">
-                            <span className="ce-diff-tag del">-</span>
-                            <span>Removed node: <strong>{n.label || n.id}</strong></span>
-                          </div>
-                        ))}
-                        {changes.nodes_modified?.map((m, idx) => (
-                          <div key={`hnm_${m.id}_${idx}`} className="ce-diff-item mod">
-                            <span className="ce-diff-tag mod">~</span>
-                            <span>Modified {m.field}: <del>{m.old || "none"}</del> → <ins>{m.new}</ins></span>
-                          </div>
-                        ))}
-                        {changes.edges_added?.map((e) => (
-                          <div key={`hea_${e.id}`} className="ce-diff-item add">
-                            <span className="ce-diff-tag add">+</span>
-                            <span>Added relation: <strong>{e.edgeType}</strong></span>
-                          </div>
-                        ))}
-                        {changes.edges_removed?.map((e) => (
-                          <div key={`her_${e.id}`} className="ce-diff-item del">
-                            <span className="ce-diff-tag del">-</span>
-                            <span>Removed relation: <strong>{e.edgeType}</strong></span>
-                          </div>
-                        ))}
-                        {changes.edges_modified?.map((e, idx) => (
-                          <div key={`hem_${e.id}_${idx}`} className="ce-diff-item mod">
-                            <span className="ce-diff-tag mod">~</span>
-                            <span>Relation changed: <del>{e.old}</del> → <ins>{e.new}</ins></span>
-                          </div>
-                        ))}
-                      </div>
+              {/* Load More Pagination Button */}
+              {hasMore && (
+                <div className="history-pagination-actions">
+                  <button
+                    type="button"
+                    className="history-load-more-btn"
+                    onClick={loadMoreHistory}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? (
+                      <>
+                        <div
+                          className="history-spinner"
+                          style={{ width: 13, height: 13, borderWidth: 2 }}
+                        />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                        Show More
+                      </>
                     )}
-                  </div>
-                );
-              })}
-            </div>
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

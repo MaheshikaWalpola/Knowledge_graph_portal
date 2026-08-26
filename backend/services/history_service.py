@@ -45,11 +45,17 @@ def list_schema_history(
     user_email: str,
     schema_id: str,
     limit: int = 50,
-) -> List[Dict]:
+    skip: int = 0,
+) -> Dict:
     """Return recent history entries for a schema, newest first."""
-    cursor = schema_history_collection.find(
-        {"user_email": user_email, "schema_id": schema_id}
-    ).sort("saved_at", -1).limit(limit)
+    query = {"user_email": user_email, "schema_id": schema_id}
+    total = schema_history_collection.count_documents(query)
+    cursor = (
+        schema_history_collection.find(query)
+        .sort("saved_at", -1)
+        .skip(skip)
+        .limit(limit)
+    )
 
     results = []
     for doc in cursor:
@@ -60,17 +66,33 @@ def list_schema_history(
             doc["saved_at"] = doc["saved_at"].isoformat()
         results.append(doc)
 
-    return results
+    return {
+        "entries": results,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "has_more": (skip + len(results)) < total,
+    }
 
 
 def list_user_all_history(
     user_email: str,
-    limit: int = 100,
-) -> List[Dict]:
-    """Return all recent history entries for a user across all schemas, newest first."""
-    cursor = schema_history_collection.find(
-        {"user_email": user_email}
-    ).sort("saved_at", -1).limit(limit)
+    limit: int = 10,
+    skip: int = 0,
+    schema_id: Optional[str] = None,
+) -> Dict:
+    """Return paginated history entries for a user across all or specific schema, newest first."""
+    query = {"user_email": user_email}
+    if schema_id and schema_id != "all":
+        query["schema_id"] = schema_id
+
+    total = schema_history_collection.count_documents(query)
+    cursor = (
+        schema_history_collection.find(query)
+        .sort("saved_at", -1)
+        .skip(skip)
+        .limit(limit)
+    )
 
     results = []
     for doc in cursor:
@@ -81,7 +103,28 @@ def list_user_all_history(
             doc["saved_at"] = doc["saved_at"].isoformat()
         results.append(doc)
 
-    return results
+    return {
+        "entries": results,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "has_more": (skip + len(results)) < total,
+    }
+
+
+def get_user_distinct_schemas(user_email: str) -> List[Dict]:
+    """Return distinct schemas that have history entries for this user."""
+    pipeline = [
+        {"$match": {"user_email": user_email}},
+        {"$group": {"_id": "$schema_id", "schema_name": {"$first": "$schema_name"}}},
+        {"$sort": {"schema_name": 1}},
+    ]
+    docs = list(schema_history_collection.aggregate(pipeline))
+    return [
+        {"id": d["_id"], "name": d.get("schema_name") or d["_id"]}
+        for d in docs
+        if d["_id"]
+    ]
 
 
 def get_history_entry(user_email: str, entry_id: str) -> Optional[Dict]:
@@ -114,5 +157,6 @@ def delete_history_entry(user_email: str, entry_id: str) -> bool:
 
     res = schema_history_collection.delete_one(query)
     return res.deleted_count > 0
+
 
 
