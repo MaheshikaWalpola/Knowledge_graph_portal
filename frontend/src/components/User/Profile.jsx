@@ -301,11 +301,11 @@ export default function Profile({ user, onUserUpdated }) {
           </div>
         )}
 
-        {/* Account Details */}
+        {/* Section 1: Account Details */}
         <div className="section">
           <div className="section-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            Account
+            Account Details
           </div>
 
           <div className="grid">
@@ -397,287 +397,7 @@ export default function Profile({ user, onUserUpdated }) {
           </div>
         </div>
 
-        {/* ─── Schema Change History Logs Section ─────────── */}
-        <div className="section history-section">
-          <div className="history-section-header">
-            <div className="section-title" style={{ margin: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              Schema Change History
-            </div>
-
-            {/* Controls: Filter & Refresh */}
-            <div className="history-controls">
-              {distinctSchemas.length > 0 && (
-                <div className="history-filter-wrapper">
-                  <label className="history-filter-label">Filter:</label>
-                  <select
-                    className="history-filter-select"
-                    value={selectedSchemaFilter}
-                    onChange={(e) => setSelectedSchemaFilter(e.target.value)}
-                  >
-                    <option value="all">All Ontologies ({historyList.length})</option>
-                    {distinctSchemas.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <button
-                type="button"
-                className={`history-refresh-btn ${loadingHistory ? "loading" : ""}`}
-                onClick={fetchHistory}
-                disabled={loadingHistory}
-                title="Refresh history"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                </svg>
-                <span>{loadingHistory ? "Loading..." : "Refresh"}</span>
-              </button>
-            </div>
-          </div>
-
-          <p className="section-desc">
-            Granular change logs recorded every time you save modifications on the Ontology Canvas.
-          </p>
-
-          {historyError && (
-            <div className="error-banner" style={{ marginBottom: "16px" }}>
-              {historyError}
-            </div>
-          )}
-
-          {/* History Timeline List */}
-          {loadingHistory && historyList.length === 0 ? (
-            <div className="history-loading-state">
-              <div className="history-spinner" />
-              <span>Loading change history...</span>
-            </div>
-          ) : filteredHistory.length === 0 ? (
-            <div className="history-empty-card">
-              <div className="history-empty-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="16" y1="13" x2="8" y2="13" />
-                  <line x1="16" y1="17" x2="8" y2="17" />
-                  <polyline points="10 9 9 9 8 9" />
-                </svg>
-              </div>
-              <h4>No Schema History Recorded Yet</h4>
-              <p>
-                When you create or modify an ontology on the Canvas and press <strong>Save</strong> or <strong>Ctrl+S</strong>, version change logs will appear here.
-              </p>
-              <button
-                type="button"
-                className="btn-small"
-                style={{ marginTop: "12px" }}
-                onClick={() => navigate("/canvas")}
-              >
-                Open Canvas Editor
-              </button>
-            </div>
-          ) : (
-            <div className="history-timeline">
-              {filteredHistory.map((item) => {
-                const isExpanded = !!expandedEntries[item.entry_id];
-                const changes = item.changes || {};
-                const addedCount = (changes.nodes_added?.length || 0) + (changes.edges_added?.length || 0);
-                const removedCount = (changes.nodes_removed?.length || 0) + (changes.edges_removed?.length || 0);
-                const modifiedCount = (changes.nodes_modified?.length || 0) + (changes.edges_modified?.length || 0);
-
-                return (
-                  <div key={item.entry_id} className="history-card">
-                    {/* Top Row: Schema Name, Version, Action, Timestamp */}
-                    <div className="history-card-top">
-                      <div className="history-card-title-group">
-                        <span className="history-version-badge">
-                          v{item.version || 1}
-                        </span>
-                        <span
-                          className={`history-action-badge ${
-                            item.action === "created"
-                              ? "created"
-                              : item.action === "imported"
-                              ? "imported"
-                              : "updated"
-                          }`}
-                        >
-                          {item.action || "updated"}
-                        </span>
-                        <h4 className="history-schema-title">
-                          {item.schema_name || item.schema_id}
-                        </h4>
-                      </div>
-
-                      <div className="history-meta-right">
-                        <span className="history-timestamp">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                          </svg>
-                          {formatDate(item.saved_at)}
-                        </span>
-
-                        <button
-                          type="button"
-                          className="history-delete-btn"
-                          onClick={() => handleDeleteHistoryEntry(item.entry_id)}
-                          disabled={deletingEntryId === item.entry_id}
-                          title="Delete this history record"
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Summary & Pills */}
-                    <div className="history-card-body">
-                      <div className="history-summary-text">
-                        {changes.summary || "Schema updated"}
-                      </div>
-
-                      <div className="history-pills-row">
-                        {addedCount > 0 && (
-                          <span className="ce-diff-pill added">
-                            +{addedCount} Added
-                          </span>
-                        )}
-                        {removedCount > 0 && (
-                          <span className="ce-diff-pill removed">
-                            -{removedCount} Removed
-                          </span>
-                        )}
-                        {modifiedCount > 0 && (
-                          <span className="ce-diff-pill modified">
-                            ~{modifiedCount} Modified
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Expandable Details */}
-                    {isExpanded && (
-                      <div className="history-expanded-details">
-                        {changes.nodes_added?.map((n) => (
-                          <div key={`hna_${n.id}`} className="ce-diff-item add">
-                            <span className="ce-diff-tag add">+</span>
-                            <span className="ce-diff-item-text">
-                              Added Node: <strong>{n.label || n.id}</strong> ({n.type})
-                            </span>
-                          </div>
-                        ))}
-                        {changes.nodes_removed?.map((n) => (
-                          <div key={`hnr_${n.id}`} className="ce-diff-item del">
-                            <span className="ce-diff-tag del">-</span>
-                            <span className="ce-diff-item-text">
-                              Removed Node: <strong>{n.label || n.id}</strong>
-                            </span>
-                          </div>
-                        ))}
-                        {changes.nodes_modified?.map((m, idx) => (
-                          <div key={`hnm_${m.id}_${idx}`} className="ce-diff-item mod">
-                            <span className="ce-diff-tag mod">~</span>
-                            <span className="ce-diff-item-text">
-                              Modified {m.field}: <del>{m.old || "none"}</del> → <ins>{m.new}</ins>
-                            </span>
-                          </div>
-                        ))}
-                        {changes.edges_added?.map((e) => (
-                          <div key={`hea_${e.id}`} className="ce-diff-item add">
-                            <span className="ce-diff-tag add">+</span>
-                            <span className="ce-diff-item-text">
-                              Added Relation: <strong>{e.edgeType}</strong>
-                            </span>
-                          </div>
-                        ))}
-                        {changes.edges_removed?.map((e) => (
-                          <div key={`her_${e.id}`} className="ce-diff-item del">
-                            <span className="ce-diff-tag del">-</span>
-                            <span className="ce-diff-item-text">
-                              Removed Relation: <strong>{e.edgeType}</strong>
-                            </span>
-                          </div>
-                        ))}
-                        {changes.edges_modified?.map((e, idx) => (
-                          <div key={`hem_${e.id}_${idx}`} className="ce-diff-item mod">
-                            <span className="ce-diff-tag mod">~</span>
-                            <span className="ce-diff-item-text">
-                              Relation Changed: <del>{e.old}</del> → <ins>{e.new}</ins>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Bottom Actions */}
-                    <div className="history-card-footer">
-                      <button
-                        type="button"
-                        className="history-toggle-details-btn"
-                        onClick={() => toggleExpandEntry(item.entry_id)}
-                      >
-                        <span>{isExpanded ? "Hide Details" : "View Details"}</span>
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          style={{
-                            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                            transition: "transform 0.2s ease",
-                          }}
-                        >
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="history-open-canvas-btn"
-                        onClick={() =>
-                          navigate(`/canvas?schema_id=${item.schema_id}`, {
-                            state: { originalName: item.schema_name },
-                          })
-                        }
-                        title="Open this schema on Canvas"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polygon points="5 3 19 12 5 21 5 3" />
-                        </svg>
-                        <span>Open on Canvas</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Change password */}
+        {/* Section 2: Change Password (Below Account Details) */}
         <div className="section">
           <div className="section-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -788,6 +508,215 @@ export default function Profile({ user, onUserUpdated }) {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Section 3: Schema Change History (Minimal & Space-Efficient) */}
+        <div className="section history-section">
+          <div className="history-section-header">
+            <div className="section-title" style={{ margin: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              Schema Change History
+            </div>
+
+            {/* Compact Filter & Refresh Controls */}
+            <div className="history-controls">
+              {distinctSchemas.length > 0 && (
+                <select
+                  className="history-filter-select"
+                  value={selectedSchemaFilter}
+                  onChange={(e) => setSelectedSchemaFilter(e.target.value)}
+                >
+                  <option value="all">All Ontologies ({historyList.length})</option>
+                  {distinctSchemas.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              <button
+                type="button"
+                className={`history-refresh-btn ${loadingHistory ? "loading" : ""}`}
+                onClick={fetchHistory}
+                disabled={loadingHistory}
+                title="Refresh history"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <polyline points="1 20 1 14 7 14" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {historyError && (
+            <div className="error-banner" style={{ margin: "8px 0" }}>
+              {historyError}
+            </div>
+          )}
+
+          {/* Compact Minimal History List */}
+          {loadingHistory && historyList.length === 0 ? (
+            <div className="history-loading-state">
+              <div className="history-spinner" />
+              <span>Loading logs...</span>
+            </div>
+          ) : filteredHistory.length === 0 ? (
+            <div className="history-empty-compact">
+              <span>No schema change history recorded yet.</span>
+            </div>
+          ) : (
+            <div className="history-compact-list">
+              {filteredHistory.map((item) => {
+                const isExpanded = !!expandedEntries[item.entry_id];
+                const changes = item.changes || {};
+                const addedCount = (changes.nodes_added?.length || 0) + (changes.edges_added?.length || 0);
+                const removedCount = (changes.nodes_removed?.length || 0) + (changes.edges_removed?.length || 0);
+                const modifiedCount = (changes.nodes_modified?.length || 0) + (changes.edges_modified?.length || 0);
+                const hasDetailedDiff =
+                  (changes.nodes_added?.length || 0) > 0 ||
+                  (changes.nodes_removed?.length || 0) > 0 ||
+                  (changes.nodes_modified?.length || 0) > 0 ||
+                  (changes.edges_added?.length || 0) > 0 ||
+                  (changes.edges_removed?.length || 0) > 0 ||
+                  (changes.edges_modified?.length || 0) > 0;
+
+                return (
+                  <div key={item.entry_id} className="history-row-container">
+                    <div
+                      className="history-row"
+                      onClick={() => hasDetailedDiff && toggleExpandEntry(item.entry_id)}
+                      style={{ cursor: hasDetailedDiff ? "pointer" : "default" }}
+                    >
+                      {/* Left: Version + Action + Name + Summary */}
+                      <div className="history-row-left">
+                        <span className="history-version-badge">
+                          v{item.version || 1}
+                        </span>
+                        <span
+                          className={`history-action-badge ${
+                            item.action === "created"
+                              ? "created"
+                              : item.action === "imported"
+                              ? "imported"
+                              : "updated"
+                          }`}
+                        >
+                          {item.action || "updated"}
+                        </span>
+                        <span className="history-row-name">
+                          {item.schema_name || item.schema_id}
+                        </span>
+                        <span className="history-row-summary">
+                          {changes.summary || "Schema updated"}
+                        </span>
+                      </div>
+
+                      {/* Right: Date + Toggle Icon + Delete */}
+                      <div className="history-row-right" onClick={(e) => e.stopPropagation()}>
+                        <span className="history-timestamp">
+                          {formatDate(item.saved_at)}
+                        </span>
+
+                        {hasDetailedDiff && (
+                          <button
+                            type="button"
+                            className="history-expand-icon-btn"
+                            onClick={() => toggleExpandEntry(item.entry_id)}
+                            title={isExpanded ? "Collapse" : "Expand"}
+                          >
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              style={{
+                                transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                                transition: "transform 0.15s ease",
+                              }}
+                            >
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          className="history-delete-btn"
+                          onClick={() => handleDeleteHistoryEntry(item.entry_id)}
+                          disabled={deletingEntryId === item.entry_id}
+                          title="Delete log"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Compact Expandable Details */}
+                    {isExpanded && hasDetailedDiff && (
+                      <div className="history-row-expanded">
+                        {changes.nodes_added?.map((n) => (
+                          <div key={`hna_${n.id}`} className="ce-diff-item add">
+                            <span className="ce-diff-tag add">+</span>
+                            <span>Added node: <strong>{n.label || n.id}</strong> ({n.type})</span>
+                          </div>
+                        ))}
+                        {changes.nodes_removed?.map((n) => (
+                          <div key={`hnr_${n.id}`} className="ce-diff-item del">
+                            <span className="ce-diff-tag del">-</span>
+                            <span>Removed node: <strong>{n.label || n.id}</strong></span>
+                          </div>
+                        ))}
+                        {changes.nodes_modified?.map((m, idx) => (
+                          <div key={`hnm_${m.id}_${idx}`} className="ce-diff-item mod">
+                            <span className="ce-diff-tag mod">~</span>
+                            <span>Modified {m.field}: <del>{m.old || "none"}</del> → <ins>{m.new}</ins></span>
+                          </div>
+                        ))}
+                        {changes.edges_added?.map((e) => (
+                          <div key={`hea_${e.id}`} className="ce-diff-item add">
+                            <span className="ce-diff-tag add">+</span>
+                            <span>Added relation: <strong>{e.edgeType}</strong></span>
+                          </div>
+                        ))}
+                        {changes.edges_removed?.map((e) => (
+                          <div key={`her_${e.id}`} className="ce-diff-item del">
+                            <span className="ce-diff-tag del">-</span>
+                            <span>Removed relation: <strong>{e.edgeType}</strong></span>
+                          </div>
+                        ))}
+                        {changes.edges_modified?.map((e, idx) => (
+                          <div key={`hem_${e.id}_${idx}`} className="ce-diff-item mod">
+                            <span className="ce-diff-tag mod">~</span>
+                            <span>Relation changed: <del>{e.old}</del> → <ins>{e.new}</ins></span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -310,26 +310,6 @@ export default function CanvasEditor({ onOpenAuth }) {
         
         const data = await importRes.json();
         handleImport(data);
-
-        // Log the import as a history event
-        try {
-          const importChanges = computeModelDiff({ nodes: [], edges: [] }, data);
-          await fetch(`${API}/history/log`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              schema_id: schemaId,
-              schema_name: originalName || schemaId,
-              action: "imported",
-              changes: importChanges,
-            }),
-          });
-        } catch (logErr) {
-          console.warn("Failed to log import history:", logErr);
-        }
       } catch (err) {
         console.error("Auto-load schema error:", err);
       } finally {
