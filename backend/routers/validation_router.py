@@ -45,6 +45,10 @@ async def api_suggest_rules(
     instance_file: Optional[UploadFile] = File(None),
     current_user: Any = Depends(get_current_user)
 ):
+    """
+    Analyze schema and optional instance data to suggest relevant SHACL validation rules
+    and verification questions based on the user's intent.
+    """
     schema_content = None
     instance_content = None
     if schema_file:
@@ -74,9 +78,6 @@ async def api_suggest_rules(
     return {"status": "ok", "rules": rules}
 
 
-
-
-
 @router.post("/validation/generate-shacl")
 async def api_generate_shacl(
     rules: str = Form(...),  # Expected JSON array string of plain English rules
@@ -84,6 +85,10 @@ async def api_generate_shacl(
     schema_file: Optional[UploadFile] = File(None),
     current_user: Any = Depends(get_current_user)
 ):
+    """
+    Convert a list of plain-English validation rules into standard SHACL shapes (Turtle format)
+    using ontology context.
+    """
     try:
         rules_list = json.loads(rules)
     except Exception as e:
@@ -110,7 +115,7 @@ async def api_generate_shacl_stream(
     schema_file: Optional[UploadFile] = File(None),
     current_user: Any = Depends(get_current_user)
 ):
-    """SSE endpoint that streams SHACL shape generation rule by rule."""
+    """SSE endpoint that streams SHACL shape generation progress rule by rule."""
     import asyncio
     try:
         rules_list = json.loads(rules)
@@ -143,6 +148,9 @@ async def api_run_playground(
     shacl_ttl: str = Form(...),
     current_user: Any = Depends(get_current_user)
 ):
+    """
+    Execute SHACL validation against user-provided Turtle data and shapes in the playground.
+    """
     report = validation_service.validate_rdf(
         data_ttl=instances_ttl,
         shapes_ttl=shacl_ttl,
@@ -158,7 +166,7 @@ async def api_run_playground_stream(
     shacl_ttl: str = Form(...),
     current_user: Any = Depends(get_current_user)
 ):
-    """SSE endpoint that streams validation progress events."""
+    """SSE endpoint that streams step-by-step SHACL validation progress for the playground."""
     import asyncio
 
     async def event_generator():
@@ -180,6 +188,9 @@ async def api_run_workspace(
     shacl_ttl: str = Form(...),
     current_user: Any = Depends(get_current_user)
 ):
+    """
+    Retrieve schema and instance graphs for a workspace ontology from GraphDB and run SHACL validation.
+    """
     user_email = current_user["email"]
     
     # 1. Fetch schema and instances turtle from GraphDB
@@ -205,7 +216,7 @@ async def api_run_workspace_stream(
     shacl_ttl: str = Form(...),
     current_user: Any = Depends(get_current_user)
 ):
-    """SSE endpoint that streams workspace validation progress events."""
+    """SSE endpoint that streams workspace graph retrieval and SHACL validation progress."""
     import asyncio
     user_email = current_user["email"]
 
@@ -236,6 +247,9 @@ async def api_export_pdf(
     request: Request,
     current_user: Any = Depends(get_current_user)
 ):
+    """
+    Generate and download a formatted PDF validation report summarizing conformance results and violations.
+    """
     try:
         body = await request.json()
         # Accept either { report_data: {...} } or the report object directly

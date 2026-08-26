@@ -17,15 +17,20 @@ def api_register_user(
     firstName: str = Body(..., embed=True),
     lastName: str = Body(..., embed=True),
 ) -> Dict:
+    """Register a new user account with hashed password and trigger verification email."""
     return ctrl_register_user(email, password, firstName, lastName)
+
 
 @router.get("/verify-email")
 def api_verify_email(token: str = Query(...)) -> Dict:
+    """Validate email verification token and activate the user account."""
     return ctrl_verify_email(token)
+
 
 @router.post("/login")
 def api_login(
     email: str = Body(..., embed=True),
     password: str = Body(..., embed=True),
 ) -> Dict:
+    """Authenticate user credentials and return an active JWT session token."""
     return ctrl_login(email, password)
