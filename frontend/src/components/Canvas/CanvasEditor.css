@@ -1375,3 +1375,166 @@ html.ce-header-hidden .canvas-editor {
   animation: pulse-highlight 1.5s ease-out 1;
   z-index: 1000 !important;
 }
+
+/* ─── Save / Don't Save / Cancel Dialog ─────────────────── */
+
+.ce-save-overlay {
+  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.ce-save-modal {
+  max-width: 440px;
+  text-align: center;
+  padding: 32px 28px 24px;
+  animation: ce-modal-pop-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.ce-save-modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  color: #fff;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+}
+
+.ce-save-modal h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ce-save-modal p {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.ce-save-schema-name {
+  color: #475569;
+}
+
+.ce-save-schema-name strong {
+  color: #6366f1;
+}
+
+/* Diff Summary */
+.ce-save-diff-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.ce-save-diff-summary.ce-save-no-changes {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.ce-save-diff-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #16a34a;
+}
+
+.ce-save-no-changes .ce-save-diff-label {
+  color: #94a3b8;
+}
+
+.ce-save-diff-text {
+  font-size: 12.5px;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.ce-save-no-changes .ce-save-diff-text {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Buttons Row */
+.ce-save-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.ce-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.ce-save-btn:active {
+  transform: scale(0.97);
+}
+
+/* Don't Save */
+.ce-save-btn-dont {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+}
+
+.ce-save-btn-dont:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+/* Cancel */
+.ce-save-btn-cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.ce-save-btn-cancel:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+/* Save */
+.ce-save-btn-save {
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+
+.ce-save-btn-save:hover {
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+}
+
+.ce-save-btn-save:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.ce-save-btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
