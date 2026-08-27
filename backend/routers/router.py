@@ -62,9 +62,7 @@ def api_neighbors_schema_and_instances(
     q: str = Query(...),
     limit: int = Query(5000, ge=1, le=50000),
 ):
-    """
-    Base ontology: schema + instances
-    """
+    """Fetch neighbor graph around a node including both schema concepts and concrete instances."""
     return ctrl_neighbors_schema_and_instances(q, limit)
 
 
@@ -72,6 +70,7 @@ def api_neighbors_schema_and_instances(
 def api_instance_details(
     iri: str = Query(..., description="Full instance IRI"),
 ):
+    """Retrieve detailed properties, types, and predicate values for a specific instance IRI."""
     return ctrl_instance_details(iri)
 
 
@@ -97,6 +96,7 @@ def api_workspace_neighbors(
     level: str = Query("schema", description="schema | both"),
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
+    """Query neighbor nodes and relations in the user's isolated workspace schema graph."""
     return ctrl_workspace_neighbors(
         current_user["email"],
         schema_id,
@@ -234,7 +234,8 @@ def api_upload_schema(
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
     """
-    Upload a custom RDF ontology.
+    Upload and register a custom RDF ontology schema (and optional instance TTL)
+    into an isolated GraphDB named graph for the user.
     """
     return ctrl_upload_schema(
         user_email=current_user["email"],

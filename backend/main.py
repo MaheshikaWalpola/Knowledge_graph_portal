@@ -5,6 +5,7 @@ from routers.assistance_router import router as assistance_router
 from routers.user_router import router as user_router
 from routers.chat_router import router as chat_router
 from routers.validation_router import router as validation_router
+from routers.history_router import router as history_router
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 
@@ -24,3 +25,4 @@ app.include_router(assistance_router)
 app.include_router(user_router)
 app.include_router(chat_router)
 app.include_router(validation_router)
+app.include_router(history_router)
