@@ -11,6 +11,7 @@ const sections = [
   { id: "instance-generation", label: "Instance Generation", icon: "file-text" },
   { id: "data-validation", label: "Data Validation", icon: "shield" },
   { id: "my-ontologies", label: "My Ontologies", icon: "database" },
+  { id: "schema-history", label: "Schema Change History", icon: "clock" },
   { id: "account", label: "Profile & Account", icon: "user" },
 ];
 
@@ -85,6 +86,12 @@ const Icon = ({ name, size = 16, className = "" }) => {
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+    clock: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
       </svg>
     ),
     lightbulb: (
@@ -576,6 +583,84 @@ const UserGuidance = () => {
               "Click on any ontology to open it in the Schema Ontology viewer.",
               "Use the action buttons to delete or export ontologies as needed."
             ]} />
+          </div>
+        </section>
+
+        {/* Schema Change History */}
+        <section id="schema-history" className="guidance-section">
+          <h2 className="guidance-section-title">
+            <span className="guidance-section-icon"><Icon name="clock" /></span>
+            Schema Change History
+          </h2>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Overview</h3>
+            <p className="guidance-text">
+              The Schema Change History feature provides automated version control and audit
+              logging for every ontology schema edited within the portal. Each time you save
+              or update a schema in the Canvas Editor, the system automatically computes a
+              granular diff of your changes and stores a versioned history entry in the database.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">How Changes Are Tracked</h3>
+            <p className="guidance-text">
+              When you save a schema from the Canvas Editor (via <strong>Save to Workspace</strong> or
+              <strong> Update in Workspace</strong>), the system automatically:
+            </p>
+            <Steps items={[
+              "Takes a snapshot of the current canvas state (all nodes and edges).",
+              "Compares it against the previous saved snapshot to compute a granular diff.",
+              "Records additions, removals, and modifications for both nodes (classes) and edges (relations).",
+              "Assigns an auto-incremented version number (v1, v2, v3…) for that schema under your account.",
+              "Generates a human-readable summary (e.g., \"Added 2 node(s), Removed 1 edge(s)\").",
+              "Stores the complete history entry with timestamp in MongoDB."
+            ]} />
+            <Callout type="info">
+              Tracked node fields include label, IRI, type, and description. Edge tracking covers relationship type (predicate), source, and target changes.
+            </Callout>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Viewing History in Your Profile</h3>
+            <Steps items={[
+              "Click your avatar icon in the top-right corner and select \"Profile\".",
+              "Scroll down to the Schema Change History section at the bottom of the profile page.",
+              "History entries are loaded automatically, showing the 10 most recent changes.",
+              "Use the Schema Filter Dropdown to narrow logs to a specific ontology, or select \"All Ontologies\" to view everything.",
+              "Click the Refresh button (↺) to reload the latest change records at any time."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Inspecting Granular Diffs</h3>
+            <p className="guidance-text">
+              Each history row displays a version badge, schema name, a high-level change summary,
+              and a timestamp. Rows with detailed changes can be expanded to inspect the full diff:
+            </p>
+            <Steps items={[
+              <><strong>Click on any history row</strong> — rows with granular diffs show a clickable chevron icon (▼) to expand.</>,
+              <><strong>Nodes Added</strong> — shown with a green <strong>+</strong> tag, displaying the node label and type.</>,
+              <><strong>Nodes Removed</strong> — shown with a red <strong>−</strong> tag, displaying the removed node label.</>,
+              <><strong>Nodes Modified</strong> — shown with an orange <strong>~</strong> tag, highlighting the field name with before and after values.</>,
+              <><strong>Edges Added / Removed / Modified</strong> — displayed similarly, showing the relationship predicate, source, and target.</>
+            ]} />
+            <Callout type="tip">
+              If a row does not have a chevron icon, it means no granular diff details were recorded for that entry (e.g., a schema was created from scratch with no prior snapshot).
+            </Callout>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Managing History Logs</h3>
+            <Steps items={[
+              <><strong>Load More</strong> — The history list loads 10 entries at a time. Click the <strong>Load More Logs</strong> button at the bottom to retrieve older records.</>,
+              <><strong>Delete a Log Entry</strong> — Click the trash can icon (🗑) on any row. An inline confirmation prompt will appear.</>,
+              <><strong>Confirm or Cancel</strong> — Click <strong>Yes, Delete</strong> to permanently remove the log entry, or <strong>Cancel</strong> to abort.</>
+            ]} />
+            <Callout type="warning">
+              Deleting a history log entry is permanent and cannot be undone. The version numbers of remaining entries are not re-sequenced after deletion.
+            </Callout>
           </div>
         </section>
 
