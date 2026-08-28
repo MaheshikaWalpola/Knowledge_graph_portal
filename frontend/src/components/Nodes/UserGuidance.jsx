@@ -11,7 +11,6 @@ const sections = [
   { id: "instance-generation", label: "Instance Generation", icon: "file-text" },
   { id: "data-validation", label: "Data Validation", icon: "shield" },
   { id: "my-ontologies", label: "My Ontologies", icon: "database" },
-  { id: "schema-history", label: "Schema Change History", icon: "clock" },
   { id: "account", label: "Profile & Account", icon: "user" },
 ];
 
@@ -245,10 +244,10 @@ const UserGuidance = () => {
               of the portal:
             </p>
             <Steps items={[
-              <><strong>Main Canvas</strong> — Visual graph editor for building and editing knowledge graphs.</>,
-              <><strong>Ontology</strong> — Browse and explore schema-level entities and relationships.</>,
-              <><strong>AI Assistant</strong> — Use natural language to query and generate graph data.</>,
-              <><strong>Workspace</strong> — Manage ontologies, upload files and configure graph settings.</>
+              <><strong>Main Canvas</strong> - Visual graph editor for building and editing knowledge graphs.</>,
+              <><strong>Ontology</strong> - Browse and explore schema-level entities and relationships.</>,
+              <><strong>AI Assistant</strong> - Use natural language to query and generate graph data.</>,
+              <><strong>Workspace</strong> - Manage ontologies, upload files and configure graph settings.</>
             ]} />
           </div>
         </section>
@@ -431,10 +430,10 @@ const UserGuidance = () => {
           <div className="guidance-subsection">
             <h3 className="guidance-subsection-title">What You Can Ask</h3>
             <Steps items={[
-              <><strong>General Definitions</strong> — Ask about concepts like RDF, SPARQL, OWL, or namespaces (e.g., <em>"What is a triple?"</em>).</>,
-              <><strong>Schema Structures</strong> — Explore classes and relationships (e.g., <em>"What classes are connected to ProcessStep?"</em>).</>,
-              <><strong>Data Statistics & Plots</strong> — Query averages, counts, or limits, and plot values (e.g., <em>"Plot wafer thickness values"</em> or <em>"What is the average run time?"</em>).</>,
-              <><strong>Instance Search</strong> — Find specific records (e.g., <em>"Show me instances of WaferRun"</em>).</>
+              <><strong>General Definitions</strong> - Ask about concepts like RDF, SPARQL, OWL, or namespaces (e.g., <em>"What is a triple?"</em>).</>,
+              <><strong>Schema Structures</strong> - Explore classes and relationships (e.g., <em>"What classes are connected to ProcessStep?"</em>).</>,
+              <><strong>Data Statistics & Plots</strong> - Query averages, counts, or limits, and plot values (e.g., <em>"Plot wafer thickness values"</em> or <em>"What is the average run time?"</em>).</>,
+              <><strong>Instance Search</strong> - Find specific records (e.g., <em>"Show me instances of WaferRun"</em>).</>
             ]} />
           </div>
 
@@ -470,8 +469,8 @@ const UserGuidance = () => {
               Begin by providing the structural schema and the corresponding data files:
             </p>
             <Steps items={[
-              "Provide a Schema file — Choose an RDF, OWL, or Turtle (.ttl) schema definition file.",
-              "Provide Data files — Choose one or more CSV files, or select a single .zip file. If a .zip file is uploaded, the system recursively scans and extracts all nested CSV files automatically.",
+              "Provide a Schema file - Choose an RDF, OWL, or Turtle (.ttl) schema definition file.",
+              "Provide Data files - Choose one or more CSV files, or select a single .zip file. If a .zip file is uploaded, the system recursively scans and extracts all nested CSV files automatically.",
               "To remove any uploaded schema or data file, simply click the small cross (x) button on its display chip."
             ]} />
           </div>
@@ -489,11 +488,11 @@ const UserGuidance = () => {
               The Matching Review screen lists matched and unmatched elements. You can modify these to fine-tune the resulting knowledge graph structure:
             </p>
             <Steps items={[
-              "Edit Mappings — Click on any CSV header mapping card to open the custom mapping dialog.",
-              "Dual-Mode Mapping — Toggle between mapping a CSV header to a schema term, or a schema term to a CSV header, using the intelligent search/autocomplete dropdown.",
-              "Save Free-form Mappings — If a schema term isn't found in the autocomplete results, you can type your own namespace/URI term and press Enter to save it.",
-              "Delete Mappings — Use the delete icon to remove any incorrect automatic mappings. Unmapped headers will be ignored during output construction.",
-              "Map Missing Schema Terms — A dedicated list card displays all key terms in the schema that are not yet bound. You can easily map these to any available CSV header."
+              "Edit Mappings - Click on any CSV header mapping card to open the custom mapping dialog.",
+              "Dual-Mode Mapping - Toggle between mapping a CSV header to a schema term, or a schema term to a CSV header, using the intelligent search/autocomplete dropdown.",
+              "Save Free-form Mappings - If a schema term isn't found in the autocomplete results, you can type your own namespace/URI term and press Enter to save it.",
+              "Delete Mappings - Use the delete icon to remove any incorrect automatic mappings. Unmapped headers will be ignored during output construction.",
+              "Map Missing Schema Terms - A dedicated list card displays all key terms in the schema that are not yet bound. You can easily map these to any available CSV header."
             ]} />
             <Callout type="tip">
               If you are confident in the system's automated suggestions, you can skip the manual review step entirely by clicking <strong>Skip Review</strong> to proceed straight to RDF compilation.
@@ -525,10 +524,10 @@ const UserGuidance = () => {
           <div className="guidance-subsection">
             <h3 className="guidance-subsection-title">Step 1: Upload & Formulate Rules</h3>
             <Steps items={[
-              "Upload Schema & Instances — Provide your schema (.ttl) and optional instance files to define the validation scope.",
-              "Generate AI Questions — Click \"Generate Questions\" to let the AI suggest 10 data-validation rules in plain English.",
-              "Manual Questions — Switch to the manual input mode to type your own validation rules directly.",
-              "Choose Rules — Select the specific rules you want to turn into SHACL validation shapes."
+              "Upload Schema & Instances - Provide your schema (.ttl) and optional instance files to define the validation scope.",
+              "Generate AI Questions - Click \"Generate Questions\" to let the AI suggest 10 data-validation rules in plain English.",
+              "Manual Questions - Switch to the manual input mode to type your own validation rules directly.",
+              "Choose Rules - Select the specific rules you want to turn into SHACL validation shapes."
             ]} />
           </div>
 
@@ -538,9 +537,9 @@ const UserGuidance = () => {
               Click <strong>Generate SHACL</strong>. The portal immediately switches to Step 2, running concurrent LLM calls in the background:
             </p>
             <Steps items={[
-              "Checklist Progress — A real-time checklist shows the generation status of each rule.",
-              "Streaming Code Editor — Watch the SHACL Turtle shapes stream directly into the code editor.",
-              "Consolidation — Upon completion, the system deduplicates prefixes and presents the final formatted Turtle code. You can copy the code to clipboard or edit it."
+              "Checklist Progress - A real-time checklist shows the generation status of each rule.",
+              "Streaming Code Editor - Watch the SHACL Turtle shapes stream directly into the code editor.",
+              "Consolidation - Upon completion, the system deduplicates prefixes and presents the final formatted Turtle code. You can copy the code to clipboard or edit it."
             ]} />
           </div>
 
@@ -550,11 +549,11 @@ const UserGuidance = () => {
               Click <strong>Proceed to Playground</strong> to execute validation on the data:
             </p>
             <Steps items={[
-              "Validate Against Target — Choose whether to validate against your uploaded files or workspace schemas.",
-              "Run Validation — Click \"Run Validation\" to start testing your instance graph against the generated SHACL shapes.",
-              "Step-by-Step Status — Observe the parsing and validation progress steps as they resolve.",
-              "Detailed Results Table — If violations are found, explore the details (Focus Node, Property, Message, Value) directly in the expandable table to locate data quality errors.",
-              "Export PDF — Export the complete validation report as a professional PDF document."
+              "Validate Against Target - Choose whether to validate against your uploaded files or workspace schemas.",
+              "Run Validation - Click \"Run Validation\" to start testing your instance graph against the generated SHACL shapes.",
+              "Step-by-Step Status - Observe the parsing and validation progress steps as they resolve.",
+              "Detailed Results Table - If violations are found, explore the details (Focus Node, Property, Message, Value) directly in the expandable table to locate data quality errors.",
+              "Export PDF - Export the complete validation report as a professional PDF document."
             ]} />
           </div>
         </section>
@@ -583,84 +582,6 @@ const UserGuidance = () => {
               "Click on any ontology to open it in the Schema Ontology viewer.",
               "Use the action buttons to delete or export ontologies as needed."
             ]} />
-          </div>
-        </section>
-
-        {/* Schema Change History */}
-        <section id="schema-history" className="guidance-section">
-          <h2 className="guidance-section-title">
-            <span className="guidance-section-icon"><Icon name="clock" /></span>
-            Schema Change History
-          </h2>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Overview</h3>
-            <p className="guidance-text">
-              The Schema Change History feature provides automated version control and audit
-              logging for every ontology schema edited within the portal. Each time you save
-              or update a schema in the Canvas Editor, the system automatically computes a
-              granular diff of your changes and stores a versioned history entry in the database.
-            </p>
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">How Changes Are Tracked</h3>
-            <p className="guidance-text">
-              When you save a schema from the Canvas Editor (via <strong>Save to Workspace</strong> or
-              <strong> Update in Workspace</strong>), the system automatically:
-            </p>
-            <Steps items={[
-              "Takes a snapshot of the current canvas state (all nodes and edges).",
-              "Compares it against the previous saved snapshot to compute a granular diff.",
-              "Records additions, removals, and modifications for both nodes (classes) and edges (relations).",
-              "Assigns an auto-incremented version number (v1, v2, v3…) for that schema under your account.",
-              "Generates a human-readable summary (e.g., \"Added 2 node(s), Removed 1 edge(s)\").",
-              "Stores the complete history entry with timestamp in MongoDB."
-            ]} />
-            <Callout type="info">
-              Tracked node fields include label, IRI, type, and description. Edge tracking covers relationship type (predicate), source, and target changes.
-            </Callout>
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Viewing History in Your Profile</h3>
-            <Steps items={[
-              "Click your avatar icon in the top-right corner and select \"Profile\".",
-              "Scroll down to the Schema Change History section at the bottom of the profile page.",
-              "History entries are loaded automatically, showing the 10 most recent changes.",
-              "Use the Schema Filter Dropdown to narrow logs to a specific ontology, or select \"All Ontologies\" to view everything.",
-              "Click the Refresh button (↺) to reload the latest change records at any time."
-            ]} />
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Inspecting Granular Diffs</h3>
-            <p className="guidance-text">
-              Each history row displays a version badge, schema name, a high-level change summary,
-              and a timestamp. Rows with detailed changes can be expanded to inspect the full diff:
-            </p>
-            <Steps items={[
-              <><strong>Click on any history row</strong> — rows with granular diffs show a clickable chevron icon (▼) to expand.</>,
-              <><strong>Nodes Added</strong> — shown with a green <strong>+</strong> tag, displaying the node label and type.</>,
-              <><strong>Nodes Removed</strong> — shown with a red <strong>−</strong> tag, displaying the removed node label.</>,
-              <><strong>Nodes Modified</strong> — shown with an orange <strong>~</strong> tag, highlighting the field name with before and after values.</>,
-              <><strong>Edges Added / Removed / Modified</strong> — displayed similarly, showing the relationship predicate, source, and target.</>
-            ]} />
-            <Callout type="tip">
-              If a row does not have a chevron icon, it means no granular diff details were recorded for that entry (e.g., a schema was created from scratch with no prior snapshot).
-            </Callout>
-          </div>
-
-          <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Managing History Logs</h3>
-            <Steps items={[
-              <><strong>Load More</strong> — The history list loads 10 entries at a time. Click the <strong>Load More Logs</strong> button at the bottom to retrieve older records.</>,
-              <><strong>Delete a Log Entry</strong> — Click the trash can icon (🗑) on any row. An inline confirmation prompt will appear.</>,
-              <><strong>Confirm or Cancel</strong> — Click <strong>Yes, Delete</strong> to permanently remove the log entry, or <strong>Cancel</strong> to abort.</>
-            ]} />
-            <Callout type="warning">
-              Deleting a history log entry is permanent and cannot be undone. The version numbers of remaining entries are not re-sequenced after deletion.
-            </Callout>
           </div>
         </section>
 
@@ -700,6 +621,17 @@ const UserGuidance = () => {
               To sign out, click your avatar icon in the top-right corner and select
               "Logout" from the dropdown menu. This will clear your session and redirect
               you to the home page.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Schema Change History</h3>
+            <p className="guidance-text">
+              Your Profile page includes a <strong>Schema Change History</strong> section that
+              automatically tracks every save you make in the Canvas Editor. Each entry records
+              a version number, a summary of changes (nodes and edges added, removed, or modified),
+              and a timestamp. You can filter logs by ontology, expand any entry to inspect the
+              granular diff, and delete individual log entries when no longer needed.
             </p>
           </div>
         </section>
