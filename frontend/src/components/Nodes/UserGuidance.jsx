@@ -87,6 +87,12 @@ const Icon = ({ name, size = 16, className = "" }) => {
         <circle cx="12" cy="7" r="4" />
       </svg>
     ),
+    clock: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
     lightbulb: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" />
@@ -238,10 +244,10 @@ const UserGuidance = () => {
               of the portal:
             </p>
             <Steps items={[
-              <><strong>Main Canvas</strong> — Visual graph editor for building and editing knowledge graphs.</>,
-              <><strong>Ontology</strong> — Browse and explore schema-level entities and relationships.</>,
-              <><strong>AI Assistant</strong> — Use natural language to query and generate graph data.</>,
-              <><strong>Workspace</strong> — Manage ontologies, upload files and configure graph settings.</>
+              <><strong>Main Canvas</strong> - Visual graph editor for building and editing knowledge graphs.</>,
+              <><strong>Ontology</strong> - Browse and explore schema-level entities and relationships.</>,
+              <><strong>AI Assistant</strong> - Use natural language to query and generate graph data.</>,
+              <><strong>Workspace</strong> - Manage ontologies, upload files and configure graph settings.</>
             ]} />
           </div>
         </section>
@@ -424,10 +430,10 @@ const UserGuidance = () => {
           <div className="guidance-subsection">
             <h3 className="guidance-subsection-title">What You Can Ask</h3>
             <Steps items={[
-              <><strong>General Definitions</strong> — Ask about concepts like RDF, SPARQL, OWL, or namespaces (e.g., <em>"What is a triple?"</em>).</>,
-              <><strong>Schema Structures</strong> — Explore classes and relationships (e.g., <em>"What classes are connected to ProcessStep?"</em>).</>,
-              <><strong>Data Statistics & Plots</strong> — Query averages, counts, or limits, and plot values (e.g., <em>"Plot wafer thickness values"</em> or <em>"What is the average run time?"</em>).</>,
-              <><strong>Instance Search</strong> — Find specific records (e.g., <em>"Show me instances of WaferRun"</em>).</>
+              <><strong>General Definitions</strong> - Ask about concepts like RDF, SPARQL, OWL, or namespaces (e.g., <em>"What is a triple?"</em>).</>,
+              <><strong>Schema Structures</strong> - Explore classes and relationships (e.g., <em>"What classes are connected to ProcessStep?"</em>).</>,
+              <><strong>Data Statistics & Plots</strong> - Query averages, counts, or limits, and plot values (e.g., <em>"Plot wafer thickness values"</em> or <em>"What is the average run time?"</em>).</>,
+              <><strong>Instance Search</strong> - Find specific records (e.g., <em>"Show me instances of WaferRun"</em>).</>
             ]} />
           </div>
 
@@ -463,8 +469,8 @@ const UserGuidance = () => {
               Begin by providing the structural schema and the corresponding data files:
             </p>
             <Steps items={[
-              "Provide a Schema file — Choose an RDF, OWL, or Turtle (.ttl) schema definition file.",
-              "Provide Data files — Choose one or more CSV files, or select a single .zip file. If a .zip file is uploaded, the system recursively scans and extracts all nested CSV files automatically.",
+              "Provide a Schema file - Choose an RDF, OWL, or Turtle (.ttl) schema definition file.",
+              "Provide Data files - Choose one or more CSV files, or select a single .zip file. If a .zip file is uploaded, the system recursively scans and extracts all nested CSV files automatically.",
               "To remove any uploaded schema or data file, simply click the small cross (x) button on its display chip."
             ]} />
           </div>
@@ -482,11 +488,11 @@ const UserGuidance = () => {
               The Matching Review screen lists matched and unmatched elements. You can modify these to fine-tune the resulting knowledge graph structure:
             </p>
             <Steps items={[
-              "Edit Mappings — Click on any CSV header mapping card to open the custom mapping dialog.",
-              "Dual-Mode Mapping — Toggle between mapping a CSV header to a schema term, or a schema term to a CSV header, using the intelligent search/autocomplete dropdown.",
-              "Save Free-form Mappings — If a schema term isn't found in the autocomplete results, you can type your own namespace/URI term and press Enter to save it.",
-              "Delete Mappings — Use the delete icon to remove any incorrect automatic mappings. Unmapped headers will be ignored during output construction.",
-              "Map Missing Schema Terms — A dedicated list card displays all key terms in the schema that are not yet bound. You can easily map these to any available CSV header."
+              "Edit Mappings - Click on any CSV header mapping card to open the custom mapping dialog.",
+              "Dual-Mode Mapping - Toggle between mapping a CSV header to a schema term, or a schema term to a CSV header, using the intelligent search/autocomplete dropdown.",
+              "Save Free-form Mappings - If a schema term isn't found in the autocomplete results, you can type your own namespace/URI term and press Enter to save it.",
+              "Delete Mappings - Use the delete icon to remove any incorrect automatic mappings. Unmapped headers will be ignored during output construction.",
+              "Map Missing Schema Terms - A dedicated list card displays all key terms in the schema that are not yet bound. You can easily map these to any available CSV header."
             ]} />
             <Callout type="tip">
               If you are confident in the system's automated suggestions, you can skip the manual review step entirely by clicking <strong>Skip Review</strong> to proceed straight to RDF compilation.
@@ -518,10 +524,10 @@ const UserGuidance = () => {
           <div className="guidance-subsection">
             <h3 className="guidance-subsection-title">Step 1: Upload & Formulate Rules</h3>
             <Steps items={[
-              "Upload Schema & Instances — Provide your schema (.ttl) and optional instance files to define the validation scope.",
-              "Generate AI Questions — Click \"Generate Questions\" to let the AI suggest 10 data-validation rules in plain English.",
-              "Manual Questions — Switch to the manual input mode to type your own validation rules directly.",
-              "Choose Rules — Select the specific rules you want to turn into SHACL validation shapes."
+              "Upload Schema & Instances - Provide your schema (.ttl) and optional instance files to define the validation scope.",
+              "Generate AI Questions - Click \"Generate Questions\" to let the AI suggest 10 data-validation rules in plain English.",
+              "Manual Questions - Switch to the manual input mode to type your own validation rules directly.",
+              "Choose Rules - Select the specific rules you want to turn into SHACL validation shapes."
             ]} />
           </div>
 
@@ -531,9 +537,9 @@ const UserGuidance = () => {
               Click <strong>Generate SHACL</strong>. The portal immediately switches to Step 2, running concurrent LLM calls in the background:
             </p>
             <Steps items={[
-              "Checklist Progress — A real-time checklist shows the generation status of each rule.",
-              "Streaming Code Editor — Watch the SHACL Turtle shapes stream directly into the code editor.",
-              "Consolidation — Upon completion, the system deduplicates prefixes and presents the final formatted Turtle code. You can copy the code to clipboard or edit it."
+              "Checklist Progress - A real-time checklist shows the generation status of each rule.",
+              "Streaming Code Editor - Watch the SHACL Turtle shapes stream directly into the code editor.",
+              "Consolidation - Upon completion, the system deduplicates prefixes and presents the final formatted Turtle code. You can copy the code to clipboard or edit it."
             ]} />
           </div>
 
@@ -543,11 +549,11 @@ const UserGuidance = () => {
               Click <strong>Proceed to Playground</strong> to execute validation on the data:
             </p>
             <Steps items={[
-              "Validate Against Target — Choose whether to validate against your uploaded files or workspace schemas.",
-              "Run Validation — Click \"Run Validation\" to start testing your instance graph against the generated SHACL shapes.",
-              "Step-by-Step Status — Observe the parsing and validation progress steps as they resolve.",
-              "Detailed Results Table — If violations are found, explore the details (Focus Node, Property, Message, Value) directly in the expandable table to locate data quality errors.",
-              "Export PDF — Export the complete validation report as a professional PDF document."
+              "Validate Against Target - Choose whether to validate against your uploaded files or workspace schemas.",
+              "Run Validation - Click \"Run Validation\" to start testing your instance graph against the generated SHACL shapes.",
+              "Step-by-Step Status - Observe the parsing and validation progress steps as they resolve.",
+              "Detailed Results Table - If violations are found, explore the details (Focus Node, Property, Message, Value) directly in the expandable table to locate data quality errors.",
+              "Export PDF - Export the complete validation report as a professional PDF document."
             ]} />
           </div>
         </section>
@@ -615,6 +621,17 @@ const UserGuidance = () => {
               To sign out, click your avatar icon in the top-right corner and select
               "Logout" from the dropdown menu. This will clear your session and redirect
               you to the home page.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Schema Change History</h3>
+            <p className="guidance-text">
+              Your Profile page includes a <strong>Schema Change History</strong> section that
+              automatically tracks every save you make in the Canvas Editor. Each entry records
+              a version number, a summary of changes (nodes and edges added, removed, or modified),
+              and a timestamp. You can filter logs by ontology, expand any entry to inspect the
+              granular diff, and delete individual log entries when no longer needed.
             </p>
           </div>
         </section>

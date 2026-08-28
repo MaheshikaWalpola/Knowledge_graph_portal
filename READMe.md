@@ -10,10 +10,71 @@ The portal provides an interactive graph interface, custom canvas workspace, nat
 
 - **Interactive Graph & Schema Visualization**: Explore ontology classes, instances, and graph relationships dynamically using Cytoscape and ReactFlow.
 - **Ontology Workspace & Canvas Editor**: Visual canvas tool to design, edit, import, and export RDF/OWL graph structures.
+- **Schema Change History & Version Tracking**: Automatic versioning, granular node/edge diff tracking, and audit logging of ontology modifications.
 - **AI-Powered Query & Chat Assistance**: Convert natural language queries into SPARQL queries and obtain natural language explanations of graph relations using OpenAI or KISTE LLM backends.
 - **Instance Generation Workflow**: Guided multi-step process for generating and populating ontology instances from structured process data.
 - **SHACL Graph Validation**: Validate RDF graph data against defined SHACL shapes (`pyshacl`) to enforce schema integrity.
 - **User Management & Authentication**: Secure JWT-based user authentication, role management, and user profile persistence using MongoDB.
+
+---
+
+## User Guidance: Schema Change History & Version Tracking
+
+The **Schema Change History** feature provides automated version control and audit logging for every ontology schema edited within the portal.
+
+```
+┌────────────────────────┐       Granular Diff        ┌─────────────────────────┐
+│     Canvas Editor      │  ────────────────────────> │     MongoDB History     │
+│  (Design / Save Nodes) │     (POST /history/log)    │  (v1, v2... Diffs, TS)  │
+└────────────────────────┘                            └────────────┬────────────┘
+                                                                   │
+                                                                   ▼
+                                                      ┌─────────────────────────┐
+                                                      │  User Profile (History) │
+                                                      │   - Filter by Schema    │
+                                                      │   - Expand Node/Edge Diff
+                                                      │   - Prune / Delete Logs │
+                                                      └─────────────────────────┘
+```
+
+### 1. How Changes Are Tracked
+- **Automatic Snapshot Comparison**: Every time you save or update an ontology in the **Canvas Editor** (via *Save to Workspace* or *Update in Workspace*), the system computes a detailed diff between the previous saved snapshot and your current canvas.
+- **Tracked Elements**:
+  - **Nodes / Classes**: Additions, removals, and modifications to node labels, IRIs, types, and descriptions.
+  - **Edges / Relations**: Additions, removals, and modifications to edge predicates and relation types.
+- **Automatic Versioning**: Each save automatically assigns an incremented version number (`v1`, `v2`, `v3`, ...) for that schema under your user account.
+
+### 2. Viewing History in the User Profile
+1. Click on your profile avatar or navigate to the **User Profile** page (`/profile`).
+2. Scroll to the **Schema Change History** section at the bottom of the profile page.
+3. Use the **Schema Filter Dropdown** to view logs for all schemas or narrow down to a specific ontology.
+4. Click the **Refresh Button** (↺) to reload the latest change records at any time.
+
+### 3. Inspecting Granular Diffs
+- Each history row displays:
+  - **Version Badge** (e.g., `v1`, `v2`)
+  - **Schema Name**
+  - **High-Level Summary** (e.g., `Added 2 node(s), Removed 1 edge(s)`)
+  - **Timestamp** (relative or localized date/time)
+- **Click on any history row** to expand the detailed diff panel:
+  - **Nodes Added / Removed**: Displays node labels and types.
+  - **Nodes Modified**: Highlights before and after values for changed fields.
+  - **Edges Added / Removed / Modified**: Displays source, target, and relationship predicates.
+
+### 4. Managing History Logs
+- **Pagination**: The history list loads 10 entries at a time. Click **Load More Logs** to retrieve older records.
+- **Deleting History Entries**: Click the **Delete icon** (trash can) on any row. An inline confirmation prompt will appear—click **Delete** to permanently remove the log entry, or **Cancel** to abort.
+
+### 5. Schema History API Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/history/log` | Record a new schema change event and generate the next version |
+| `GET` | `/history/user/all` | Get paginated history logs for the current user (with optional `schema_id` filter) |
+| `GET` | `/history/user/schemas` | Get list of distinct schemas that have recorded history |
+| `GET` | `/history/{schema_id}` | Retrieve all revision logs for a specific schema ID |
+| `GET` | `/history/entry/{entry_id}` | Get full details of a specific history log entry |
+| `DELETE` | `/history/entry/{entry_id}` | Delete a single history log entry |
 
 ---
 
@@ -191,10 +252,10 @@ cd Knowledge_graph_portal
 Knowledge_graph_portal/
 ├── backend/
 │   ├── controllers/      # Business logic handlers
-│   ├── core/             # Application config and settings
+│   ├── core/             # Application config, auth & settings
 │   ├── ontology/         # Default SHACL shapes & schema definitions
-│   ├── routers/          # FastAPI route endpoints (auth, graph, chat, validation)
-│   ├── services/         # SPARQL wrapper, DB, & LLM service integration
+│   ├── routers/          # FastAPI route endpoints (auth, graph, chat, history, validation)
+│   ├── services/         # SPARQL wrapper, MongoDB, history, & LLM service integration
 │   ├── main.py           # Application entrypoint & CORS middleware
 │   └── requirement.txt   # Python dependencies
 ├── frontend/
@@ -208,3 +269,4 @@ Knowledge_graph_portal/
 │   └── vite.config.js    # Vite configuration
 └── READMe.md             # Project documentation
 ```
+
