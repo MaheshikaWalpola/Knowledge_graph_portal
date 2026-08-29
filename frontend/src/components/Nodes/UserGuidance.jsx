@@ -471,6 +471,7 @@ const UserGuidance = () => {
             <Steps items={[
               "Provide a Schema file - Choose an RDF, OWL, or Turtle (.ttl) schema definition file.",
               "Provide Data files - Choose one or more CSV files, or select a single .zip file. If a .zip file is uploaded, the system recursively scans and extracts all nested CSV files automatically.",
+              "Select an AI Model - Use the model dropdown to choose which AI model will be used for intelligent header-to-schema matching. Different models offer varying speed and accuracy trade-offs.",
               "To remove any uploaded schema or data file, simply click the small cross (x) button on its display chip."
             ]} />
           </div>
