@@ -416,6 +416,7 @@ async def api_canvas_import(
 async def api_analyze_schema_and_data(
     schema_file: UploadFile = File(..., description="RDF/Turtle schema file"),
     data_files: List[UploadFile] = File(..., description="CSV data files"),
+    model: Optional[str] = Form(None, description="Kiste model ID to use for AI matching"),
     current_user: Any = Depends(get_current_user),
 ):
     """
@@ -430,6 +431,7 @@ async def api_analyze_schema_and_data(
         schema_file=schema_file,
         data_files=data_files,
         user_email=current_user["email"],
+        model=model,
     )
 
 
@@ -439,6 +441,7 @@ async def api_generate_instance(
     data_files: List[UploadFile] = File(..., description="CSV data files"),
     mappings: str = Form(..., description="JSON string of {data_header: schema_term} mappings"),
     schema_id: Optional[str] = Form("main", description="Which schema workspace to use"),
+    model: Optional[str] = Form(None, description="Kiste model ID to use for AI matching"),
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
     """
@@ -453,5 +456,6 @@ async def api_generate_instance(
         mappings=mappings,
         user_email=current_user["email"],
         schema_id=schema_id,
+        model=model,
     )
 

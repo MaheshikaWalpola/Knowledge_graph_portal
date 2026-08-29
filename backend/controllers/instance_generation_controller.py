@@ -50,6 +50,7 @@ async def ctrl_analyze_schema_and_data_stream(
     schema_file: UploadFile,
     data_files: List[UploadFile],
     user_email: str,
+    model: str = None,
 ) -> StreamingResponse:
     """
     Reads files in the request context and returns a StreamingResponse.
@@ -69,7 +70,7 @@ async def ctrl_analyze_schema_and_data_stream(
 
     def generator():
         try:
-            for chunk in analyze_schema_and_data_stream(schema_content, csv_contents, csv_filenames):
+            for chunk in analyze_schema_and_data_stream(schema_content, csv_contents, csv_filenames, model=model):
                 yield json.dumps(chunk) + "\n"
         except Exception as e:
             yield json.dumps({"type": "error", "message": str(e)}) + "\n"
@@ -85,6 +86,7 @@ async def ctrl_generate_instance(
     mappings: str,  # JSON string of header -> term mappings
     user_email: str,
     schema_id: str = "main",
+    model: str = None,
 ) -> Dict[str, Any]:
     """
     Generate RDF instance file from schema and data files using provided mappings.

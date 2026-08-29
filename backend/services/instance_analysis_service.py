@@ -410,7 +410,7 @@ def analyze_schema_and_data(
         raise ValueError(f"Analysis failed: {str(e)}")
 
 
-def get_single_llm_match(header: str, schema_terms: List[str]):
+def get_single_llm_match(header: str, schema_terms: List[str], model: str = None):
     """
     Use LLM to match a single CSV header to schema terms.
     Returns the matched term name or None.
@@ -435,7 +435,7 @@ def get_single_llm_match(header: str, schema_terms: List[str]):
             {"role": "user", "content": user}
         ]
 
-        ans = llm_service._call_kiste(messages, json_mode=False, temperature=0.1)
+        ans = llm_service._call_kiste(messages, json_mode=False, temperature=0.1, model_override=model)
         ans = ans.strip().replace('"', '').replace("'", '').replace("`", "")
         
         # Check if the returned answer matches a schema term
@@ -452,6 +452,7 @@ def analyze_schema_and_data_stream(
     schema_content: bytes,
     csv_files: List[bytes],
     filenames: List[str],
+    model: str = None,
 ):
     """
     Generator function that:
@@ -509,7 +510,7 @@ def analyze_schema_and_data_stream(
             try:
                 with ThreadPoolExecutor(max_workers=5) as executor:
                     future_to_header = {
-                        executor.submit(get_single_llm_match, header, schema_terms): header
+                        executor.submit(get_single_llm_match, header, schema_terms, model): header
                         for header in unmatched_headers
                     }
                     for future in as_completed(future_to_header):

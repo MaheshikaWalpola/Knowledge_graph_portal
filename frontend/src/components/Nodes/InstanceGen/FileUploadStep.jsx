@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ModelSelector from "./ModelSelector";
 
 export default function FileUploadStep({
   onSchemaUpload,
@@ -18,6 +19,8 @@ export default function FileUploadStep({
   dataFiles,
   onSchemaRemove,
   onDataFileRemove,
+  selectedModel,
+  onModelChange,
 }) {
   const schemaInputRef = useRef(null);
   const dataInputRef = useRef(null);
@@ -144,6 +147,12 @@ export default function FileUploadStep({
             />
           </CardContent>
         </Card>
+
+        {/* AI MODEL SELECTION */}
+        <ModelSelector
+          selectedModel={selectedModel}
+          onModelChange={onModelChange}
+        />
       </Stack>
     </Box>
   );
