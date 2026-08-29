@@ -50,6 +50,9 @@ export default function InstanceGenerationWorkflow() {
   // Generated instance
   const [generatedInstance, setGeneratedInstance] = useState(null);
 
+  // AI Model selection
+  const [selectedModel, setSelectedModel] = useState("Qwen3.6-35B-A3B-MLX-8bit");
+
   // Skip review dialog
   const [skipReviewDialog, setSkipReviewDialog] = useState(false);
   const [infoDialog, setInfoDialog] = useState(false);
@@ -115,6 +118,7 @@ export default function InstanceGenerationWorkflow() {
       dataFiles.forEach((file) => {
         formData.append("data_files", file);
       });
+      formData.append("model", selectedModel);
 
       const response = await fetch(`${API}/instance-generation/analyze`, {
         method: "POST",
@@ -267,6 +271,7 @@ export default function InstanceGenerationWorkflow() {
         formData.append("data_files", file);
       });
       formData.append("mappings", JSON.stringify(mappings));
+      formData.append("model", selectedModel);
 
       const response = await axios.post(
         `${API}/instance-generation/generate`,
@@ -403,6 +408,8 @@ export default function InstanceGenerationWorkflow() {
                 dataFiles={dataFiles}
                 onSchemaRemove={handleSchemaRemove}
                 onDataFileRemove={handleDataFileRemove}
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
               />
             )}
 

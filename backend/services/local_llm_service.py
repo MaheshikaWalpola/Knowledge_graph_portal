@@ -26,13 +26,14 @@ class KisteConnectionError(Exception):
 
 
 class LocalLLMService:
-    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7) -> str:
-        """Call Kiste API (OpenAI-compatible)"""
+    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7, model_override: str = None) -> str:
+        """Call Kiste API (OpenAI-compatible). Use model_override to dynamically select a different model."""
         if not KISTE_API_KEY:
             raise KisteConnectionError("We are experiencing connection issues with the AI server. Please try again shortly.")
         
+        effective_model = model_override or MODEL_NAME
         data = {
-            "model": MODEL_NAME,
+            "model": effective_model,
             "messages": messages,
             "temperature": temperature,
         }
@@ -59,7 +60,7 @@ class LocalLLMService:
                 result = json.loads(response.read().decode("utf-8"))
                 return result.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:
-            print(f"Kiste API error: {e}")
+            print(f"Kiste API error (model={effective_model}): {e}")
             raise KisteConnectionError("We are experiencing connection issues with the AI server. Please try again shortly.") from e
 
 
