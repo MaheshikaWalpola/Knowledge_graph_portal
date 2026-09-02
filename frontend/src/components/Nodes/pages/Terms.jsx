@@ -542,103 +542,83 @@ const SECTIONS = [
 ];
 
 const Terms = () => {
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
-    <div className="legal-page-container">
-      {/* Formal Document Header */}
-      <header className="legal-doc-header">
-        <div className="legal-doc-header-top">
-          <div className="legal-entity-badge">
-            <span className="legal-bullet" />
-            Knowledge Graph Portal &bull; VSR TU Chemnitz
-          </div>
-          <div className="legal-doc-actions">
-            <button onClick={handlePrint} className="legal-action-btn" title="Print Terms of Service">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 6 2 18 2 18 9" />
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                <rect x="6" y="14" width="12" height="8" />
-              </svg>
-              Print Document
-            </button>
-            <Link to="/guidance" className="legal-action-btn" title="View User Documentation">
-              Documentation
-            </Link>
+    <div className="terms-container">
+      <div className="terms-card">
+        {/* Component Header matching portal style */}
+        <div className="terms-header">
+          <div className="terms-header-left">
+            <h1 className="terms-title">Terms and Conditions</h1>
+            <p className="terms-subtitle">
+              Legal agreement and service conditions governing access to the Knowledge Graph Portal (VSR - Chemnitz University of Technology).
+            </p>
           </div>
         </div>
 
-        <h1 className="legal-doc-title">Terms and Conditions of Service</h1>
-        
-        <p className="legal-doc-intro">
-          These Terms and Conditions govern access to and usage of the Knowledge Graph Portal, an academic research and ontology engineering platform provided by the Professorship of Distributed and Self-Organizing Systems (VSR) at Chemnitz University of Technology.
-        </p>
-
-        <div className="legal-meta-strip">
-          <div className="legal-meta-col">
+        {/* Meta Strip */}
+        <div className="terms-meta-strip">
+          <div className="terms-meta-col">
             <span className="meta-term">Effective Date</span>
             <span className="meta-val">January 1, 2026</span>
           </div>
-          <div className="legal-meta-col">
+          <div className="terms-meta-col">
             <span className="meta-term">Last Revised</span>
             <span className="meta-val">September 2026</span>
           </div>
-          <div className="legal-meta-col">
+          <div className="terms-meta-col">
             <span className="meta-term">Version</span>
             <span className="meta-val">2.4 (Academic Release)</span>
           </div>
-          <div className="legal-meta-col">
+          <div className="terms-meta-col">
             <span className="meta-term">Applicable Law</span>
             <span className="meta-val">Federal Republic of Germany / EU</span>
           </div>
         </div>
-      </header>
 
-      {/* Main Single-Column Document Layout */}
-      <main className="legal-content">
-        <div className="legal-preamble-box">
+        {/* Notice Box */}
+        <div className="terms-preamble-box">
           <p>
             <strong>IMPORTANT NOTICE:</strong> Please review these Terms thoroughly before using the Platform. Your access to and continued use of the Knowledge Graph Portal constitutes binding acceptance of all provisions, covenants, disclaimers, and guidelines set forth below.
           </p>
         </div>
 
-        {SECTIONS.map((sec) => (
-          <section key={sec.id} id={sec.id} className="legal-section">
-            <h2 className="legal-section-title">
-              <span className="legal-section-num">{sec.number}.</span> {sec.title}
-            </h2>
+        {/* Legal Text Document Content */}
+        <div className="terms-content">
+          {SECTIONS.map((sec) => (
+            <section key={sec.id} id={sec.id} className="terms-section">
+              <h2 className="terms-section-title">
+                <span className="terms-section-num">{sec.number}.</span> {sec.title}
+              </h2>
 
-            <div className="legal-section-subsections">
-              {sec.subsections.map((sub, idx) => (
-                <div key={idx} className="legal-subsection">
-                  <h3 className="legal-subsection-heading">
-                    <span className="legal-sub-num">{sub.num}</span> {sub.heading}
-                  </h3>
-                  <div className="legal-subsection-body">{sub.text}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
+              <div className="terms-section-subsections">
+                {sec.subsections.map((sub, idx) => (
+                  <div key={idx} className="terms-subsection">
+                    <h3 className="terms-subsection-heading">
+                      <span className="terms-sub-num">{sub.num}</span> {sub.heading}
+                    </h3>
+                    <div className="terms-subsection-body">{sub.text}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
 
-        {/* Formal Closing Signature Block */}
-        <div className="legal-footer-block">
-          <div className="legal-footer-text">
+        {/* Closing Signature Block */}
+        <div className="terms-footer-block">
+          <div className="terms-footer-text">
             <p>
               <strong>Knowledge Graph Portal</strong> &bull; Developed by the Professorship of Distributed and Self-Organizing Systems (VSR), Chemnitz University of Technology.
             </p>
             <p>
-              For official inquiries regarding these Terms or institutional academic agreements, please reach out to <a href="mailto:vsr-support@tu-chemnitz.de" className="legal-link">vsr-support@tu-chemnitz.de</a>.
+              For official inquiries regarding these Terms or institutional academic agreements, please reach out to <a href="mailto:vsr-support@tu-chemnitz.de" className="terms-link">vsr-support@tu-chemnitz.de</a>.
             </p>
           </div>
-          <div className="legal-footer-nav">
-            <Link to="/" className="legal-footer-btn">Return to Home</Link>
-            <Link to="/graph" className="legal-footer-btn primary">Explore Schema Ontology</Link>
+          <div className="terms-footer-nav">
+            <Link to="/" className="terms-footer-btn">Return to Home</Link>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
