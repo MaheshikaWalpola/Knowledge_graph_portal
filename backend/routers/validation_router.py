@@ -141,20 +141,32 @@ async def api_generate_shacl_stream(
     return EventSourceResponse(event_generator())
 
 
+def _parse_verification_meta(raw: Optional[str]) -> Optional[dict]:
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
 @router.post("/validation/run-playground")
 async def api_run_playground(
     schema_ttl: str = Form(...),
     instances_ttl: str = Form(...),
     shacl_ttl: str = Form(...),
+    verification_metadata: Optional[str] = Form(None),
     current_user: Any = Depends(get_current_user)
 ):
     """
     Execute SHACL validation against user-provided Turtle data and shapes in the playground.
     """
+    v_meta = _parse_verification_meta(verification_metadata)
     report = validation_service.validate_rdf(
         data_ttl=instances_ttl,
         shapes_ttl=shacl_ttl,
-        schema_ttl=schema_ttl
+        schema_ttl=schema_ttl,
+        verification_metadata=v_meta
     )
     return {"status": "ok", "report": report}
 
@@ -164,16 +176,19 @@ async def api_run_playground_stream(
     schema_ttl: str = Form(...),
     instances_ttl: str = Form(...),
     shacl_ttl: str = Form(...),
+    verification_metadata: Optional[str] = Form(None),
     current_user: Any = Depends(get_current_user)
 ):
     """SSE endpoint that streams step-by-step SHACL validation progress for the playground."""
     import asyncio
+    v_meta = _parse_verification_meta(verification_metadata)
 
     async def event_generator():
         for event in validation_service.validate_rdf_stream(
             data_ttl=instances_ttl,
             shapes_ttl=shacl_ttl,
-            schema_ttl=schema_ttl
+            schema_ttl=schema_ttl,
+            verification_metadata=v_meta
         ):
             yield {"data": json.dumps(event)}
             await asyncio.sleep(0)  # Yield control to flush the event
@@ -186,12 +201,14 @@ async def api_run_playground_stream(
 async def api_run_workspace(
     schema_id: str = Form(...),
     shacl_ttl: str = Form(...),
+    verification_metadata: Optional[str] = Form(None),
     current_user: Any = Depends(get_current_user)
 ):
     """
     Retrieve schema and instance graphs for a workspace ontology from GraphDB and run SHACL validation.
     """
     user_email = current_user["email"]
+    v_meta = _parse_verification_meta(verification_metadata)
     
     # 1. Fetch schema and instances turtle from GraphDB
     try:
@@ -204,7 +221,8 @@ async def api_run_workspace(
     report = validation_service.validate_rdf(
         data_ttl=instances_ttl,
         shapes_ttl=shacl_ttl,
-        schema_ttl=schema_ttl
+        schema_ttl=schema_ttl,
+        verification_metadata=v_meta
     )
     
     return {"status": "ok", "report": report}
@@ -214,11 +232,13 @@ async def api_run_workspace(
 async def api_run_workspace_stream(
     schema_id: str = Form(...),
     shacl_ttl: str = Form(...),
+    verification_metadata: Optional[str] = Form(None),
     current_user: Any = Depends(get_current_user)
 ):
     """SSE endpoint that streams workspace graph retrieval and SHACL validation progress."""
     import asyncio
     user_email = current_user["email"]
+    v_meta = _parse_verification_meta(verification_metadata)
 
     # Fetch graphs first (fast operation)
     try:
@@ -233,7 +253,8 @@ async def api_run_workspace_stream(
         for event in validation_service.validate_rdf_stream(
             data_ttl=instances_ttl_content,
             shapes_ttl=shacl_ttl,
-            schema_ttl=schema_ttl_content
+            schema_ttl=schema_ttl_content,
+            verification_metadata=v_meta
         ):
             yield {"data": json.dumps(event)}
             await asyncio.sleep(0)

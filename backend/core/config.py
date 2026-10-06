@@ -34,4 +34,8 @@ class Settings:
     # OpenAI
     OPEN_API_KEY = os.getenv("OPEN_API_KEY")
 
+    # SHACL Verification & Repair Pipeline
+    ENABLE_SHACL_VERIFICATION = os.getenv("ENABLE_SHACL_VERIFICATION", "true").lower() in ("true", "1", "yes")
+
 settings = Settings()
+

@@ -8,6 +8,7 @@ from rdflib import Graph, Namespace, RDF, URIRef
 from pyshacl import validate
 
 from services.local_llm_service import LocalLLMService
+from services.shacl_verifier import SHACLVerifier
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -57,6 +58,8 @@ class NumberedCanvas(canvas.Canvas):
 class ValidationService:
     def __init__(self):
         self.llm = LocalLLMService()
+        self.verifier = SHACLVerifier(self.llm)
+        self.last_verification_map = {}
 
     def _shorten_iri(self, iri: str) -> str:
         """Helper to shorten IRIs into pre-defined prefixes for readability."""
@@ -224,15 +227,17 @@ class ValidationService:
 
     async def generate_shacl_shapes_stream(self, rules: List[str], schema_content: Optional[str] = None):
         """
-        Generates SHACL shapes rule by rule concurrently and streams progress and snippets.
+        Generates SHACL shapes rule by rule concurrently, verifies and repairs each rule, and streams progress.
         """
         import asyncio
         from concurrent.futures import ThreadPoolExecutor
         from rdflib import Graph
-        
+
         schema_text = schema_content or "No schema provided."
         completed_shapes = {}
-        
+        verification_map = {}
+        known_terms = SHACLVerifier.extract_ontology_terms(schema_text)
+
         def generate_single_shape(index: int, rule: str) -> dict:
             clean_rule_str = rule.replace('"', '')
             prompt = (
@@ -273,7 +278,6 @@ class ValidationService:
             ]
             try:
                 response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1)
-                # Clean up any wrappers
                 clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
                 clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
                 return {"index": index, "rule": rule, "status": "success", "shacl": clean_ttl.strip()}
@@ -282,75 +286,173 @@ class ValidationService:
                 return {"index": index, "rule": rule, "status": "error", "message": str(e), "shacl": f"# Failed to generate shape for rule: {rule}"}
 
         loop = asyncio.get_running_loop()
-        
-        yield {"status": "start", "total": len(rules)}
-        
-        with ThreadPoolExecutor(max_workers=min(len(rules), 10)) as executor:
-            tasks = [
-                loop.run_in_executor(executor, generate_single_shape, i, rule)
-                for i, rule in enumerate(rules)
-            ]
-            
-            for future in asyncio.as_completed(tasks):
-                res = await future
-                if res["status"] == "success":
-                    completed_shapes[res["index"]] = res["shacl"]
-                yield {
-                    "status": "progress",
-                    "index": res["index"],
-                    "rule": res["rule"],
-                    "result_status": res["status"],
-                    "shacl": res["shacl"],
-                    "message": f"Generated shape for rule: {res['rule'][:50]}..." if res["status"] == "success" else f"Failed rule: {res['rule'][:50]}..."
+        queue = asyncio.Queue()
+
+        def process_rule_pipeline(index: int, rule: str):
+            res = generate_single_shape(index, rule)
+            initial_shacl = res.get("shacl", "")
+
+            if res.get("status") != "success" or not initial_shacl or initial_shacl.startswith("#"):
+                v_res = {
+                    "rule_text": rule,
+                    "shape_ttl": initial_shacl,
+                    "verification": "unverified",
+                    "attempts": 1,
+                    "unknown_terms": [],
+                    "failed_examples": [],
+                    "reason": "Failed to generate initial shape"
                 }
+                loop.call_soon_threadsafe(queue.put_nowait, {
+                    "type": "final",
+                    "index": index,
+                    "rule": rule,
+                    "result_status": "error",
+                    "shacl": initial_shacl,
+                    "message": f"Failed rule: {rule[:50]}...",
+                    **v_res
+                })
+                return
+
+            def on_progress(stage: str):
+                stage_label = "Checking rule…" if stage != "repairing" else "Fixing rule…"
+                loop.call_soon_threadsafe(queue.put_nowait, {
+                    "type": "verifying",
+                    "status": "verifying",
+                    "index": index,
+                    "rule": rule,
+                    "stage": stage,
+                    "message": f"{stage_label} ({rule[:45]}...)"
+                })
+
+            try:
+                v_res = self.verifier.verify_and_repair(
+                    rule_text=rule,
+                    initial_shape_ttl=initial_shacl,
+                    schema_ttl=schema_text,
+                    known_terms=known_terms,
+                    on_progress=on_progress
+                )
+            except Exception as err:
+                print(f"Verification exception for rule '{rule}': {err}")
+                v_res = {
+                    "rule_text": rule,
+                    "shape_ttl": initial_shacl,
+                    "verification": "unverified",
+                    "attempts": 1,
+                    "unknown_terms": [],
+                    "failed_examples": [],
+                    "reason": "verification unavailable"
+                }
+
+            final_shacl = v_res.get("shape_ttl") or initial_shacl
+            loop.call_soon_threadsafe(queue.put_nowait, {
+                "type": "final",
+                "index": index,
+                "rule": rule,
+                "result_status": "success",
+                "shacl": final_shacl,
+                "message": f"Checked rule: {rule[:50]}...",
+                **v_res
+            })
+
+        yield {"status": "start", "total": len(rules)}
+
+        remaining = len(rules)
+        with ThreadPoolExecutor(max_workers=min(len(rules), 10)) as executor:
+            for i, rule in enumerate(rules):
+                executor.submit(process_rule_pipeline, i, rule)
+
+            while remaining > 0:
+                event = await queue.get()
+                if event.get("type") == "verifying":
+                    yield {
+                        "status": "verifying",
+                        "index": event["index"],
+                        "rule": event["rule"],
+                        "stage": event["stage"],
+                        "message": event["message"]
+                    }
+                elif event.get("type") == "final":
+                    idx = event["index"]
+                    if event["result_status"] == "success":
+                        completed_shapes[idx] = event["shacl"]
+
+                    shape_key = f"inst:Question_{idx+1}_Shape"
+                    item_meta = {
+                        "rule_text": event["rule"],
+                        "verification": event.get("verification", "verified"),
+                        "attempts": event.get("attempts", 1),
+                        "unknown_terms": event.get("unknown_terms", []),
+                        "failed_examples": event.get("failed_examples", []),
+                        "reason": event.get("reason", "")
+                    }
+                    verification_map[shape_key] = item_meta
+                    verification_map[str(idx)] = item_meta
+
+                    remaining -= 1
+                    yield {
+                        "status": "progress",
+                        "index": idx,
+                        "rule": event["rule"],
+                        "result_status": event["result_status"],
+                        "shacl": event["shacl"],
+                        "message": event["message"],
+                        "verification": item_meta["verification"],
+                        "attempts": item_meta["attempts"],
+                        "unknown_terms": item_meta["unknown_terms"],
+                        "failed_examples": item_meta["failed_examples"],
+                        "reason": item_meta["reason"]
+                    }
+
+        self.last_verification_map = verification_map
 
         # Merge all shapes into a final RDF graph to prettify and deduplicate prefixes
         final_ttl = ""
         if completed_shapes:
             g = Graph()
-            # Sort by index to keep ordering consistent
             for idx in sorted(completed_shapes.keys()):
                 chunk = completed_shapes[idx]
                 try:
                     g.parse(data=chunk, format="turtle")
                 except Exception as parse_err:
                     print(f"rdflib failed to parse chunk {idx}: {parse_err}. Using fallback concatenation later if needed.")
-            
+
             try:
                 g.bind("sh", Namespace("http://www.w3.org/ns/shacl#"))
                 g.bind("xsd", Namespace("http://www.w3.org/2001/XMLSchema#"))
                 g.bind("rdfs", Namespace("http://www.w3.org/2000/01/rdf-schema#"))
                 g.bind("cmpo", Namespace("https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#"))
                 g.bind("inst", Namespace("https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/"))
-                
+
                 final_ttl = g.serialize(format="turtle")
             except Exception as ser_err:
                 print(f"rdflib serialization failed: {ser_err}")
                 final_ttl = "\n\n".join(completed_shapes[idx] for idx in sorted(completed_shapes.keys()))
         else:
             final_ttl = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n# Failed to generate any shapes."
-            
-        yield {"status": "completed", "shacl_ttl": final_ttl.strip()}
 
-    def validate_rdf_stream(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None):
+        yield {"status": "completed", "shacl_ttl": final_ttl.strip(), "verification_map": verification_map}
+
+    def validate_rdf_stream(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None, verification_metadata: Optional[Dict[str, Any]] = None):
         """
         Generator that yields JSON progress events for SSE streaming.
         Each yield is a dict that will be JSON-serialized.
         """
         import time
 
+        v_map = verification_metadata if verification_metadata is not None else (getattr(self, "last_verification_map", None) or {})
+
         # Step 1: Parse SHACL shapes
-        yield {"step": "parsing_shapes", "message": "Parsing SHACL shapes..."}
+        yield {"step": "parsing_shapes", "message": "Parsing quality rules..."}
         try:
             g_shapes = Graph()
             g_shapes.parse(data=shapes_ttl, format="turtle")
         except Exception as e:
             error_str = str(e)
-            # Extract a user-friendly message from the rdflib BadSyntax error
-            friendly = "Invalid SHACL Turtle syntax. "
+            friendly = "Invalid rules syntax. "
             if "Bad syntax" in error_str:
                 friendly += error_str.split("Bad syntax")[-1].split("at ^")[0].strip().strip("(").strip(")")
-                friendly += ". Please check the generated SHACL shapes for syntax errors."
+                friendly += ". Please check the generated rules for syntax errors."
             else:
                 friendly += f"Parser error: {error_str[:200]}"
             yield {"step": "error", "message": friendly, "error": True}
@@ -367,7 +469,7 @@ class ValidationService:
             shape_nodes_set.add(s)
 
         num_shapes = len(shape_nodes_set)
-        yield {"step": "shapes_parsed", "message": f"SHACL shapes parsed successfully ({num_shapes} shapes found)"}
+        yield {"step": "shapes_parsed", "message": f"Validation rules loaded successfully ({num_shapes} rules found)"}
 
         # Step 2: Parse data graph
         yield {"step": "parsing_data", "message": "Parsing instance data graph..."}
@@ -393,11 +495,7 @@ class ValidationService:
             yield {"step": "schema_merged", "message": f"Schema merged ({len(g_combined)} total triples)"}
 
         # Step 4a: Pre-materialize rdfs:subClassOf transitive closure
-        # ------------------------------------------------------------------
-        # Materializes ancestor relationships so rdfs:subClassOf* property
-        # paths in SPARQL resolve from explicit triples (O(1) lookup) instead
-        # of recursive graph walks (O(depth) per call).
-        yield {"step": "materializing", "message": "Pre-materializing class hierarchy for SPARQL performance..."}
+        yield {"step": "materializing", "message": "Pre-materializing class hierarchy for query performance..."}
         try:
             RDFS_NS = Namespace("http://www.w3.org/2000/01/rdf-schema#")
             parents = {}
@@ -431,17 +529,8 @@ class ValidationService:
             yield {"step": "materialized", "message": f"Materialization skipped: {str(e)[:100]}"}
 
         # Step 4b: Bulk-evaluate sh:sparql constraints
-        # ------------------------------------------------------------------
-        # pySHACL evaluates each sh:sparql query once per focus node. With
-        # 80K+ CMPObservation nodes, Q2 and Q12 alone trigger 160K+ SPARQL
-        # executions — taking hours.
-        #
-        # Instead: run each SPARQL query once in bulk (all violations in one
-        # query), strip sh:sparql from the shapes graph, and let pySHACL
-        # handle only the fast property-based shapes.
-        yield {"step": "sparql_bulk", "message": "Bulk-evaluating SPARQL-based constraints..."}
+        yield {"step": "sparql_bulk", "message": "Bulk-evaluating query-based constraints..."}
 
-        # Collect prefix declarations from shapes graph for SPARQL queries
         prefix_map = {
             "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
             "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
@@ -460,7 +549,7 @@ class ValidationService:
         bulk_violations = []
         bulk_violated_shapes = set()
         bulk_shape_failed_nodes = {}
-        sparql_bnodes = set()  # blank nodes to strip from shapes
+        sparql_bnodes = set()
 
         for shape_node in shape_nodes_set:
             sparql_constraints = list(g_shapes.objects(shape_node, SH.sparql))
@@ -469,7 +558,7 @@ class ValidationService:
 
             for sparql_bnode in sparql_constraints:
                 select_q = str(g_shapes.value(sparql_bnode, SH.select) or "")
-                msg = str(g_shapes.value(sparql_bnode, SH.message) or "SPARQL constraint violated")
+                msg = str(g_shapes.value(sparql_bnode, SH.message) or "Constraint violated")
                 if not select_q:
                     continue
 
@@ -491,7 +580,6 @@ class ValidationService:
                             bulk_shape_failed_nodes[shape_str] = set()
 
                     for row in results:
-                        # $this is the first binding (focus node)
                         focus = str(row[0]) if row[0] is not None else ""
                         value = str(row[1]) if len(row) > 1 and row[1] is not None else ""
 
@@ -510,28 +598,27 @@ class ValidationService:
                             "value": value
                         })
 
-                    yield {"step": "sparql_bulk", "message": f"SPARQL: \"{short_label}\" — {len(results)} violations ({t1}s)"}
+                    yield {"step": "sparql_bulk", "message": f"Query: \"{short_label}\" — {len(results)} items flagged ({t1}s)"}
                 except Exception as e:
-                    print(f"[WARNING] Bulk SPARQL failed for {shape_node}: {e}")
-                    yield {"step": "sparql_bulk", "message": f"SPARQL fallback needed: {str(e)[:80]}"}
-                    # Don't strip this shape — let pySHACL handle it as fallback
+                    print(f"[WARNING] Bulk query failed for {shape_node}: {e}")
+                    yield {"step": "sparql_bulk", "message": f"Query fallback needed: {str(e)[:80]}"}
                     sparql_bnodes.discard(sparql_bnode)
 
-        yield {"step": "sparql_done", "message": f"Bulk SPARQL complete: {len(bulk_violations)} violations from {len(bulk_violated_shapes)} shapes"}
+        yield {"step": "sparql_done", "message": f"Bulk check complete: {len(bulk_violations)} items flagged across {len(bulk_violated_shapes)} rules"}
 
-        # Build stripped shapes graph (remove sh:sparql so pySHACL skips them)
+        # Build stripped shapes graph (remove sh:sparql so fast property check handles remainder)
         g_shapes_stripped = Graph()
         for pfx, ns in g_shapes.namespaces():
             g_shapes_stripped.bind(pfx, ns)
         for s, p, o in g_shapes:
             if p == SH.sparql and o in sparql_bnodes:
-                continue  # drop the sh:sparql link
+                continue
             if s in sparql_bnodes:
-                continue  # drop the blank node's own triples (sh:select, sh:message, sh:prefixes)
+                continue
             g_shapes_stripped.add((s, p, o))
 
-        # Step 4c: Run pySHACL on property-based shapes only (fast)
-        yield {"step": "validating", "message": f"Running pySHACL on property-based shapes ({len(g_combined)} triples)..."}
+        # Step 4c: Run property-based validation
+        yield {"step": "validating", "message": f"Checking rules against data ({len(g_combined)} triples)..."}
         try:
             start_time = time.time()
             conforms, results_graph, results_text = validate(
@@ -543,23 +630,21 @@ class ValidationService:
             )
             elapsed = round(time.time() - start_time, 1)
         except Exception as e:
-            yield {"step": "error", "message": f"SHACL validation engine error: {str(e)[:200]}", "error": True}
+            yield {"step": "error", "message": f"Validation engine error: {str(e)[:200]}", "error": True}
             return
 
-        # Override conforms if bulk SPARQL found violations
         if bulk_violations:
             conforms = False
 
-        yield {"step": "validation_done", "message": f"pySHACL completed in {elapsed}s"}
+        yield {"step": "validation_done", "message": f"Data check completed in {elapsed}s"}
 
-        # Step 5: Collect results (merge pySHACL + bulk SPARQL violations)
-        yield {"step": "collecting", "message": "Collecting results..."}
+        # Step 5: Collect results
+        yield {"step": "collecting", "message": "Collecting validation results..."}
 
         violations = []
         violated_shapes = set()
-        shape_failed_nodes = {}  # shape_iri -> set of focusNode IRIs
+        shape_failed_nodes = {}
 
-        # 5a: pySHACL results
         for result_node in results_graph.subjects(RDF.type, SH.ValidationResult):
             focus_node = results_graph.value(result_node, SH.focusNode)
             path = results_graph.value(result_node, SH.resultPath)
@@ -588,7 +673,6 @@ class ValidationService:
                 "value": str(val) if val is not None else ""
             })
 
-        # 5b: Merge bulk SPARQL violations
         violations.extend(bulk_violations)
         violated_shapes |= bulk_violated_shapes
         for shape_str, nodes in bulk_shape_failed_nodes.items():
@@ -600,7 +684,6 @@ class ValidationService:
         for shape_node in shape_nodes_set:
             label = g_shapes.value(shape_node, RDFS.label)
             if not label:
-                # Try finding message or label inside property
                 for prop_node in g_shapes.objects(shape_node, SH.property):
                     msg = g_shapes.value(prop_node, SH.message) or g_shapes.value(prop_node, RDFS.label)
                     if msg:
@@ -609,22 +692,72 @@ class ValidationService:
 
             target_cls = g_shapes.value(shape_node, SH.targetClass)
             shape_str = str(shape_node)
+            shape_short = self._shorten_iri(shape_node)
 
             failed_nodes = shape_failed_nodes.get(shape_str, set())
             failed_items_count = len(failed_nodes)
             passed = (failed_items_count == 0) and (shape_str not in violated_shapes)
 
+            # Focus nodes count for suspicion calculation
+            total_focus_nodes = 0
+            if target_cls:
+                total_focus_nodes = len(set(g_combined.subjects(RDF.type, target_cls)))
+            if total_focus_nodes == 0 and failed_items_count > 0:
+                total_focus_nodes = failed_items_count
+
+            # Suspicion flag: fails on > 90% of focus nodes
+            suspicious = False
+            if failed_items_count > 0 and total_focus_nodes > 0:
+                if (failed_items_count / total_focus_nodes) > 0.90:
+                    suspicious = True
+
+            # Match verification metadata
+            meta = None
+            if shape_str in v_map:
+                meta = v_map[shape_str]
+            elif shape_short in v_map:
+                meta = v_map[shape_short]
+            else:
+                m = re.search(r"Question_(\d+)_Shape", shape_str) or re.search(r"Question_(\d+)_Shape", shape_short)
+                if m:
+                    idx_val = int(m.group(1)) - 1
+                    meta = v_map.get(str(idx_val)) or v_map.get(f"inst:Question_{idx_val+1}_Shape")
+
+            if not meta and label:
+                lbl_clean = str(label).strip()
+                for k, v in v_map.items():
+                    if isinstance(v, dict) and v.get("rule_text") and (v["rule_text"] in lbl_clean or lbl_clean in v["rule_text"]):
+                        meta = v
+                        break
+
+            rule_text = meta.get("rule_text") if meta else (str(label) if label else shape_short)
+            verification_status = meta.get("verification", "verified") if meta else "verified"
+            attempts = meta.get("attempts", 1) if meta else 1
+            unknown_terms = meta.get("unknown_terms", []) if meta else []
+            failed_examples = meta.get("failed_examples", []) if meta else []
+            reason = meta.get("reason", "") if meta else ""
+
+            # Ensure label displays plain-English sentence instead of Question_X_Shape
+            display_label = rule_text or (str(label) if label else shape_short)
+
             all_shapes.append({
                 "shape_iri": shape_str,
-                "shape_short": self._shorten_iri(shape_node),
-                "label": str(label) if label else self._shorten_iri(shape_node),
+                "shape_short": shape_short,
+                "label": display_label,
+                "rule_text": display_label,
                 "target_class": str(target_cls) if target_cls else "",
                 "target_class_short": self._shorten_iri(target_cls) if target_cls else "",
                 "status": "Pass" if passed else "Fail",
-                "failed_items_count": failed_items_count
+                "failed_items_count": failed_items_count,
+                "total_focus_nodes": total_focus_nodes,
+                "suspicious": suspicious,
+                "verification": verification_status,
+                "attempts": attempts,
+                "unknown_terms": unknown_terms,
+                "failed_examples": failed_examples,
+                "reason": reason
             })
 
-        # Sort shapes alphabetically or by IRI for consistent layout
         all_shapes.sort(key=lambda x: x["label"].lower())
 
         total_questions = len(all_shapes)
@@ -633,31 +766,66 @@ class ValidationService:
         pass_percentage = round((passed_questions / total_questions * 100), 1) if total_questions > 0 else 0.0
 
         if total_questions == 0:
-            status_summary = "No shapes evaluated"
+            status_summary = "No rules evaluated"
         elif passed_questions == total_questions:
-            status_summary = f"All {total_questions} Questions Passed (100%)"
+            status_summary = f"All {total_questions} Rules Passed (100%)"
         elif passed_questions == 0:
-            status_summary = f"0 of {total_questions} Questions Passed (0%)"
+            status_summary = f"0 of {total_questions} Rules Passed (0%)"
         else:
-            status_summary = f"{passed_questions} of {total_questions} Questions Passed ({pass_percentage}%)"
+            status_summary = f"{passed_questions} of {total_questions} Rules Passed ({pass_percentage}%)"
 
-        # Compute KPI metrics for report cards
         violation_count = sum(1 for v in violations if v.get("severity", "Violation") == "Violation")
         warning_count = sum(1 for v in violations if v.get("severity", "Violation") == "Warning")
-
-        # Unique focus nodes affected by any violation/warning
         affected_focus_nodes = len(set(v["focus_node"] for v in violations if v.get("focus_node")))
 
-        execution_status = "Completed"
-        conformance_status = "Conformant" if conforms else "Non-Conformant"
+        # Separate into reliable vs unreliable
+        reliable_rules = [
+            r for r in all_shapes
+            if r.get("verification") in ("verified", "repaired") and not r.get("suspicious")
+        ]
+        unreliable_rules = [
+            r for r in all_shapes
+            if r.get("verification") == "unverified" or r.get("suspicious")
+        ]
 
-        # Gate decision: Pass only when fully conformant; Conditional if only warnings exist
-        if conforms:
+        shape_is_reliable = {
+            r["shape_iri"]: (r.get("verification") in ("verified", "repaired") and not r.get("suspicious"))
+            for r in all_shapes
+        }
+        for r in all_shapes:
+            shape_is_reliable[r["shape_short"]] = shape_is_reliable[r["shape_iri"]]
+
+        reliable_violations = [
+            v for v in violations
+            if shape_is_reliable.get(v.get("source_shape"), shape_is_reliable.get(v.get("source_shape_short"), True))
+        ]
+        unreliable_violations = [
+            v for v in violations
+            if not shape_is_reliable.get(v.get("source_shape"), shape_is_reliable.get(v.get("source_shape_short"), True))
+        ]
+
+        verified_count = sum(1 for r in all_shapes if r.get("verification") == "verified")
+        repaired_count = sum(1 for r in all_shapes if r.get("verification") == "repaired")
+        unverified_count = sum(1 for r in all_shapes if r.get("verification") == "unverified")
+        suspicious_count = sum(1 for r in all_shapes if r.get("suspicious"))
+        total_rules = len(all_shapes)
+
+        # Gate decision:
+        # Unverified rules must NEVER cause a hard FAIL by themselves. If only unverified rules have violations, gate decision is "Needs review".
+        failed_rules = [r for r in all_shapes if r["status"] != "Pass" or r["failed_items_count"] > 0]
+        failed_reliable = [r for r in failed_rules if r.get("verification") in ("verified", "repaired") and not r.get("suspicious")]
+
+        if conforms or len(failed_rules) == 0:
             gate_decision = "Pass"
+        elif len(failed_reliable) == 0 and len(failed_rules) > 0:
+            gate_decision = "Needs review"
         elif violation_count == 0 and warning_count > 0:
             gate_decision = "Conditional"
         else:
             gate_decision = "Fail"
+
+        execution_status = "Completed"
+        conformance_status = "Conformant" if conforms else "Non-Conformant"
 
         # Final result
         yield {
@@ -678,17 +846,26 @@ class ValidationService:
                 "violation_count": violation_count,
                 "warning_count": warning_count,
                 "affected_focus_nodes": affected_focus_nodes,
+                "verified_count": verified_count,
+                "repaired_count": repaired_count,
+                "unverified_count": unverified_count,
+                "suspicious_count": suspicious_count,
+                "total_rules": total_rules,
                 "rules": all_shapes,
-                "violations": violations
+                "reliable_rules": reliable_rules,
+                "unreliable_rules": unreliable_rules,
+                "violations": violations,
+                "reliable_violations": reliable_violations,
+                "unreliable_violations": unreliable_violations
             }
         }
 
-    def validate_rdf(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None) -> Dict[str, Any]:
+    def validate_rdf(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None, verification_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Non-streaming wrapper: runs the full validation and returns the report dict.
         """
         result = None
-        for event in self.validate_rdf_stream(data_ttl, shapes_ttl, schema_ttl):
+        for event in self.validate_rdf_stream(data_ttl, shapes_ttl, schema_ttl, verification_metadata):
             if event.get("error"):
                 return {
                     "conforms": False,
@@ -706,8 +883,17 @@ class ValidationService:
                     "violation_count": 0,
                     "warning_count": 0,
                     "affected_focus_nodes": 0,
+                    "verified_count": 0,
+                    "repaired_count": 0,
+                    "unverified_count": 0,
+                    "suspicious_count": 0,
+                    "total_rules": 0,
                     "rules": [],
-                    "violations": []
+                    "reliable_rules": [],
+                    "unreliable_rules": [],
+                    "violations": [],
+                    "reliable_violations": [],
+                    "unreliable_violations": []
                 }
             if event.get("report"):
                 result = event["report"]
@@ -727,13 +913,24 @@ class ValidationService:
             "violation_count": 0,
             "warning_count": 0,
             "affected_focus_nodes": 0,
+            "verified_count": 0,
+            "repaired_count": 0,
+            "unverified_count": 0,
+            "suspicious_count": 0,
+            "total_rules": 0,
             "rules": [],
-            "violations": []
+            "reliable_rules": [],
+            "unreliable_rules": [],
+            "violations": [],
+            "reliable_violations": [],
+            "unreliable_violations": []
         }
 
     def generate_pdf_report(self, report_data: Dict[str, Any]) -> bytes:
         """
         Generates an executive, expert-level PDF validation & compliance report.
+        Strictly uses plain-English terminology suitable for CMP engineers.
+        Never outputs forbidden technical jargon.
         """
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -796,46 +993,34 @@ class ValidationService:
             fontName='Courier', fontSize=8, leading=10,
             textColor=c_primary
         )
-        style_kpi_val = ParagraphStyle(
-            'KpiVal', parent=styles['Normal'],
-            fontName='Helvetica-Bold', fontSize=14, leading=16,
-            alignment=1
-        )
-        style_kpi_lbl = ParagraphStyle(
-            'KpiLbl', parent=styles['Normal'],
-            fontName='Helvetica-Bold', fontSize=7.5, leading=9,
-            textColor=c_secondary, alignment=1
-        )
 
         story = []
 
         # 1. Header Banner
         story.append(Paragraph("Validation & Compliance Audit Report", style_title))
-        story.append(Paragraph("Knowledge Graph Quality Assurance Engine • SHACL Constraint Verification", style_subtitle))
+        story.append(Paragraph("Knowledge Graph Quality Assurance Engine • Data Quality Verification", style_subtitle))
 
-        # Dynamic conformance calculation based on actual rule and violation status
         rules = report_data.get("rules", [])
         violations = report_data.get("violations", [])
         total_q = report_data.get("total_questions", len(rules))
         passed_q = report_data.get("passed_questions", sum(1 for r in rules if r.get("status") == "Pass"))
         failed_q = report_data.get("failed_questions", total_q - passed_q)
         total_triples = report_data.get("total_triples", 0)
-        
-        conforms = report_data.get("conforms", failed_q == 0 and len(violations) == 0)
-        if conforms or (failed_q == 0 and len(violations) == 0):
-            exec_status = "Completed"
-            conform_status = "Conformant"
-            gate_dec = "Pass"
-            violation_cnt = 0
-            warning_cnt = 0
-            affected_fn = 0
-        else:
-            exec_status = report_data.get("execution_status", "Completed")
-            conform_status = "Non-Conformant"
-            violation_cnt = report_data.get("violation_count", len(violations))
-            warning_cnt = report_data.get("warning_count", 0)
-            affected_fn = report_data.get("affected_focus_nodes", len(set(v.get("focus_node", "") for v in violations if v.get("focus_node"))))
-            gate_dec = "Fail" if violation_cnt > 0 or failed_q > 0 else "Conditional"
+
+        verified_cnt = report_data.get("verified_count", sum(1 for r in rules if r.get("verification") == "verified"))
+        repaired_cnt = report_data.get("repaired_count", sum(1 for r in rules if r.get("verification") == "repaired"))
+        unverified_cnt = report_data.get("unverified_count", sum(1 for r in rules if r.get("verification") == "unverified"))
+        suspicious_cnt = report_data.get("suspicious_count", sum(1 for r in rules if r.get("suspicious")))
+
+        reliable_cnt = verified_cnt + repaired_cnt - sum(1 for r in rules if r.get("suspicious") and r.get("verification") in ("verified", "repaired"))
+        unreliable_cnt = total_q - reliable_cnt
+
+        gate_dec = report_data.get("gate_decision", "Pass" if failed_q == 0 else "Fail")
+        exec_status = report_data.get("execution_status", "Completed")
+        conform_status = report_data.get("conformance_status", "Conformant" if failed_q == 0 and len(violations) == 0 else "Non-Conformant")
+        violation_cnt = report_data.get("violation_count", len(violations))
+        warning_cnt = report_data.get("warning_count", 0)
+        affected_fn = report_data.get("affected_focus_nodes", len(set(v.get("focus_node", "") for v in violations if v.get("focus_node"))))
 
         pass_rate = round((passed_q / total_q * 100), 1) if total_q > 0 else 100.0
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M UTC")
@@ -858,10 +1043,16 @@ class ValidationService:
         story.append(meta_table)
         story.append(Spacer(1, 10))
 
-        # 2. Executive Audit Metrics (Row-by-Row Raw List Format)
+        # 2. Executive Audit Metrics
         story.append(Paragraph("Executive Audit Metrics", style_h2))
 
-        gate_color = c_success if gate_dec == "Pass" else (c_warning if gate_dec == "Conditional" else c_danger)
+        if gate_dec == "Pass":
+            gate_color = c_success
+        elif gate_dec in ("Conditional", "Needs review"):
+            gate_color = c_warning
+        else:
+            gate_color = c_danger
+
         conform_color = c_success if conform_status == "Conformant" else c_danger
         viol_color = c_danger if violation_cnt > 0 else c_success
         warn_color = c_warning if warning_cnt > 0 else c_success
@@ -871,9 +1062,9 @@ class ValidationService:
             [Paragraph("<b>Execution Status:</b>", style_body), Paragraph(f"<font color='{c_success.hexval()}'><b>{exec_status}</b></font>", style_body)],
             [Paragraph("<b>Conformance Status:</b>", style_body), Paragraph(f"<font color='{conform_color.hexval()}'><b>{conform_status}</b></font>", style_body)],
             [Paragraph("<b>Gate Decision:</b>", style_body), Paragraph(f"<font color='{gate_color.hexval()}'><b>{gate_dec}</b></font>", style_body)],
-            [Paragraph("<b>Violation Count:</b>", style_body), Paragraph(f"<font color='{viol_color.hexval()}'><b>{violation_cnt:,}</b></font>", style_body)],
-            [Paragraph("<b>Warning Count:</b>", style_body), Paragraph(f"<font color='{warn_color.hexval()}'><b>{warning_cnt:,}</b></font>", style_body)],
-            [Paragraph("<b>Affected Focus-Nodes:</b>", style_body), Paragraph(f"<font color='{fn_color.hexval()}'><b>{affected_fn:,}</b></font>", style_body)],
+            [Paragraph("<b>Flagged Problems:</b>", style_body), Paragraph(f"<font color='{viol_color.hexval()}'><b>{violation_cnt:,}</b></font>", style_body)],
+            [Paragraph("<b>Flagged Warnings:</b>", style_body), Paragraph(f"<font color='{warn_color.hexval()}'><b>{warning_cnt:,}</b></font>", style_body)],
+            [Paragraph("<b>Affected Items:</b>", style_body), Paragraph(f"<font color='{fn_color.hexval()}'><b>{affected_fn:,}</b></font>", style_body)],
         ]
 
         summary_list_table = Table(summary_rows, colWidths=[150, 384])
@@ -887,31 +1078,37 @@ class ValidationService:
         story.append(summary_list_table)
         story.append(Spacer(1, 10))
 
-        # 3. Overall Compliance Summary Callout Box
+        # 3. Overall Reliability and Compliance Callout Box
         comp_pct = report_data.get("pass_percentage", 0.0)
-        if failed_q > 0:
+        top_reliability_msg = f"{reliable_cnt} of {total_q} checks are reliable, {unreliable_cnt} need your review."
+        
+        if gate_dec == "Needs review":
             summary_text = (
-                f"<b>Compliance Summary:</b> {passed_q} of {total_q} validation rules passed successfully ({comp_pct}% compliance). "
-                f"A total of <b>{violation_cnt:,} constraint violations</b> were detected across <b>{affected_fn:,} unique focus nodes</b>."
+                f"<b>Check Review Required:</b> {top_reliability_msg} "
+                f"Only unverified checks flagged potential issues. The checks themselves may be incorrect, not your data."
             )
-        elif violation_cnt > 0:
+            banner_color = c_warning_bg
+            banner_border = c_warning_border
+        elif failed_q > 0:
             summary_text = (
-                f"<b>Compliance Summary:</b> All {total_q} validation rules passed successfully (100% compliance). "
-                f"However, the underlying SHACL shapes flagged <b>{violation_cnt:,} constraint violations</b> across <b>{affected_fn:,} focus nodes</b>. "
-                f"See the Violation Overview below for a breakdown by constraint type."
+                f"<b>Compliance Summary:</b> {top_reliability_msg} "
+                f"{passed_q} of {total_q} rules passed successfully ({comp_pct}% compliance). "
+                f"A total of <b>{violation_cnt:,} problems</b> were detected across <b>{affected_fn:,} unique items</b>."
             )
-        else:
-            summary_text = (
-                f"<b>Compliance Summary:</b> All {total_q} validation rules passed successfully (100% compliance). "
-                f"The dataset fully conforms to the defined SHACL shapes."
-            )
-        if failed_q > 0:
             banner_color = c_danger_bg
             banner_border = c_danger_border
         elif violation_cnt > 0:
+            summary_text = (
+                f"<b>Compliance Summary:</b> {top_reliability_msg} All {total_q} validation rules passed successfully. "
+                f"However, <b>{violation_cnt:,} problems</b> were flagged across <b>{affected_fn:,} items</b>."
+            )
             banner_color = c_warning_bg
             banner_border = c_warning_border
         else:
+            summary_text = (
+                f"<b>Compliance Summary:</b> {top_reliability_msg} All {total_q} rules passed successfully (100% compliance). "
+                f"The dataset fully conforms to all defined quality checks."
+            )
             banner_color = c_success_bg
             banner_border = c_success_border
 
@@ -924,73 +1121,6 @@ class ValidationService:
         story.append(summary_table)
         story.append(Spacer(1, 12))
 
-        # 3b. Violation Overview — concise grouped summary
-        if violations:
-            story.append(Paragraph("Violation Overview", style_h2))
-
-            # Group violations by message (constraint type)
-            from collections import Counter, defaultdict
-            msg_counter = Counter()
-            msg_paths = defaultdict(set)
-            msg_example_node = {}
-            for v in violations:
-                msg = v.get("message", "Constraint violated")
-                msg_counter[msg] += 1
-                p = v.get("path_short", "")
-                if p:
-                    msg_paths[msg].add(p)
-                if msg not in msg_example_node:
-                    msg_example_node[msg] = v.get("focus_node_short", "")
-
-            overview_intro = (
-                f"The {violation_cnt:,} violations fall into <b>{len(msg_counter)}</b> "
-                f"distinct constraint {'type' if len(msg_counter) == 1 else 'types'}, summarised below."
-            )
-            story.append(Paragraph(overview_intro, style_body))
-            story.append(Spacer(1, 6))
-
-            overview_rows = [
-                [
-                    Paragraph("<b>#</b>", style_body_bold),
-                    Paragraph("<b>Constraint / Message</b>", style_body_bold),
-                    Paragraph("<b>Property</b>", style_body_bold),
-                    Paragraph("<b>Count</b>", style_body_bold),
-                ]
-            ]
-            for rank, (msg, cnt) in enumerate(msg_counter.most_common(15), 1):
-                # Truncate long messages for readability
-                display_msg = msg
-                paths_str = ", ".join(sorted(msg_paths[msg])[:3])
-                if len(msg_paths[msg]) > 3:
-                    paths_str += f" (+{len(msg_paths[msg]) - 3})"
-                overview_rows.append([
-                    Paragraph(str(rank), style_body),
-                    Paragraph(display_msg, style_body),
-                    Paragraph(paths_str or "—", style_mono),
-                    Paragraph(f"{cnt:,}", style_body),
-                ])
-
-            if len(msg_counter) > 15:
-                remaining_types = len(msg_counter) - 15
-                remaining_cnt = sum(c for _, c in msg_counter.most_common()[15:])
-                overview_rows.append([
-                    Paragraph("", style_body),
-                    Paragraph(f"<i>... and {remaining_types} more constraint types</i>", style_body),
-                    Paragraph("", style_body),
-                    Paragraph(f"<i>{remaining_cnt:,}</i>", style_body),
-                ])
-
-            ov_table = Table(overview_rows, colWidths=[24, 310, 120, 80])
-            ov_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-                ('PADDING', (0, 0), (-1, -1), 4),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, c_bg_light]),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ]))
-            story.append(ov_table)
-            story.append(Spacer(1, 12))
-
         # Group violations by shape_iri for clean diagnostic display
         violations_by_shape = {}
         for v in violations:
@@ -999,34 +1129,43 @@ class ValidationService:
                 violations_by_shape[src] = []
             violations_by_shape[src].append(v)
 
-        # 4. Failed Test Cases Section (Grouped & Actionable)
-        failed_rules = [r for r in rules if r.get("status") != "Pass" or r.get("failed_items_count", 0) > 0]
-        
-        if failed_rules:
-            story.append(Paragraph(f"Failed Test Cases ({len(failed_rules)} Non-Conformant Rules)", style_h2))
+        # Split failed rules into reliable problems vs checks needing review
+        reliable_failed_rules = [
+            r for r in rules
+            if (r.get("status") != "Pass" or r.get("failed_items_count", 0) > 0)
+            and (r.get("verification") in ("verified", "repaired") and not r.get("suspicious"))
+        ]
+        unreliable_failed_rules = [
+            r for r in rules
+            if (r.get("status") != "Pass" or r.get("failed_items_count", 0) > 0)
+            and (r.get("verification") == "unverified" or r.get("suspicious"))
+        ]
+
+        # 4. Reliable Problems Section
+        if reliable_failed_rules:
+            story.append(Paragraph(f"Problems Flagged by Reliable Checks ({len(reliable_failed_rules)} Rules)", style_h2))
             story.append(Paragraph(
-                "The following validation checks detected constraint violations in the dataset. Each card details the violated rule, target class, severity, and a sample of affected focus nodes.",
+                "The following checked and reliable quality rules detected problems in the dataset. Each card details the rule, affected class, and a sample of affected items.",
                 style_body
             ))
             story.append(Spacer(1, 8))
 
-            for idx, rule in enumerate(failed_rules, 1):
+            for idx, rule in enumerate(reliable_failed_rules, 1):
                 rule_shape_iri = rule.get("shape_iri", "")
                 rule_viols = violations_by_shape.get(rule_shape_iri, [])
                 failed_count = rule.get("failed_items_count", len(rule_viols))
-                target_cls = rule.get("target_class_short", "All Nodes")
-                rule_label = rule.get("label", "Validation Constraint Check")
+                target_cls = rule.get("target_class_short", "All Items")
+                rule_label = rule.get("rule_text") or rule.get("label", "Quality Check")
 
-                msg = rule_viols[0].get("message", "Constraint violated") if rule_viols else "Validation constraint violated"
+                msg = rule_viols[0].get("message", "Constraint violated") if rule_viols else "Rule violated"
                 path = rule_viols[0].get("path_short", "N/A") if rule_viols else "N/A"
 
                 card_elements = []
 
-                # Alert Card Header
-                header_text = f"<b>#{idx}. FAILED CHECK: {rule_label}</b>"
-                badge_text = f"<font color='{c_danger.hexval()}'><b>{failed_count} Failed Item{'s' if failed_count != 1 else ''}</b></font>"
+                header_text = f"<b>#{idx}. {rule_label}</b>"
+                badge_text = f"<font color='{c_danger.hexval()}'><b>{failed_count} Flagged Item{'s' if failed_count != 1 else ''}</b></font> &nbsp;|&nbsp; <font color='{c_success.hexval()}'><b>Checked and reliable</b></font>"
 
-                hdr_table = Table([[Paragraph(header_text, style_body_bold), Paragraph(badge_text, ParagraphStyle('R', parent=style_body_bold, alignment=2))]], colWidths=[374, 160])
+                hdr_table = Table([[Paragraph(header_text, style_body_bold), Paragraph(badge_text, ParagraphStyle('R', parent=style_body_bold, alignment=2))]], colWidths=[330, 204])
                 hdr_table.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, -1), c_danger_bg),
                     ('BOX', (0, 0), (-1, -1), 0.75, c_danger_border),
@@ -1035,10 +1174,9 @@ class ValidationService:
                 ]))
                 card_elements.append(hdr_table)
 
-                # Details block
                 details_data = [
-                    [Paragraph("<b>Target Class:</b>", style_body), Paragraph(target_cls, style_body), Paragraph("<b>Property Path:</b>", style_body), Paragraph(path, style_mono)],
-                    [Paragraph("<b>Constraint Message:</b>", style_body), Paragraph(msg, style_body), Paragraph("<b>Severity:</b>", style_body), Paragraph("<font color='#dc2626'><b>Violation</b></font>", style_body)]
+                    [Paragraph("<b>Target Class:</b>", style_body), Paragraph(target_cls, style_body), Paragraph("<b>Property:</b>", style_body), Paragraph(path, style_mono)],
+                    [Paragraph("<b>Description:</b>", style_body), Paragraph(msg, style_body), Paragraph("<b>Status:</b>", style_body), Paragraph("<font color='#dc2626'><b>Flagged Problem</b></font>", style_body)]
                 ]
                 dt_table = Table(details_data, colWidths=[94, 173, 94, 173])
                 dt_table.setStyle(TableStyle([
@@ -1049,10 +1187,9 @@ class ValidationService:
                 ]))
                 card_elements.append(dt_table)
 
-                # Sample Violations Mini-Table (Top 5 samples)
                 if rule_viols:
                     sample_rows = [
-                        [Paragraph("<b>Sample Focus Node (Item)</b>", style_body_bold), Paragraph("<b>Path</b>", style_body_bold), Paragraph("<b>Value</b>", style_body_bold)]
+                        [Paragraph("<b>Sample Affected Item</b>", style_body_bold), Paragraph("<b>Property</b>", style_body_bold), Paragraph("<b>Value</b>", style_body_bold)]
                     ]
                     sample_limit = min(5, len(rule_viols))
                     for v in rule_viols[:sample_limit]:
@@ -1065,7 +1202,7 @@ class ValidationService:
                     if len(rule_viols) > sample_limit:
                         remainder = len(rule_viols) - sample_limit
                         sample_rows.append([
-                            Paragraph(f"<i>... and {remainder} more affected focus nodes</i>", style_body),
+                            Paragraph(f"<i>... and {remainder} more affected items</i>", style_body),
                             Paragraph("", style_body),
                             Paragraph("", style_body)
                         ])
@@ -1081,23 +1218,89 @@ class ValidationService:
 
                 story.append(KeepTogether(card_elements))
                 story.append(Spacer(1, 10))
-        else:
-            story.append(Paragraph("Failed Test Cases", style_h2))
-            story.append(Paragraph("<b>No failed test cases!</b> The dataset passed all SHACL validation rules.", style_body))
-            story.append(Spacer(1, 10))
 
-        # 5. Passed Checks Summary Section (Compact List)
+        # 5. Unreliable Checks Section ("Checks that need your review")
+        if unreliable_failed_rules:
+            story.append(Paragraph(f"Checks that need your review ({len(unreliable_failed_rules)} Rules)", style_h2))
+            story.append(Paragraph(
+                "<b>Please Note:</b> The following checks flagged items, but the check itself may be wrong, not your data. These checks are kept separate and do not cause a hard failure.",
+                style_body
+            ))
+            story.append(Spacer(1, 8))
+
+            for idx, rule in enumerate(unreliable_failed_rules, 1):
+                rule_shape_iri = rule.get("shape_iri", "")
+                rule_viols = violations_by_shape.get(rule_shape_iri, [])
+                failed_count = rule.get("failed_items_count", len(rule_viols))
+                target_cls = rule.get("target_class_short", "All Items")
+                rule_label = rule.get("rule_text") or rule.get("label", "Quality Check")
+
+                msg = rule_viols[0].get("message", "Constraint violated") if rule_viols else "Rule violated"
+                path = rule_viols[0].get("path_short", "N/A") if rule_viols else "N/A"
+
+                card_elements = []
+
+                header_text = f"<b>#{idx}. {rule_label}</b>"
+                badge_text = f"<font color='{c_warning.hexval()}'><b>We're not sure this check is right. Please review.</b></font>"
+
+                hdr_table = Table([[Paragraph(header_text, style_body_bold), Paragraph(badge_text, ParagraphStyle('R', parent=style_body_bold, alignment=2))]], colWidths=[290, 244])
+                hdr_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), c_warning_bg),
+                    ('BOX', (0, 0), (-1, -1), 0.75, c_warning_border),
+                    ('PADDING', (0, 0), (-1, -1), 5),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ]))
+                card_elements.append(hdr_table)
+
+                review_note = f"This check flagged {failed_count} items. The check itself may be wrong, not your data."
+                details_data = [
+                    [Paragraph("<b>Target Class:</b>", style_body), Paragraph(target_cls, style_body), Paragraph("<b>Property:</b>", style_body), Paragraph(path, style_mono)],
+                    [Paragraph("<b>Review Note:</b>", style_body), Paragraph(f"<i>{review_note}</i>", style_body), Paragraph("<b>Flagged:</b>", style_body), Paragraph(f"{failed_count} items", style_body)]
+                ]
+                dt_table = Table(details_data, colWidths=[94, 173, 94, 173])
+                dt_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), c_bg_light),
+                    ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#f1f5f9")),
+                    ('PADDING', (0, 0), (-1, -1), 4),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ]))
+                card_elements.append(dt_table)
+
+                if rule_viols:
+                    sample_rows = [
+                        [Paragraph("<b>Sample Flagged Item</b>", style_body_bold), Paragraph("<b>Property</b>", style_body_bold), Paragraph("<b>Value</b>", style_body_bold)]
+                    ]
+                    sample_limit = min(3, len(rule_viols))
+                    for v in rule_viols[:sample_limit]:
+                        sample_rows.append([
+                            Paragraph(v.get("focus_node_short", ""), style_mono),
+                            Paragraph(v.get("path_short", ""), style_mono),
+                            Paragraph(str(v.get("value", "") or "—"), style_body)
+                        ])
+                    sample_table = Table(sample_rows, colWidths=[234, 160, 140])
+                    sample_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                        ('PADDING', (0, 0), (-1, -1), 4),
+                        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, c_bg_light])
+                    ]))
+                    card_elements.append(sample_table)
+
+                story.append(KeepTogether(card_elements))
+                story.append(Spacer(1, 10))
+
+        # 6. Passed Checks Summary Section
         passed_rules = [r for r in rules if r.get("status") == "Pass" and r.get("failed_items_count", 0) == 0]
         if passed_rules:
             story.append(Paragraph(f"Passed Checks ({len(passed_rules)} Rules)", style_h2))
-            
+
             pass_rows = [
-                [Paragraph("<b>Rule / Question Name</b>", style_body_bold), Paragraph("<b>Target Class</b>", style_body_bold), Paragraph("<b>Status</b>", style_body_bold)]
+                [Paragraph("<b>Rule Description</b>", style_body_bold), Paragraph("<b>Target Class</b>", style_body_bold), Paragraph("<b>Status</b>", style_body_bold)]
             ]
             for r in passed_rules:
                 pass_rows.append([
-                    Paragraph(r.get("label", ""), style_body),
-                    Paragraph(r.get("target_class_short", "All Nodes"), style_body),
+                    Paragraph(r.get("rule_text") or r.get("label", ""), style_body),
+                    Paragraph(r.get("target_class_short", "All Items"), style_body),
                     Paragraph("<font color='#059669'><b>✓ PASS</b></font>", style_body)
                 ])
 

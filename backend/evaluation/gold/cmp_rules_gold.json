@@ -1,0 +1,44 @@
+[
+  {
+    "id": "RULE-01",
+    "question": "Every CMP process run must have a valid measurement timestamp and record at least one wafer input.",
+    "target_class": "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#CMPProcess",
+    "gold_shacl": "@prefix sh: <http://www.w3.org/ns/shacl#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n\ninst:Question_1_Shape a sh:NodeShape ;\n    sh:targetClass cmpo:CMPProcess ;\n    sh:property [\n        sh:path cmpo:hasTimestamp ;\n        sh:minCount 1 ;\n        sh:datatype xsd:dateTime ;\n        sh:message \"Every CMP process run must have a valid measurement timestamp (xsd:dateTime).\"\n    ] ;\n    sh:property [\n        sh:path cmpo:hasInput ;\n        sh:minCount 1 ;\n        sh:message \"Every CMP process run must specify at least one wafer input via hasInput.\"\n    ] .",
+    "positive_cases": [
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Run_A a cmpo:CMPProcess ;\n    cmpo:hasTimestamp \"2026-03-31T10:00:00Z\"^^xsd:dateTime ;\n    cmpo:hasInput inst:Wafer_101 .",
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Run_B a cmpo:CMPProcess ;\n    cmpo:hasTimestamp \"2026-03-31T11:30:00Z\"^^xsd:dateTime ;\n    cmpo:hasInput inst:Wafer_102, inst:Wafer_103 ."
+    ],
+    "negative_cases": [
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n\ninst:Run_Bad_NoTimestamp a cmpo:CMPProcess ;\n    cmpo:hasInput inst:Wafer_101 .",
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Run_Bad_NoInput a cmpo:CMPProcess ;\n    cmpo:hasTimestamp \"2026-03-31T10:00:00Z\"^^xsd:dateTime ."
+    ]
+  },
+  {
+    "id": "RULE-02",
+    "question": "Pressure parameter values must be measured in 'psi' units and have a non-negative numeric value.",
+    "target_class": "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#Pressure",
+    "gold_shacl": "@prefix sh: <http://www.w3.org/ns/shacl#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n\ninst:Question_2_Shape a sh:NodeShape ;\n    sh:targetClass cmpo:Pressure ;\n    sh:property [\n        sh:path cmpo:hasNumericValue ;\n        sh:minCount 1 ;\n        sh:datatype xsd:float ;\n        sh:minInclusive 0.0 ;\n        sh:message \"Pressure numeric value must be a non-negative float.\"\n    ] ;\n    sh:property [\n        sh:path cmpo:hasUnit ;\n        sh:minCount 1 ;\n        sh:hasValue \"psi\" ;\n        sh:message \"Pressure values must be measured in 'psi' units.\"\n    ] .",
+    "positive_cases": [
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Pressure_1 a cmpo:Pressure ;\n    cmpo:hasNumericValue \"4.2\"^^xsd:float ;\n    cmpo:hasUnit \"psi\" .",
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Pressure_Zero a cmpo:Pressure ;\n    cmpo:hasNumericValue \"0.0\"^^xsd:float ;\n    cmpo:hasUnit \"psi\" ."
+    ],
+    "negative_cases": [
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Pressure_Negative a cmpo:Pressure ;\n    cmpo:hasNumericValue \"-2.5\"^^xsd:float ;\n    cmpo:hasUnit \"psi\" .",
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Pressure_WrongUnit a cmpo:Pressure ;\n    cmpo:hasNumericValue \"4.2\"^^xsd:float ;\n    cmpo:hasUnit \"bar\" ."
+    ]
+  },
+  {
+    "id": "RULE-03",
+    "question": "Rotation speed of polishing heads must be measured in 'rpm' and must not exceed 150 rpm.",
+    "target_class": "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#Velocity",
+    "gold_shacl": "@prefix sh: <http://www.w3.org/ns/shacl#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n\ninst:Question_3_Shape a sh:NodeShape ;\n    sh:targetClass cmpo:Velocity ;\n    sh:property [\n        sh:path cmpo:hasNumericValue ;\n        sh:minCount 1 ;\n        sh:datatype xsd:float ;\n        sh:minInclusive 0.0 ;\n        sh:maxInclusive 150.0 ;\n        sh:message \"Velocity rotation speed must be between 0.0 and 150.0 rpm.\"\n    ] ;\n    sh:property [\n        sh:path cmpo:hasUnit ;\n        sh:minCount 1 ;\n        sh:hasValue \"rpm\" ;\n        sh:message \"Velocity rotation speeds must be measured in 'rpm' units.\"\n    ] .",
+    "positive_cases": [
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Speed_Normal a cmpo:Velocity ;\n    cmpo:hasNumericValue \"120.0\"^^xsd:float ;\n    cmpo:hasUnit \"rpm\" .",
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Speed_Max a cmpo:Velocity ;\n    cmpo:hasNumericValue \"150.0\"^^xsd:float ;\n    cmpo:hasUnit \"rpm\" ."
+    ],
+    "negative_cases": [
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Speed_TooHigh a cmpo:Velocity ;\n    cmpo:hasNumericValue \"180.0\"^^xsd:float ;\n    cmpo:hasUnit \"rpm\" .",
+      "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\ninst:Speed_WrongUnit a cmpo:Velocity ;\n    cmpo:hasNumericValue \"120.0\"^^xsd:float ;\n    cmpo:hasUnit \"rad/s\" ."
+    ]
+  }
+]
