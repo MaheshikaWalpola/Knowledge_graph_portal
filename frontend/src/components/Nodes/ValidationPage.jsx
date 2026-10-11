@@ -162,6 +162,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [copied, setCopied] = useState(false);
   const [shaclGenerationSteps, setShaclGenerationSteps] = useState([]);
   const [verificationMap, setVerificationMap] = useState({});
+  const [verifying, setVerifying] = useState(false);
 
   //  Step 3 
   const [playgroundSchemaText, setPlaygroundSchemaText] = useState("");
@@ -170,6 +171,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [playgroundSchemaFullText, setPlaygroundSchemaFullText] = useState("");
   const [playgroundInstancesFullText, setPlaygroundInstancesFullText] = useState("");
   const [playgroundReport, setPlaygroundReport] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [expandedRules, setExpandedRules] = useState({});
   const [expandedAdvanced, setExpandedAdvanced] = useState({});
   const [validationSteps, setValidationSteps] = useState([]);
@@ -401,7 +403,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       ? { 
                           ...step, 
                           status: event.result_status,
-                          verification: event.verification || "verified",
+                          verification: event.verification || undefined,
                           attempts: event.attempts || 1,
                           unknown_terms: event.unknown_terms || [],
                           failed_examples: event.failed_examples || [],
@@ -455,7 +457,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 if (event.verification_map) {
                   setVerificationMap(event.verification_map);
                 }
-                setSuccess("Rules generated and checked successfully!");
+                setSuccess("SHACL shapes generated. Use \"Verify Shapes\" to run an extra correctness check.");
               }
             } catch (e) {
               console.error("Failed to parse shape stream chunk", e);
@@ -468,6 +470,96 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
       setActiveStep(1);
     } finally {
       setLoading(false);
+    }
+  };
+
+  //  Step 2: Optional further check (verify & repair generated shapes)
+  const handleVerifyShacl = async () => {
+    const rules = shaclGenerationSteps.map(step => step.rule);
+    if (rules.length === 0 || !shaclCode.trim()) return;
+
+    setVerifying(true);
+    setError(null);
+    setSuccess(null);
+    setShaclGenerationSteps(prev => prev.map(step => ({ ...step, status: "generating", verification: undefined })));
+
+    const formData = new FormData();
+    formData.append("rules", JSON.stringify(rules));
+    formData.append("shapes_ttl", shaclCode);
+    if (combinedFile) formData.append("schema_file", combinedFile);
+    else if (schemaFile) formData.append("schema_file", schemaFile);
+
+    try {
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await fetch(`${API}/validation/verify-shacl-stream`, {
+        method: "POST",
+        headers,
+        body: formData
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `Server error ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          try {
+            const event = JSON.parse(line.slice(5).trim());
+            if (event.status === "verifying") {
+              setShaclGenerationSteps(prev => prev.map((step, idx) =>
+                idx === event.index
+                  ? { ...step, status: "verifying", verifyStage: event.stage, message: event.message }
+                  : step
+              ));
+            } else if (event.status === "progress") {
+              setShaclGenerationSteps(prev => prev.map((step, idx) =>
+                idx === event.index
+                  ? {
+                      ...step,
+                      status: "success",
+                      verification: event.verification,
+                      attempts: event.attempts || 1,
+                      unknown_terms: event.unknown_terms || [],
+                      failed_examples: event.failed_examples || [],
+                      reason: event.reason || ""
+                    }
+                  : step
+              ));
+            } else if (event.status === "completed") {
+              if (event.shacl_ttl) {
+                setShaclCode(event.shacl_ttl);
+                setPlaygroundShaclText(event.shacl_ttl);
+              }
+              if (event.verification_map) setVerificationMap(event.verification_map);
+              setSuccess("Verification finished. Shapes were updated where fixes were needed.");
+            } else if (event.status === "error") {
+              throw new Error(event.message || "Verification failed.");
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) console.error("Failed to parse verify stream chunk", e);
+            else throw e;
+          }
+        }
+      }
+    } catch (err) {
+      setError(err.message || "Failed to verify SHACL shapes.");
+      setShaclGenerationSteps(prev => prev.map(step =>
+        step.status === "generating" || step.status === "verifying" ? { ...step, status: "success" } : step
+      ));
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -616,20 +708,41 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   //  Step 3: Download PDF 
   const handleDownloadPDF = async (reportData) => {
     if (!reportData) return;
+    setDownloadingPdf(true);
+    setError(null);
     try {
       const res = await axios.post(`${API}/validation/export-pdf`, { report_data: reportData }, {
         ...getAuthConfig(),
         responseType: "blob"
       });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "validation_report.pdf");
+      link.setAttribute("download", `validation_report_${new Date().toISOString().slice(0, 10)}.pdf`);
       document.body.appendChild(link);
       link.click();
-      link.remove();
-    } catch {
-      setError("Failed to export PDF report.");
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        link.remove();
+      }, 200);
+    } catch (err) {
+      console.error("PDF download error:", err);
+      let errorMsg = "Failed to export PDF report.";
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          if (parsed.detail) errorMsg = `Failed to export PDF: ${parsed.detail}`;
+        } catch { /* use default */ }
+      } else if (err.response?.data?.detail) {
+        errorMsg = `Failed to export PDF: ${err.response.data.detail}`;
+      } else if (err.message) {
+        errorMsg = `Failed to export PDF: ${err.message}`;
+      }
+      setError(errorMsg);
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -967,7 +1080,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   <Card variant="outlined" sx={{ mb: 3, border: "1px solid var(--border-light)", bgcolor: "var(--bg-glass-strong)" }}>
                     <CardContent sx={{ pb: '16px !important' }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
-                        {loading ? "Generating & Checking Rules..." : "Rule Generation Status"}
+                        {loading ? "Generating Rules..." : verifying ? "Verifying Rules..." : "Rule Generation Status"}
                       </Typography>
                       <Stack spacing={1}>
                         {shaclGenerationSteps.map((step, idx) => (
@@ -1026,17 +1139,28 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1 }}>
                   <Typography variant="h6">Generated SHACL Shapes</Typography>
-                  <button 
-                    className={`validation-copy-btn ${copied ? "copied" : ""}`} 
-                    onClick={handleCopyShacl}
-                    disabled={loading}
-                  >
-                    {copied ? <><CheckIcon sx={{ fontSize: 16 }} /> Copied!</> : <><ContentCopyIcon sx={{ fontSize: 16 }} /> Copy to Clipboard</>}
-                  </button>
+                  <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={handleVerifyShacl}
+                      disabled={loading || verifying || !shaclCode.trim()}
+                      startIcon={verifying ? <CircularProgress size={16} /> : <VerifiedIcon />}
+                    >
+                      {verifying ? "Verifying..." : "Verify Shapes"}
+                    </Button>
+                    <button 
+                      className={`validation-copy-btn ${copied ? "copied" : ""}`} 
+                      onClick={handleCopyShacl}
+                      disabled={loading || verifying}
+                    >
+                      {copied ? <><CheckIcon sx={{ fontSize: 16 }} /> Copied!</> : <><ContentCopyIcon sx={{ fontSize: 16 }} /> Copy to Clipboard</>}
+                    </button>
+                  </Box>
                 </Box>
 
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                  AI has compiled your questions into SHACL shapes (Turtle format). You can edit the code, copy it to an external SHACL playground, or proceed to validate in-app.
+                  AI has compiled your questions into SHACL shapes (Turtle format). You can edit the code, copy it to an external SHACL playground, or proceed to validate in-app. To double-check the shapes, click "Verify Shapes" - each rule is tested and automatically fixed if needed.
                 </Typography>
 
                 <TextField
@@ -1045,10 +1169,18 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   fullWidth
                   variant="outlined"
                   value={shaclCode}
-                  onChange={(e) => { setShaclCode(e.target.value); setPlaygroundShaclText(e.target.value); }}
-                  InputProps={{ 
+                  onChange={(e) => {
+                    setShaclCode(e.target.value);
+                    setPlaygroundShaclText(e.target.value);
+                    // Manual edits invalidate any previous verification result
+                    if (Object.keys(verificationMap).length > 0) {
+                      setVerificationMap({});
+                      setShaclGenerationSteps(prev => prev.map(step => ({ ...step, verification: undefined })));
+                    }
+                  }}
+                  InputProps={{
                     className: "validation-code-area",
-                    readOnly: loading 
+                    readOnly: loading || verifying
                   }}
                   sx={{ mb: 2 }}
                 />
@@ -1382,7 +1514,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                             <Button 
                               variant="outlined" 
                               size="small"
-                              startIcon={<DownloadIcon />} 
+                              disabled={downloadingPdf}
+                              startIcon={downloadingPdf ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />} 
                               onClick={() => handleDownloadPDF(playgroundReport)}
                               sx={{ 
                                 borderColor: 'rgba(255,255,255,0.5)', 
@@ -1391,7 +1524,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                                 '&:hover': { borderColor: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.15)' }
                               }}
                             >
-                              PDF Report
+                              {downloadingPdf ? "Generating..." : "PDF Report"}
                             </Button>
                           </Box>
                         </Box>
@@ -1613,6 +1746,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
             {activeStep === 3 && (
               <Box sx={{ display: "flex", gap: 1 }}>
                 <Button variant="outlined" onClick={handleReset}>Start Over</Button>
+                {playgroundReport && (
+                  <Button 
+                    variant="outlined" 
+                    disabled={downloadingPdf}
+                    startIcon={downloadingPdf ? <CircularProgress size={18} /> : <DownloadIcon />} 
+                    onClick={() => handleDownloadPDF(playgroundReport)}
+                  >
+                    {downloadingPdf ? "Generating PDF..." : "Download PDF Report"}
+                  </Button>
+                )}
                 <Button variant="contained" onClick={handlePlaygroundValidate} disabled={loading} startIcon={loading ? <CircularProgress size={20} /> : <PlayArrowIcon />}>
                   Run Validation
                 </Button>
