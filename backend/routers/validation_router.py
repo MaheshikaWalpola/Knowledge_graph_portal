@@ -165,6 +165,7 @@ async def api_generate_shacl_stream(
 async def api_verify_shacl_stream(
     rules: str = Form(...),       # JSON array of the plain-English rules, in generation order
     shapes_ttl: str = Form(...),  # current SHACL shapes (Turtle)
+    indices: Optional[str] = Form(None),  # optional JSON array of rule indices to (re)check only
     schema_id: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
     current_user: Any = Depends(get_current_user)
@@ -176,6 +177,10 @@ async def api_verify_shacl_stream(
         rules_list = json.loads(rules)
     except Exception:
         raise HTTPException(400, detail="Invalid JSON array format for 'rules'.")
+    try:
+        indices_list = [int(i) for i in json.loads(indices)] if indices else None
+    except Exception:
+        raise HTTPException(400, detail="Invalid JSON array format for 'indices'.")
 
     schema_content = None
     if schema_file:
@@ -187,8 +192,9 @@ async def api_verify_shacl_stream(
             print(f"Error fetching workspace schema: {e}")
 
     async def event_generator():
-        with _timed(f"SHACL verification ({len(rules_list)} rules)", start):
-            async for event in validation_service.verify_shacl_shapes_stream(rules_list, shapes_ttl, schema_content):
+        checked = len(indices_list) if indices_list is not None else len(rules_list)
+        with _timed(f"SHACL verification ({checked} rules)", start):
+            async for event in validation_service.verify_shacl_shapes_stream(rules_list, shapes_ttl, schema_content, indices_list):
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)
 

@@ -56,6 +56,98 @@ class NumberedCanvas(canvas.Canvas):
         
         self.restoreState()
 
+def _shape_subgraph(graph: Graph, subject) -> Graph:
+    """Concise bounded description: subject triples plus nested blank nodes."""
+    from rdflib import BNode
+    out = Graph()
+    seen, stack = set(), [subject]
+    while stack:
+        node = stack.pop()
+        if node in seen:
+            continue
+        seen.add(node)
+        for p, o in graph.predicate_objects(node):
+            out.add((node, p, o))
+            if isinstance(o, BNode):
+                stack.append(o)
+    for prefix, ns in graph.namespaces():
+        out.bind(prefix, ns)
+    return out
+
+
+def _serialize_shapes_in_order(graph: Graph, ordered_subjects: List[Any]) -> str:
+    """
+    Serialize shapes as Turtle in the given subject order (rdflib alone sorts subjects
+    alphabetically, which puts Question_10 before Question_2). Triples not reachable from
+    any listed subject are appended at the end.
+    """
+    full = graph.serialize(format="turtle")
+    prefix_lines = [ln for ln in full.splitlines() if ln.startswith("@prefix")]
+
+    def body(g: Graph) -> str:
+        return "\n".join(ln for ln in g.serialize(format="turtle").splitlines()
+                         if not ln.startswith("@prefix")).strip()
+
+    blocks, covered = [], set()
+    for subj in ordered_subjects:
+        if subj is None or (subj, None, None) not in graph:
+            continue
+        sub = _shape_subgraph(graph, subj)
+        if all(t in covered for t in sub):
+            continue
+        covered.update(sub)
+        blocks.append(body(sub))
+
+    rest = Graph()
+    for t in graph:
+        if t not in covered:
+            rest.add(t)
+    if len(rest):
+        for prefix, ns in graph.namespaces():
+            rest.bind(prefix, ns)
+        blocks.append(body(rest))
+
+    return "\n".join(prefix_lines) + "\n\n" + "\n\n".join(b for b in blocks if b) + "\n"
+
+
+VERIFICATION_LABELS = {
+    "verified": "Verified by AI",
+    "repaired": "Fixed by AI",
+    "unverified": "AI could not verify",
+    "not_checked": "Not checked by AI",
+}
+
+
+def _verification_advice(meta: Dict[str, Any]) -> str:
+    """Plain-language next step for a rule whose shape the AI could not verify or fix."""
+    if meta.get("verification") != "unverified":
+        return ""
+    reason = (meta.get("reason") or "").lower()
+    if "unavailable" in reason or "not found" in reason:
+        if "not found" in reason:
+            return ("The shape for this question could not be found in the SHACL code. "
+                    "Check that it still has its rdfs:label, or regenerate the shapes.")
+        return "The AI service could not be reached. Click \"Retry AI fix\" to try again."
+    tips = []
+    unknown = meta.get("unknown_terms") or []
+    if unknown:
+        tips.append(f"It uses terms that are not in your ontology ({', '.join(unknown[:5])}); "
+                    "replace them with the correct class or property names.")
+    for fe in (meta.get("failed_examples") or [])[:2]:
+        if fe.get("expected") == "invalid" and fe.get("actual") == "conforms":
+            tips.append("It accepted test data that breaks the rule, so it may be too loose "
+                        "(check sh:minCount, sh:datatype and value limits).")
+        elif fe.get("expected") == "valid" and fe.get("actual") == "violates":
+            tips.append("It rejected test data that follows the rule, so it may be too strict "
+                        "or target the wrong class (check sh:targetClass and sh:path).")
+    tips = list(dict.fromkeys(tips))
+    if not tips:
+        tips.append("Its behaviour did not match the question in the AI's tests.")
+    return ("The AI tried to fix this shape automatically but could not confirm it. "
+            + " ".join(tips)
+            + " Review the shape manually, or click \"Retry AI fix\".")
+
+
 class ValidationService:
     def __init__(self):
         self.llm = LocalLLMService()
@@ -425,10 +517,19 @@ class ValidationService:
         final_ttl = ""
         if completed_shapes:
             g = Graph()
+            ordered_subjects = []
             for idx in sorted(completed_shapes.keys()):
                 chunk = completed_shapes[idx]
                 try:
-                    g.parse(data=chunk, format="turtle")
+                    chunk_g = Graph()
+                    chunk_g.parse(data=chunk, format="turtle")
+                    for t in chunk_g:
+                        g.add(t)
+                    for prefix, ns in chunk_g.namespaces():
+                        g.bind(prefix, ns, override=False)
+                    for s_ in chunk_g.subjects(unique=True):
+                        if isinstance(s_, URIRef) and s_ not in ordered_subjects:
+                            ordered_subjects.append(s_)
                 except Exception as parse_err:
                     print(f"rdflib failed to parse chunk {idx}: {parse_err}. Using fallback concatenation later if needed.")
 
@@ -439,7 +540,7 @@ class ValidationService:
                 g.bind("cmpo", Namespace("https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#"))
                 g.bind("inst", Namespace("https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/"))
 
-                final_ttl = g.serialize(format="turtle")
+                final_ttl = _serialize_shapes_in_order(g, ordered_subjects)
             except Exception as ser_err:
                 print(f"rdflib serialization failed: {ser_err}")
                 final_ttl = "\n\n".join(completed_shapes[idx] for idx in sorted(completed_shapes.keys()))
@@ -448,15 +549,16 @@ class ValidationService:
 
         yield {"status": "completed", "shacl_ttl": final_ttl.strip(), "verification_map": verification_map}
 
-    async def verify_shacl_shapes_stream(self, rules: List[str], shapes_ttl: str, schema_content: Optional[str] = None):
+    async def verify_shacl_shapes_stream(self, rules: List[str], shapes_ttl: str, schema_content: Optional[str] = None,
+                                         indices: Optional[List[int]] = None):
         """
         On-demand verification of already generated SHACL shapes.
         Each rule's shape is located in shapes_ttl (by rdfs:label, falling back to inst:Question_N_Shape),
-        checked/repaired concurrently, and written back into the merged graph.
+        checked/repaired concurrently, and written back into the merged graph in question order.
+        If indices is given, only those rules are (re)checked, e.g. to retry the ones the AI could not verify.
         """
         import asyncio
         from concurrent.futures import ThreadPoolExecutor
-        from rdflib import Graph, URIRef, BNode
         from rdflib.namespace import RDFS
 
         schema_text = schema_content or "No schema provided."
@@ -470,23 +572,6 @@ class ValidationService:
             yield {"status": "error", "message": f"Shapes are not valid Turtle: {e}"}
             return
 
-        def cbd(graph: Graph, subject) -> Graph:
-            """Concise bounded description: subject triples plus nested blank nodes."""
-            out = Graph()
-            seen, stack = set(), [subject]
-            while stack:
-                node = stack.pop()
-                if node in seen:
-                    continue
-                seen.add(node)
-                for p, o in graph.predicate_objects(node):
-                    out.add((node, p, o))
-                    if isinstance(o, BNode):
-                        stack.append(o)
-            for prefix, ns in graph.namespaces():
-                out.bind(prefix, ns)
-            return out
-
         def find_subject(idx: int, rule: str):
             clean = rule.replace('"', '').strip()
             for s_, _, o in g.triples((None, RDFS.label, None)):
@@ -498,6 +583,7 @@ class ValidationService:
             return None
 
         subjects = {i: find_subject(i, r) for i, r in enumerate(rules)}
+        targets = [i for i in range(len(rules)) if indices is None or i in set(indices)]
         verification_map = {}
         loop = asyncio.get_running_loop()
         queue = asyncio.Queue()
@@ -511,7 +597,7 @@ class ValidationService:
                     "failed_examples": [], "reason": "Shape for this rule not found in the current code"
                 })
                 return
-            snippet = cbd(g, subj).serialize(format="turtle")
+            snippet = _shape_subgraph(g, subj).serialize(format="turtle")
 
             def on_progress(stage: str):
                 label = "Checking rule…" if stage != "repairing" else "Fixing rule…"
@@ -535,15 +621,15 @@ class ValidationService:
                 **{k: v for k, v in v_res.items() if k != "shape_ttl"}
             })
 
-        yield {"status": "start", "total": len(rules)}
-        remaining = len(rules)
+        yield {"status": "start", "total": len(targets)}
+        remaining = len(targets)
         if remaining == 0:
             yield {"status": "completed", "shacl_ttl": shapes_ttl, "verification_map": {}}
             return
 
-        with ThreadPoolExecutor(max_workers=min(len(rules), 10)) as executor:
-            for i, rule in enumerate(rules):
-                executor.submit(process, i, rule)
+        with ThreadPoolExecutor(max_workers=min(remaining, 10)) as executor:
+            for i in targets:
+                executor.submit(process, i, rules[i])
 
             while remaining > 0:
                 event = await queue.get()
@@ -556,17 +642,22 @@ class ValidationService:
                 verification = event.get("verification", "unverified")
                 new_ttl = event.get("shacl")
 
-                # Write a changed/repaired shape back into the merged graph
+                # Write a changed/repaired shape back into the merged graph.
+                # Unverified shapes keep their original code so the user's version is not replaced by a failed fix.
                 if new_ttl and subjects[idx] is not None and verification in ("verified", "repaired"):
                     new_g = Graph()
                     try:
                         new_g.parse(data=new_ttl, format="turtle")
-                        for t in list(cbd(g, subjects[idx])):
+                        for t in list(_shape_subgraph(g, subjects[idx])):
                             g.remove(t)
                         for t in new_g:
                             g.add(t)
                         for prefix, ns in new_g.namespaces():
                             g.bind(prefix, ns, override=False)
+                        # The repaired shape may use a different IRI; follow it so ordering stays correct
+                        new_roots = [s_ for s_ in new_g.subjects(unique=True) if isinstance(s_, URIRef)]
+                        if new_roots and subjects[idx] not in new_roots:
+                            subjects[idx] = new_roots[0]
                     except Exception as parse_err:
                         print(f"Could not merge verified shape {idx}: {parse_err}")
 
@@ -578,14 +669,18 @@ class ValidationService:
                     "failed_examples": event.get("failed_examples", []),
                     "reason": event.get("reason", ""),
                 }
+                meta["advice"] = _verification_advice(meta)
                 verification_map[f"inst:Question_{idx+1}_Shape"] = meta
                 verification_map[str(idx)] = meta
+                if subjects[idx] is not None:
+                    verification_map[str(subjects[idx])] = meta
                 remaining -= 1
                 yield {"status": "progress", "index": idx, "rule": event["rule"],
-                       **{k: meta[k] for k in ("verification", "attempts", "unknown_terms", "failed_examples", "reason")}}
+                       **{k: meta[k] for k in ("verification", "attempts", "unknown_terms", "failed_examples", "reason", "advice")}}
 
         self.last_verification_map = verification_map
-        yield {"status": "completed", "shacl_ttl": g.serialize(format="turtle").strip(),
+        ordered = [subjects[i] for i in range(len(rules))]
+        yield {"status": "completed", "shacl_ttl": _serialize_shapes_in_order(g, ordered).strip(),
                "verification_map": verification_map}
 
     def validate_rdf_stream(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None, verification_metadata: Optional[Dict[str, Any]] = None):
@@ -800,6 +895,17 @@ class ValidationService:
         violated_shapes = set()
         shape_failed_nodes = {}
 
+        # pyshacl reports the nested `sh:property [ ... ]` blank node as sourceShape; map it back to the
+        # question's top-level shape so failures are attributed to the right rule.
+        from rdflib import BNode
+        owner_shape = {}
+        for top in shape_nodes_set:
+            if isinstance(top, BNode):
+                continue
+            for s_, _, _ in _shape_subgraph(g_shapes, top):
+                if isinstance(s_, BNode) and s_ not in shape_nodes_set:
+                    owner_shape.setdefault(str(s_), top)
+
         for result_node in results_graph.subjects(RDF.type, SH.ValidationResult):
             focus_node = results_graph.value(result_node, SH.focusNode)
             path = results_graph.value(result_node, SH.resultPath)
@@ -807,6 +913,8 @@ class ValidationService:
             source_shape = results_graph.value(result_node, SH.sourceShape)
             message = results_graph.value(result_node, SH.resultMessage)
             val = results_graph.value(result_node, SH.value)
+            if source_shape is not None:
+                source_shape = owner_shape.get(str(source_shape), source_shape)
 
             if source_shape:
                 src_str = str(source_shape)
@@ -886,11 +994,14 @@ class ValidationService:
                         break
 
             rule_text = meta.get("rule_text") if meta else (str(label) if label else shape_short)
-            verification_status = meta.get("verification", "verified") if meta else "verified"
+            # Shapes the user never ran "Verify Shapes" on are reported honestly as not checked
+            verification_status = (meta.get("verification") if meta else None) or "not_checked"
             attempts = meta.get("attempts", 1) if meta else 1
             unknown_terms = meta.get("unknown_terms", []) if meta else []
             failed_examples = meta.get("failed_examples", []) if meta else []
             reason = meta.get("reason", "") if meta else ""
+            advice = (meta.get("advice") if meta else "") or _verification_advice({**(meta or {}), "verification": verification_status})
+            q_match = re.search(r"Question_(\d+)_Shape", shape_str)
 
             # Ensure label displays plain-English sentence instead of Question_X_Shape
             display_label = rule_text or (str(label) if label else shape_short)
@@ -910,10 +1021,14 @@ class ValidationService:
                 "attempts": attempts,
                 "unknown_terms": unknown_terms,
                 "failed_examples": failed_examples,
-                "reason": reason
+                "reason": reason,
+                "advice": advice,
+                "verification_label": VERIFICATION_LABELS.get(verification_status, verification_status),
+                "question_number": int(q_match.group(1)) if q_match else None
             })
 
-        all_shapes.sort(key=lambda x: x["label"].lower())
+        # Keep the order the questions were asked in; shapes without a question number go last
+        all_shapes.sort(key=lambda x: (x["question_number"] is None, x["question_number"] or 0, x["label"].lower()))
 
         total_questions = len(all_shapes)
         passed_questions = sum(1 for r in all_shapes if r["status"] == "Pass")
@@ -933,20 +1048,15 @@ class ValidationService:
         warning_count = sum(1 for v in violations if v.get("severity", "Violation") == "Warning")
         affected_focus_nodes = len(set(v["focus_node"] for v in violations if v.get("focus_node")))
 
-        # Separate into reliable vs unreliable
-        reliable_rules = [
-            r for r in all_shapes
-            if r.get("verification") in ("verified", "repaired") and not r.get("suspicious")
-        ]
-        unreliable_rules = [
-            r for r in all_shapes
-            if r.get("verification") == "unverified" or r.get("suspicious")
-        ]
+        # Separate into reliable vs needs-review. Only shapes the AI tried and failed to verify, or that
+        # look suspicious, need review; shapes nobody asked to verify are listed normally as "Not checked by AI".
+        def needs_review(r):
+            return r.get("verification") == "unverified" or r.get("suspicious")
 
-        shape_is_reliable = {
-            r["shape_iri"]: (r.get("verification") in ("verified", "repaired") and not r.get("suspicious"))
-            for r in all_shapes
-        }
+        reliable_rules = [r for r in all_shapes if not needs_review(r)]
+        unreliable_rules = [r for r in all_shapes if needs_review(r)]
+
+        shape_is_reliable = {r["shape_iri"]: not needs_review(r) for r in all_shapes}
         for r in all_shapes:
             shape_is_reliable[r["shape_short"]] = shape_is_reliable[r["shape_iri"]]
 
@@ -963,12 +1073,13 @@ class ValidationService:
         repaired_count = sum(1 for r in all_shapes if r.get("verification") == "repaired")
         unverified_count = sum(1 for r in all_shapes if r.get("verification") == "unverified")
         suspicious_count = sum(1 for r in all_shapes if r.get("suspicious"))
+        not_checked_count = sum(1 for r in all_shapes if r.get("verification") == "not_checked")
         total_rules = len(all_shapes)
 
         # Gate decision:
         # Unverified rules must NEVER cause a hard FAIL by themselves. If only unverified rules have violations, gate decision is "Needs review".
         failed_rules = [r for r in all_shapes if r["status"] != "Pass" or r["failed_items_count"] > 0]
-        failed_reliable = [r for r in failed_rules if r.get("verification") in ("verified", "repaired") and not r.get("suspicious")]
+        failed_reliable = [r for r in failed_rules if not needs_review(r)]
 
         if conforms or len(failed_rules) == 0:
             gate_decision = "Pass"
@@ -1005,6 +1116,7 @@ class ValidationService:
                 "repaired_count": repaired_count,
                 "unverified_count": unverified_count,
                 "suspicious_count": suspicious_count,
+                "not_checked_count": not_checked_count,
                 "total_rules": total_rules,
                 "rules": all_shapes,
                 "reliable_rules": reliable_rules,
@@ -1178,8 +1290,15 @@ class ValidationService:
         unverified_cnt = report_data.get("unverified_count", sum(1 for r in rules if r.get("verification") == "unverified"))
         suspicious_cnt = report_data.get("suspicious_count", sum(1 for r in rules if r.get("suspicious")))
 
-        reliable_cnt = verified_cnt + repaired_cnt - sum(1 for r in rules if r.get("suspicious") and r.get("verification") in ("verified", "repaired"))
-        unreliable_cnt = total_q - reliable_cnt
+        unreliable_cnt = sum(1 for r in rules if r.get("verification") == "unverified" or r.get("suspicious"))
+        reliable_cnt = total_q - unreliable_cnt
+        unverified_ai_cnt = sum(1 for r in rules if r.get("verification") == "unverified")
+        not_checked_cnt = sum(1 for r in rules if r.get("verification") in (None, "", "not_checked"))
+        if not_checked_cnt == len(rules):
+            ai_summary = "Not run (shapes were not verified by AI)"
+        else:
+            ai_summary = (f"{verified_cnt} verified, {repaired_cnt} fixed by AI, "
+                          f"{unverified_ai_cnt} could not be verified, {not_checked_cnt} not checked")
 
         gate_dec = report_data.get("gate_decision", "Pass" if failed_q == 0 else "Fail")
         exec_status = report_data.get("execution_status", "Completed")
@@ -1231,6 +1350,7 @@ class ValidationService:
             [Paragraph("<b>Flagged Problems:</b>", style_body), Paragraph(f"<font color='{viol_color.hexval()}'><b>{violation_cnt:,}</b></font>", style_body)],
             [Paragraph("<b>Flagged Warnings:</b>", style_body), Paragraph(f"<font color='{warn_color.hexval()}'><b>{warning_cnt:,}</b></font>", style_body)],
             [Paragraph("<b>Affected Items:</b>", style_body), Paragraph(f"<font color='{fn_color.hexval()}'><b>{affected_fn:,}</b></font>", style_body)],
+            [Paragraph("<b>AI Verification:</b>", style_body), Paragraph(self._safe_xml(ai_summary), style_body)],
         ]
 
         summary_list_table = Table(summary_rows, colWidths=[150, 384])
@@ -1246,7 +1366,7 @@ class ValidationService:
 
         # 3. Overall Reliability and Compliance Callout Box
         comp_pct = report_data.get("pass_percentage", 0.0)
-        top_reliability_msg = f"{reliable_cnt} of {total_q} checks are reliable, {unreliable_cnt} need your review."
+        top_reliability_msg = f"{unreliable_cnt} of {total_q} checks need your review. AI verification: {self._safe_xml(ai_summary)}."
         
         if gate_dec == "Needs review":
             summary_text = (
@@ -1329,7 +1449,9 @@ class ValidationService:
                 card_elements = []
 
                 header_text = f"<b>#{idx}. {rule_label}</b>"
-                badge_text = f"<font color='{c_danger.hexval()}'><b>{failed_count} Flagged Item{'s' if failed_count != 1 else ''}</b></font> &nbsp;|&nbsp; <font color='{c_success.hexval()}'><b>Checked and reliable</b></font>"
+                ai_color = c_success if rule.get("verification") in ("verified", "repaired") else c_secondary
+                ai_label = self._safe_xml(rule.get("verification_label") or VERIFICATION_LABELS.get(rule.get("verification"), "Not checked by AI"))
+                badge_text = f"<font color='{c_danger.hexval()}'><b>{failed_count} Flagged Item{'s' if failed_count != 1 else ''}</b></font> &nbsp;|&nbsp; <font color='{ai_color.hexval()}'><b>{ai_label}</b></font>"
 
                 hdr_table = Table([[Paragraph(header_text, style_body_bold), Paragraph(badge_text, style_body_right)]], colWidths=[330, 204])
                 hdr_table.setStyle(TableStyle([
@@ -1407,7 +1529,9 @@ class ValidationService:
                 card_elements = []
 
                 header_text = f"<b>#{idx}. {rule_label}</b>"
-                badge_text = f"<font color='{c_warning.hexval()}'><b>We're not sure this check is right. Please review.</b></font>"
+                badge_msg = ("AI could not verify this check. Please review." if rule.get("verification") == "unverified"
+                             else "This check flags almost every item. Please review.")
+                badge_text = f"<font color='{c_warning.hexval()}'><b>{badge_msg}</b></font>"
 
                 hdr_table = Table([[Paragraph(header_text, style_body_bold), Paragraph(badge_text, style_body_right)]], colWidths=[290, 244])
                 hdr_table.setStyle(TableStyle([
@@ -1423,13 +1547,19 @@ class ValidationService:
                     [Paragraph("<b>Target Class:</b>", style_body), Paragraph(target_cls, style_body), Paragraph("<b>Property:</b>", style_body), Paragraph(path, style_mono)],
                     [Paragraph("<b>Review Note:</b>", style_body), Paragraph(f"<i>{review_note}</i>", style_body), Paragraph("<b>Flagged:</b>", style_body), Paragraph(f"{failed_count} items", style_body)]
                 ]
+                advice = rule.get("advice") or ""
+                if advice:
+                    details_data.append([Paragraph("<b>What to do:</b>", style_body), Paragraph(self._safe_xml(advice), style_body), "", ""])
                 dt_table = Table(details_data, colWidths=[94, 173, 94, 173])
-                dt_table.setStyle(TableStyle([
+                dt_style = [
                     ('BACKGROUND', (0, 0), (-1, -1), c_bg_light),
                     ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#f1f5f9")),
                     ('PADDING', (0, 0), (-1, -1), 4),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ]))
+                ]
+                if advice:
+                    dt_style.append(('SPAN', (1, 2), (3, 2)))
+                dt_table.setStyle(TableStyle(dt_style))
                 card_elements.append(dt_table)
 
                 if rule_viols:
@@ -1461,16 +1591,17 @@ class ValidationService:
             story.append(Paragraph(f"Passed Checks ({len(passed_rules)} Rules)", style_h2))
 
             pass_rows = [
-                [Paragraph("<b>Rule Description</b>", style_body_bold), Paragraph("<b>Target Class</b>", style_body_bold), Paragraph("<b>Status</b>", style_body_bold)]
+                [Paragraph("<b>Rule Description</b>", style_body_bold), Paragraph("<b>Target Class</b>", style_body_bold), Paragraph("<b>AI Check</b>", style_body_bold), Paragraph("<b>Status</b>", style_body_bold)]
             ]
             for r in passed_rules:
                 pass_rows.append([
                     Paragraph(self._safe_xml(r.get("rule_text") or r.get("label", "")), style_body),
                     Paragraph(self._safe_xml(r.get("target_class_short", "All Items")), style_body),
+                    Paragraph(self._safe_xml(r.get("verification_label") or VERIFICATION_LABELS.get(r.get("verification"), "Not checked by AI")), style_body),
                     Paragraph("<font color='#059669'><b>PASS</b></font>", style_body)
                 ])
 
-            pass_table = Table(pass_rows, colWidths=[304, 150, 80])
+            pass_table = Table(pass_rows, colWidths=[244, 120, 110, 60])
             pass_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),

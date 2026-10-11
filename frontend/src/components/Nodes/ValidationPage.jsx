@@ -474,18 +474,23 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   };
 
   //  Step 2: Optional further check (verify & repair generated shapes)
-  const handleVerifyShacl = async () => {
+  // onlyIndices: re-check just these rules (e.g. "Retry AI fix" for the ones the AI could not verify)
+  const handleVerifyShacl = async (onlyIndices = null) => {
     const rules = shaclGenerationSteps.map(step => step.rule);
     if (rules.length === 0 || !shaclCode.trim()) return;
+    const isTarget = (idx) => !onlyIndices || onlyIndices.includes(idx);
 
     setVerifying(true);
     setError(null);
     setSuccess(null);
-    setShaclGenerationSteps(prev => prev.map(step => ({ ...step, status: "generating", verification: undefined })));
+    setShaclGenerationSteps(prev => prev.map((step, idx) =>
+      isTarget(idx) ? { ...step, status: "generating", verification: undefined, advice: "" } : step
+    ));
 
     const formData = new FormData();
     formData.append("rules", JSON.stringify(rules));
     formData.append("shapes_ttl", shaclCode);
+    if (onlyIndices) formData.append("indices", JSON.stringify(onlyIndices));
     if (combinedFile) formData.append("schema_file", combinedFile);
     else if (schemaFile) formData.append("schema_file", schemaFile);
 
@@ -533,7 +538,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       attempts: event.attempts || 1,
                       unknown_terms: event.unknown_terms || [],
                       failed_examples: event.failed_examples || [],
-                      reason: event.reason || ""
+                      reason: event.reason || "",
+                      advice: event.advice || ""
                     }
                   : step
               ));
@@ -542,8 +548,15 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 setShaclCode(event.shacl_ttl);
                 setPlaygroundShaclText(event.shacl_ttl);
               }
-              if (event.verification_map) setVerificationMap(event.verification_map);
-              setSuccess("Verification finished. Shapes were updated where fixes were needed.");
+              if (event.verification_map) {
+                // A retry only returns the re-checked rules, so merge into the existing results
+                setVerificationMap(prev => onlyIndices ? { ...prev, ...event.verification_map } : event.verification_map);
+                const results = Object.entries(event.verification_map).filter(([k]) => /^\d+$/.test(k)).map(([, v]) => v.verification);
+                const failedCnt = results.filter(v => v === "unverified").length;
+                setSuccess(failedCnt === 0
+                  ? "AI verification finished. All checked shapes are verified (fixed shapes were updated in the code)."
+                  : `AI verification finished. ${failedCnt} shape${failedCnt !== 1 ? "s" : ""} could not be verified — see the advice below, edit the shape, or click "Retry AI fix".`);
+              }
             } else if (event.status === "error") {
               throw new Error(event.message || "Verification failed.");
             }
@@ -562,6 +575,10 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
       setVerifying(false);
     }
   };
+
+  const unverifiedStepIndices = shaclGenerationSteps
+    .map((step, idx) => (step.verification === "unverified" ? idx : -1))
+    .filter(idx => idx >= 0);
 
   //  Step 2: Copy 
   const handleCopyShacl = async () => {
@@ -1124,9 +1141,14 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                                        : step.verification === "repaired" ? "#f59e0b" 
                                        : "var(--text-secondary)" 
                                 }}>
-                                  {step.verification === "verified" ? "Checked and reliable" 
-                                   : step.verification === "repaired" ? `Fixed after ${step.attempts || 1} attempt(s)` 
-                                   : `Needs review${step.reason ? ` — ${step.reason}` : ""}`}
+                                  {step.verification === "verified" ? "Verified by AI" 
+                                   : step.verification === "repaired" ? `Fixed by AI after ${step.attempts || 1} attempt(s) — the corrected shape is in the code below` 
+                                   : "AI could not verify this shape"}
+                                </Typography>
+                              )}
+                              {step.status === "success" && step.verification === "unverified" && step.advice && (
+                                <Typography variant="caption" display="block" sx={{ color: "#d97706", mt: 0.25, whiteSpace: "normal" }}>
+                                  {step.advice}
                                 </Typography>
                               )}
                             </Box>
@@ -1143,12 +1165,24 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                     <Button
                       variant="outlined"
                       size="small"
-                      onClick={handleVerifyShacl}
+                      onClick={() => handleVerifyShacl()}
                       disabled={loading || verifying || !shaclCode.trim()}
                       startIcon={verifying ? <CircularProgress size={16} /> : <VerifiedIcon />}
                     >
                       {verifying ? "Verifying..." : "Verify Shapes"}
                     </Button>
+                    {unverifiedStepIndices.length > 0 && !verifying && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="warning"
+                        onClick={() => handleVerifyShacl(unverifiedStepIndices)}
+                        disabled={loading || !shaclCode.trim()}
+                        startIcon={<BuildIcon />}
+                      >
+                        Retry AI fix ({unverifiedStepIndices.length})
+                      </Button>
+                    )}
                     <button 
                       className={`validation-copy-btn ${copied ? "copied" : ""}`} 
                       onClick={handleCopyShacl}
@@ -1318,11 +1352,23 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   const repairedCnt = playgroundReport.repaired_count ?? 0;
                   const unverifiedCnt = playgroundReport.unverified_count ?? 0;
                   const suspiciousCnt = playgroundReport.suspicious_count ?? 0;
-                  const reliableCnt = verifiedCnt + repairedCnt - (playgroundReport.rules?.filter(r => r.suspicious && ["verified","repaired"].includes(r.verification)).length || 0);
-                  const unreliableCnt = totalRules - reliableCnt;
+                  const notCheckedCnt = playgroundReport.not_checked_count ?? (playgroundReport.rules?.filter(r => !r.verification || r.verification === "not_checked").length || 0);
+                  const aiVerifiedCnt = verifiedCnt + repairedCnt;
+                  const needsReview = (r) => r.verification === "unverified" || r.suspicious;
 
-                  const reliableRules = playgroundReport.reliable_rules || playgroundReport.rules?.filter(r => ["verified","repaired"].includes(r.verification) && !r.suspicious) || [];
-                  const unreliableRules = playgroundReport.unreliable_rules || playgroundReport.rules?.filter(r => r.verification === "unverified" || r.suspicious) || [];
+                  const reliableRules = playgroundReport.reliable_rules || playgroundReport.rules?.filter(r => !needsReview(r)) || [];
+                  const unreliableRules = playgroundReport.unreliable_rules || playgroundReport.rules?.filter(needsReview) || [];
+                  const unreliableCnt = unreliableRules.length;
+
+                  const aiSummary = notCheckedCnt === totalRules
+                    ? "Shapes were not verified by AI (use \"Verify Shapes\" in step 2)."
+                    : `AI verification: ${verifiedCnt} verified, ${repairedCnt} fixed${unverifiedCnt ? `, ${unverifiedCnt} could not be verified` : ""}${notCheckedCnt ? `, ${notCheckedCnt} not checked` : ""}.`;
+                  const AI_STATUS = {
+                    verified: { label: "Verified by AI", color: "var(--accent-success)", bg: "rgba(16, 185, 129, 0.1)", icon: <VerifiedIcon sx={{ fontSize: 14 }} /> },
+                    repaired: { label: "Fixed by AI", color: "var(--accent-success)", bg: "rgba(16, 185, 129, 0.1)", icon: <BuildIcon sx={{ fontSize: 14 }} /> },
+                    unverified: { label: "AI could not verify", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)", icon: <HelpOutlineIcon sx={{ fontSize: 14 }} /> },
+                    not_checked: { label: "Not checked by AI", color: "var(--text-secondary)", bg: "var(--bg-tertiary)", icon: <InfoOutlinedIcon sx={{ fontSize: 14 }} /> },
+                  };
 
                   const gate = playgroundReport.gate_decision || (playgroundReport.conforms ? 'Pass' : 'Fail');
                   const bannerClass = gate === 'Pass' ? 'pass' : gate === 'Needs review' ? 'partial' : failedRules === 0 ? 'pass' : (passedRules === 0 ? 'fail' : 'partial');
@@ -1334,7 +1380,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                     const isExpanded = expandedRules[rule.shape_iri];
                     const isAdvExpanded = expandedAdvanced[rule.shape_iri];
                     const failedItemCount = rule.failed_items_count !== undefined ? rule.failed_items_count : ruleViolations.length;
-                    const isReliable = ["verified","repaired"].includes(rule.verification) && !rule.suspicious;
+                    const isReliable = !needsReview(rule);
+                    const aiStatus = AI_STATUS[rule.verification] || AI_STATUS.not_checked;
 
                     return (
                       <Box key={`${isReliableSection}-${i}`} className={`validation-rule-card ${isFail ? "fail" : "pass"} ${!isReliable && isFail ? "unreliable" : ""}`}>
@@ -1358,22 +1405,13 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                             </Box>
                           </Box>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                            {/* Reliability badge */}
-                            {isReliable ? (
-                              <Chip 
-                                icon={<VerifiedIcon sx={{ fontSize: 14 }} />}
-                                label="Checked and reliable"
-                                size="small"
-                                sx={{ bgcolor: "rgba(16, 185, 129, 0.1)", color: "var(--accent-success)", fontWeight: 600, fontSize: 11, height: 24 }}
-                              />
-                            ) : (
-                              <Chip 
-                                icon={<HelpOutlineIcon sx={{ fontSize: 14 }} />}
-                                label="Needs review"
-                                size="small"
-                                sx={{ bgcolor: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", fontWeight: 600, fontSize: 11, height: 24 }}
-                              />
-                            )}
+                            {/* AI verification badge */}
+                            <Chip
+                              icon={aiStatus.icon}
+                              label={rule.verification_label || aiStatus.label}
+                              size="small"
+                              sx={{ bgcolor: aiStatus.bg, color: aiStatus.color, fontWeight: 600, fontSize: 11, height: 24, "& .MuiChip-icon": { color: "inherit" } }}
+                            />
                             {isFail ? (
                               <Chip 
                                 label={`${failedItemCount} flagged`}
@@ -1399,6 +1437,14 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                           <Box sx={{ px: 2, py: 1, bgcolor: "rgba(245, 158, 11, 0.06)", borderTop: "1px solid rgba(245, 158, 11, 0.15)" }}>
                             <Typography variant="caption" sx={{ color: "#d97706", fontStyle: "italic" }}>
                               This check flagged {failedItemCount} item{failedItemCount !== 1 ? "s" : ""}. The check itself may be wrong, not your data.
+                            </Typography>
+                          </Box>
+                        )}
+                        {/* What to do when the AI could not verify the shape */}
+                        {rule.verification === "unverified" && rule.advice && (
+                          <Box sx={{ px: 2, py: 1, bgcolor: "rgba(245, 158, 11, 0.06)", borderTop: "1px solid rgba(245, 158, 11, 0.15)" }}>
+                            <Typography variant="caption" sx={{ color: "#d97706" }}>
+                              <b>What to do:</b> {rule.advice}
                             </Typography>
                           </Box>
                         )}
@@ -1502,7 +1548,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                                 {bannerTitle}
                               </Typography>
                               <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
-                                {reliableCnt} of {totalRules} checks are reliable, {unreliableCnt} need your review.
+                                {unreliableCnt > 0 ? `${unreliableCnt} of ${totalRules} checks need your review${suspiciousCnt ? ` (${suspiciousCnt} flag almost every item)` : ""}. ` : ""}{aiSummary}
                                 {gate === 'Needs review' && " Only unverified checks flagged issues — your data may be fine."}
                               </Typography>
                             </Box>
@@ -1619,14 +1665,14 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                           })()}
                         </Grid>
                         <Grid item xs={6} sm={4}>
-                          <Box className={`validation-kpi-card ${reliableCnt === totalRules ? 'kpi-success' : 'kpi-warning'}`}>
-                            <Box className="validation-kpi-icon" sx={{ bgcolor: reliableCnt === totalRules ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)' }}>
-                              <VerifiedIcon sx={{ fontSize: 20, color: reliableCnt === totalRules ? 'var(--accent-success)' : '#f59e0b' }} />
+                          <Box className={`validation-kpi-card ${aiVerifiedCnt === totalRules ? 'kpi-success' : 'kpi-warning'}`}>
+                            <Box className="validation-kpi-icon" sx={{ bgcolor: aiVerifiedCnt === totalRules ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)' }}>
+                              <VerifiedIcon sx={{ fontSize: 20, color: aiVerifiedCnt === totalRules ? 'var(--accent-success)' : '#f59e0b' }} />
                             </Box>
-                            <Typography className="validation-kpi-value" sx={{ color: reliableCnt === totalRules ? 'var(--accent-success)' : '#f59e0b' }}>
-                              {reliableCnt} / {totalRules}
+                            <Typography className="validation-kpi-value" sx={{ color: aiVerifiedCnt === totalRules ? 'var(--accent-success)' : '#f59e0b' }}>
+                              {aiVerifiedCnt} / {totalRules}
                             </Typography>
-                            <Typography className="validation-kpi-label">Reliable Checks</Typography>
+                            <Typography className="validation-kpi-label">Verified by AI</Typography>
                           </Box>
                         </Grid>
                         <Grid item xs={6} sm={4}>
@@ -1649,14 +1695,14 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       <Box>
                         <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
                           <VerifiedIcon sx={{ fontSize: 20, color: "var(--accent-success)" }} />
-                          Reliable Checks ({reliableRules.length})
+                          {notCheckedCnt > 0 ? "Checks" : "Reliable Checks"} ({reliableRules.length})
                         </Typography>
                         {reliableRules.length > 0 ? (
                           <Stack spacing={1}>
                             {reliableRules.map((rule, i) => renderRuleCard(rule, i, true))}
                           </Stack>
                         ) : (
-                          <Typography variant="body2" color="textSecondary" sx={{ fontStyle: "italic" }}>No reliable checks available.</Typography>
+                          <Typography variant="body2" color="textSecondary" sx={{ fontStyle: "italic" }}>No checks in this section.</Typography>
                         )}
                       </Box>
 
@@ -1668,7 +1714,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                             Checks That Need Your Review ({unreliableRules.length})
                           </Typography>
                           <Typography variant="body2" color="textSecondary" sx={{ mb: 1.5, fontStyle: "italic" }}>
-                            These checks could not be fully verified. They do not cause a hard failure. The check itself may be wrong, not your data.
+                            The AI could not verify these checks, or they flag almost every item. They do not cause a hard failure. The check itself may be wrong, not your data.
                           </Typography>
                           <Stack spacing={1}>
                             {unreliableRules.map((rule, i) => renderRuleCard(rule, i, false))}
