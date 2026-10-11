@@ -52,6 +52,7 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import BuildIcon from "@mui/icons-material/Build";
+import ModelSelector from "./InstanceGen/ModelSelector";
 
 import "./ValidationPage.css";
 
@@ -152,6 +153,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [aiContextPrompt, setAiContextPrompt] = useState("");
   const [numQuestions, setNumQuestions] = useState(10);
   const [manualQuestionsText, setManualQuestionsText] = useState("");
+  const [selectedModel, setSelectedModel] = useState("Qwen3.6-35B-A3B-MLX-8bit");
 
   //  Step 1 
   const [questions, setQuestions] = useState([]);
@@ -264,6 +266,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     const formData = new FormData();
     if (aiContextPrompt) formData.append("user_explanation", aiContextPrompt);
     formData.append("num_questions", numQuestions);
+    formData.append("model", selectedModel);
 
     if (combinedFile) {
       formData.append("schema_file", combinedFile);
@@ -333,6 +336,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
     const formData = new FormData();
     formData.append("rules", JSON.stringify(activeRules));
+    formData.append("model", selectedModel);
     if (combinedFile) formData.append("schema_file", combinedFile);
     else if (schemaFile) formData.append("schema_file", schemaFile);
 
@@ -489,6 +493,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
     const formData = new FormData();
     formData.append("rules", JSON.stringify(rules));
+    formData.append("model", selectedModel);
     formData.append("shapes_ttl", shaclCode);
     if (onlyIndices) formData.append("indices", JSON.stringify(onlyIndices));
     if (combinedFile) formData.append("schema_file", combinedFile);
@@ -1036,6 +1041,15 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                     </Card>
                   </Stack>
                 )}
+
+                {/* AI model used for question suggestion, SHACL generation and verification */}
+                <Box sx={{ mt: 3 }}>
+                  <ModelSelector
+                    selectedModel={selectedModel}
+                    onModelChange={setSelectedModel}
+                    description="Choose the AI model used to suggest questions, generate SHACL shapes and verify them"
+                  />
+                </Box>
               </Box>
             )}
 

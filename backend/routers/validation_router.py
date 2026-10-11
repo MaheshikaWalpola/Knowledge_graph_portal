@@ -56,6 +56,7 @@ def _fetch_workspace_instances_ttl(user_email: str, schema_id: str) -> str:
 async def api_suggest_rules(
     user_explanation: Optional[str] = Form(None),
     num_questions: int = Form(10),
+    model: Optional[str] = Form(None),  # Kiste model ID; server default when omitted
     schema_id: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
     instance_file: Optional[UploadFile] = File(None),
@@ -86,12 +87,13 @@ async def api_suggest_rules(
         except Exception as e:
             print(f"Error fetching workspace instances: {e}")
             
-    with _timed(f"Rule suggestion ({num_questions} questions)", start):
+    with _timed(f"Rule suggestion ({num_questions} questions, model={model or 'default'})", start):
         rules = validation_service.suggest_validation_rules(
             user_explanation=user_explanation,
             schema_content=schema_content,
             instance_content=instance_content,
-            num_questions=num_questions
+            num_questions=num_questions,
+            model=model
         )
     return {"status": "ok", "rules": rules}
 
@@ -100,6 +102,7 @@ async def api_suggest_rules(
 async def api_generate_shacl(
     rules: str = Form(...),  # Expected JSON array string of plain English rules
     schema_id: Optional[str] = Form(None),
+    model: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
     current_user: Any = Depends(get_current_user)
 ):
@@ -122,7 +125,7 @@ async def api_generate_shacl(
         except Exception as e:
             print(f"Error fetching workspace schema: {e}")
             
-    shacl_ttl = validation_service.generate_shacl_shapes(rules_list, schema_content)
+    shacl_ttl = validation_service.generate_shacl_shapes(rules_list, schema_content, model=model)
     return {"status": "ok", "shacl_ttl": shacl_ttl}
 
 
@@ -130,6 +133,7 @@ async def api_generate_shacl(
 async def api_generate_shacl_stream(
     rules: str = Form(...),
     schema_id: Optional[str] = Form(None),
+    model: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
     current_user: Any = Depends(get_current_user)
 ):
@@ -152,8 +156,8 @@ async def api_generate_shacl_stream(
             print(f"Error fetching workspace schema: {e}")
             
     async def event_generator():
-        with _timed(f"SHACL generation ({len(rules_list)} rules)", start):
-            async for event in validation_service.generate_shacl_shapes_stream(rules_list, schema_content):
+        with _timed(f"SHACL generation ({len(rules_list)} rules, model={model or 'default'})", start):
+            async for event in validation_service.generate_shacl_shapes_stream(rules_list, schema_content, model=model):
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)  # Yield control to flush the event
 
@@ -166,6 +170,7 @@ async def api_verify_shacl_stream(
     rules: str = Form(...),       # JSON array of the plain-English rules, in generation order
     shapes_ttl: str = Form(...),  # current SHACL shapes (Turtle)
     indices: Optional[str] = Form(None),  # optional JSON array of rule indices to (re)check only
+    model: Optional[str] = Form(None),
     schema_id: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
     current_user: Any = Depends(get_current_user)
@@ -193,8 +198,8 @@ async def api_verify_shacl_stream(
 
     async def event_generator():
         checked = len(indices_list) if indices_list is not None else len(rules_list)
-        with _timed(f"SHACL verification ({checked} rules)", start):
-            async for event in validation_service.verify_shacl_shapes_stream(rules_list, shapes_ttl, schema_content, indices_list):
+        with _timed(f"SHACL verification ({checked} rules, model={model or 'default'})", start):
+            async for event in validation_service.verify_shacl_shapes_stream(rules_list, shapes_ttl, schema_content, indices_list, model=model):
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)
 

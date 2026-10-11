@@ -139,7 +139,7 @@ class SHACLVerifier:
 
         return unknown_terms
 
-    def _generate_test_examples(self, rule_text: str, shape_ttl: str, schema_ttl: Optional[str]) -> Tuple[List[str], List[str]]:
+    def _generate_test_examples(self, rule_text: str, shape_ttl: str, schema_ttl: Optional[str], model: Optional[str] = None) -> Tuple[List[str], List[str]]:
         """
         Calls LLM to generate 3 valid and 3 invalid tiny Turtle instance graphs.
         Returns (valid_examples, invalid_examples).
@@ -167,7 +167,7 @@ class SHACLVerifier:
             {"role": "user", "content": prompt}
         ]
 
-        response = self.llm._call_kiste(messages, json_mode=True, temperature=0.1)
+        response = self.llm._call_kiste(messages, json_mode=True, temperature=0.1, model_override=model)
         data = json.loads(response)
         valid = data.get("valid", [])
         invalid = data.get("invalid", [])
@@ -177,7 +177,8 @@ class SHACLVerifier:
         self,
         rule_text: str,
         shape_ttl: str,
-        schema_ttl: Optional[str] = None
+        schema_ttl: Optional[str] = None,
+        model: Optional[str] = None
     ) -> Tuple[bool, List[Dict[str, Any]], str]:
         """
         Check 2: Test-data check
@@ -189,7 +190,7 @@ class SHACLVerifier:
         Returns (passed, failed_examples, reason).
         """
         try:
-            valid_raw, invalid_raw = self._generate_test_examples(rule_text, shape_ttl, schema_ttl)
+            valid_raw, invalid_raw = self._generate_test_examples(rule_text, shape_ttl, schema_ttl, model)
         except Exception as e:
             logger.warning(f"Error generating test examples: {e}")
             return False, [], "failed to generate test examples"
@@ -217,7 +218,7 @@ class SHACLVerifier:
         # Retry once if we had broken examples and don't meet the 2 usable threshold
         if (len(valid_clean) < 2 or len(invalid_clean) < 2) and (broken_v or broken_inv):
             try:
-                retry_v, retry_inv = self._generate_test_examples(rule_text, shape_ttl, schema_ttl)
+                retry_v, retry_inv = self._generate_test_examples(rule_text, shape_ttl, schema_ttl, model)
                 v2, _ = filter_parseable(retry_v)
                 inv2, _ = filter_parseable(retry_inv)
                 valid_clean = list(dict.fromkeys(valid_clean + v2))
@@ -307,7 +308,8 @@ class SHACLVerifier:
         current_shape_ttl: str,
         unknown_terms: List[str],
         failed_examples: List[Dict[str, Any]],
-        schema_ttl: Optional[str] = None
+        schema_ttl: Optional[str] = None,
+        model: Optional[str] = None
     ) -> str:
         """
         Check 3: Repair loop prompt
@@ -353,7 +355,7 @@ class SHACLVerifier:
             {"role": "user", "content": prompt}
         ]
 
-        response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1)
+        response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1, model_override=model)
         clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
         clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
         return clean_ttl.strip()
@@ -364,7 +366,8 @@ class SHACLVerifier:
         initial_shape_ttl: str,
         schema_ttl: Optional[str] = None,
         known_terms: Optional[Set[str]] = None,
-        on_progress: Optional[Callable[[str], None]] = None
+        on_progress: Optional[Callable[[str], None]] = None,
+        model: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Executes the full verification & repair pipeline:
@@ -427,7 +430,8 @@ class SHACLVerifier:
                 test_passed, failed_examples, test_reason = self.check_test_data(
                     rule_text=rule_text,
                     shape_ttl=current_shape,
-                    schema_ttl=schema_ttl
+                    schema_ttl=schema_ttl,
+                    model=model
                 )
             except KisteConnectionError:
                 return {
@@ -468,7 +472,8 @@ class SHACLVerifier:
                         current_shape_ttl=current_shape,
                         unknown_terms=unknown_terms,
                         failed_examples=failed_examples,
-                        schema_ttl=schema_ttl
+                        schema_ttl=schema_ttl,
+                        model=model
                     )
                 except KisteConnectionError:
                     return {

@@ -181,7 +181,7 @@ class ValidationService:
             return iri_str.rsplit("/", 1)[-1]
         return iri_str
 
-    def suggest_validation_rules(self, user_explanation: Optional[str] = None, schema_content: Optional[str] = None, instance_content: Optional[str] = None, num_questions: int = 10) -> List[str]:
+    def suggest_validation_rules(self, user_explanation: Optional[str] = None, schema_content: Optional[str] = None, instance_content: Optional[str] = None, num_questions: int = 10, model: Optional[str] = None) -> List[str]:
         """
         Uses Kiste LLM to suggest data validation rules in plain English based on the ontology schema
         and optionally instance data.
@@ -245,7 +245,7 @@ class ValidationService:
         ]
         
         try:
-            response = self.llm._call_kiste(messages, json_mode=True, temperature=0.2)
+            response = self.llm._call_kiste(messages, json_mode=True, temperature=0.2, model_override=model)
             data = json.loads(response)
             rules = data.get("rules", [])
             if len(rules) < target_count:
@@ -258,7 +258,7 @@ class ValidationService:
             return fallback_rules[:target_count]
 
 
-    def generate_shacl_shapes(self, rules: List[str], schema_content: Optional[str] = None) -> str:
+    def generate_shacl_shapes(self, rules: List[str], schema_content: Optional[str] = None, model: Optional[str] = None) -> str:
         """
         Uses Kiste LLM to turn a list of plain English rules and an ontology schema into SHACL shapes (TTL).
         """
@@ -301,7 +301,7 @@ class ValidationService:
         ]
         
         try:
-            response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1)
+            response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1, model_override=model)
             # Remove any markdown wrappers if the model didn't follow instructions
             clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
             clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
@@ -318,7 +318,8 @@ class ValidationService:
                     return f.read()
             return "@prefix sh: <http://www.w3.org/ns/shacl#> .\n# Failed to generate shapes."
 
-    async def generate_shacl_shapes_stream(self, rules: List[str], schema_content: Optional[str] = None, verify: bool = False):
+    async def generate_shacl_shapes_stream(self, rules: List[str], schema_content: Optional[str] = None, verify: bool = False,
+                                           model: Optional[str] = None):
         """
         Generates SHACL shapes rule by rule concurrently and streams progress.
         Verification/repair is opt-in (verify=True); by default it is run on demand via verify_shacl_shapes_stream.
@@ -371,7 +372,7 @@ class ValidationService:
                 {"role": "user", "content": prompt}
             ]
             try:
-                response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1)
+                response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1, model_override=model)
                 clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
                 clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
                 return {"index": index, "rule": rule, "status": "success", "shacl": clean_ttl.strip()}
@@ -436,7 +437,8 @@ class ValidationService:
                     initial_shape_ttl=initial_shacl,
                     schema_ttl=schema_text,
                     known_terms=known_terms,
-                    on_progress=on_progress
+                    on_progress=on_progress,
+                    model=model
                 )
             except Exception as err:
                 print(f"Verification exception for rule '{rule}': {err}")
@@ -550,7 +552,7 @@ class ValidationService:
         yield {"status": "completed", "shacl_ttl": final_ttl.strip(), "verification_map": verification_map}
 
     async def verify_shacl_shapes_stream(self, rules: List[str], shapes_ttl: str, schema_content: Optional[str] = None,
-                                         indices: Optional[List[int]] = None):
+                                         indices: Optional[List[int]] = None, model: Optional[str] = None):
         """
         On-demand verification of already generated SHACL shapes.
         Each rule's shape is located in shapes_ttl (by rdfs:label, falling back to inst:Question_N_Shape),
@@ -609,7 +611,7 @@ class ValidationService:
             try:
                 v_res = self.verifier.verify_and_repair(
                     rule_text=rule, initial_shape_ttl=snippet, schema_ttl=schema_text,
-                    known_terms=known_terms, on_progress=on_progress
+                    known_terms=known_terms, on_progress=on_progress, model=model
                 )
             except Exception as err:
                 print(f"Verification exception for rule '{rule}': {err}")
