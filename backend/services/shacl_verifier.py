@@ -20,6 +20,82 @@ STANDARD_VOCABULARIES = {
 
 SH = Namespace("http://www.w3.org/ns/shacl#")
 
+# W3C SOSA/SSN terms. Domain ontologies such as CMPO reference these without declaring or
+# importing them, so they are accepted as known terms (an invented sosa:/ssn: term is still flagged).
+_SOSA = "http://www.w3.org/ns/sosa/"
+_SSN = "http://www.w3.org/ns/ssn/"
+SOSA_SSN_TERMS = {_SOSA + t for t in (
+    "FeatureOfInterest", "ObservableProperty", "ActuatableProperty", "Sample", "Sensor", "Actuator",
+    "Sampler", "Platform", "Observation", "Actuation", "Sampling", "Procedure", "Result",
+    "ObservationCollection", "ActuationCollection", "SamplingCollection",
+    "hasFeatureOfInterest", "isFeatureOfInterestOf", "hasUltimateFeatureOfInterest", "hasSample",
+    "isSampleOf", "hasOriginalSample", "hasSampledFeature", "isSampledBy", "hosts", "isHostedBy",
+    "observes", "isObservedBy", "madeObservation", "madeBySensor", "observedProperty",
+    "madeActuation", "madeByActuator", "actsOnProperty", "isActedOnBy", "madeSampling",
+    "madeBySampler", "usedProcedure", "hasResult", "isResultOf", "hasSimpleResult", "resultTime",
+    "phenomenonTime", "hasMember",
+)} | {_SSN + t for t in (
+    "System", "Property", "Input", "Output", "Deployment", "Stimulus",
+    "hasProperty", "isPropertyOf", "forProperty", "hasInput", "hasOutput", "implements",
+    "implementedBy", "hasSubSystem", "deployedSystem", "deployedOnPlatform", "inDeployment",
+    "hasDeployment", "detects", "isProxyFor", "wasOriginatedBy",
+)}
+
+
+SHAPE_STRUCTURE_GUIDE = (
+    "STRUCTURING SHAPES:\n"
+    "A. A `sh:NodeShape` targets a class with `sh:targetClass`. A NodeShape can never be the subject of `sh:path`; "
+    "always nest path constraints in `sh:property [ sh:path ... ]`. Example (property rule on a class):\n"
+    "   inst:Question_1_Shape a sh:NodeShape ;\n"
+    "       rdfs:label \"Every CMP observation must be linked to exactly one polishing step.\" ;\n"
+    "       sh:targetClass cmpo:CMPObservation ;\n"
+    "       sh:property [\n"
+    "           sh:path cmpo:duringStep ;\n"
+    "           sh:minCount 1 ; sh:maxCount 1 ;\n"
+    "           sh:class cmpo:PolishingStep ;\n"
+    "           sh:message \"Each CMP observation must be linked to exactly one polishing step.\"\n"
+    "       ] .\n"
+    "B. MEASUREMENTS ARE OBSERVATIONS. If the ontology records values as observations (e.g. a subclass of "
+    "sosa:Observation linked to a parameter via sosa:observedProperty and to its value via sosa:hasSimpleResult), "
+    "then parameter classes such as Pressure or Velocity are NOT things that have values, and a rule about ONE kind "
+    "of parameter (\"pressure values must be positive\", \"slurry flow rates must be non-negative\") must check ONLY "
+    "observations whose sosa:observedProperty is that parameter or one of its subclasses. A plain "
+    "`sh:property [ sh:path sosa:hasSimpleResult ... ]` on the observation class is WRONG for such a rule: it would "
+    "check every observation of every parameter. Use a SPARQL constraint written with FULL IRIs (no prefixes inside "
+    "the query) that selects only the violating observations:\n"
+    "   inst:Question_2_Shape a sh:NodeShape ;\n"
+    "       rdfs:label \"Pressure values must be positive float values.\" ;\n"
+    "       sh:targetClass cmpo:CMPObservation ;\n"
+    "       sh:sparql [\n"
+    "           a sh:SPARQLConstraint ;\n"
+    "           sh:message \"Pressure observation values must be positive floats.\" ;\n"
+    "           sh:select \"\"\"\n"
+    "               SELECT $this ?value WHERE {\n"
+    "                   $this <http://www.w3.org/ns/sosa/observedProperty> ?param .\n"
+    "                   ?param <http://www.w3.org/2000/01/rdf-schema#subClassOf>* <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#Pressure> .\n"
+    "                   $this <http://www.w3.org/ns/sosa/hasSimpleResult> ?value .\n"
+    "                   FILTER (datatype(?value) != <http://www.w3.org/2001/XMLSchema#float> || ?value <= 0)\n"
+    "               }\"\"\"\n"
+    "       ] .\n"
+    "   Replace cmpo:Pressure with the parameter class the rule is about (find it in the ontology), and adapt the "
+    "FILTER so it matches exactly the values that BREAK the rule.\n"
+)
+
+
+def schema_context(schema_ttl: Optional[str], limit: int = 12000) -> str:
+    """Schema text for prompts: comment-only lines are dropped so the limit is spent on definitions."""
+    if not schema_ttl:
+        return "CMP semiconductor ontology."
+    lines = [ln for ln in schema_ttl.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+    return "\n".join(lines)[:limit]
+
+
+def data_sample(instance_ttl: Optional[str], limit: int = 3000) -> str:
+    """Start of the user's real instance data, showing the actual data structure to the AI."""
+    if not instance_ttl or not instance_ttl.strip():
+        return ""
+    return instance_ttl.strip()[:limit]
+
 
 class SHACLVerifier:
     def __init__(self, llm_service: Optional[LocalLLMService] = None):
@@ -80,6 +156,26 @@ class SHACLVerifier:
         return known_terms
 
     @staticmethod
+    def extract_used_terms(data_ttl: Optional[str]) -> Set[str]:
+        """Properties and classes actually used in instance data (predicates and rdf:type objects)."""
+        used = set()
+        if not data_ttl or not data_ttl.strip():
+            return used
+        g = Graph()
+        try:
+            g.parse(data=data_ttl, format="turtle")
+        except Exception as e:
+            logger.warning(f"Could not parse instance data for known terms: {e}")
+            return used
+        for p in g.predicates(unique=True):
+            if isinstance(p, URIRef):
+                used.add(str(p))
+        for o in g.objects(None, RDF.type, unique=True):
+            if isinstance(o, URIRef):
+                used.add(str(o))
+        return used
+
+    @staticmethod
     def _is_standard_vocab(iri: str) -> bool:
         return any(iri.startswith(std) for std in STANDARD_VOCABULARIES)
 
@@ -134,17 +230,23 @@ class SHACLVerifier:
         for term in sorted(used_terms):
             if self._is_standard_vocab(term):
                 continue
-            if term not in known_terms:
+            if term not in known_terms and term not in SOSA_SSN_TERMS:
                 unknown_terms.append(term)
 
         return unknown_terms
 
-    def _generate_test_examples(self, rule_text: str, shape_ttl: str, schema_ttl: Optional[str], model: Optional[str] = None) -> Tuple[List[str], List[str]]:
+    def _generate_test_examples(self, rule_text: str, shape_ttl: str, schema_ttl: Optional[str], model: Optional[str] = None,
+                                instance_ttl: Optional[str] = None) -> Tuple[List[str], List[str]]:
         """
         Calls LLM to generate 3 valid and 3 invalid tiny Turtle instance graphs.
         Returns (valid_examples, invalid_examples).
         """
-        schema_snippet = schema_ttl[:4000] if schema_ttl else "CMP semiconductor ontology."
+        schema_snippet = schema_context(schema_ttl)
+        sample = data_sample(instance_ttl)
+        sample_text = (
+            "EXAMPLE OF THE USER'S REAL INSTANCE DATA (follow the same structure, properties and classes):\n"
+            f"{sample}\n\n"
+        ) if sample else ""
         prompt = (
             "You are a Semantic Web and SHACL validation test engineer.\n"
             "Given the plain-English data quality rule, the generated SHACL shape, and the ontology context, "
@@ -152,9 +254,14 @@ class SHACLVerifier:
             f"Rule: \"{rule_text}\"\n\n"
             f"Generated SHACL Shape:\n{shape_ttl}\n\n"
             f"Ontology snippet:\n{schema_snippet}\n\n"
+            f"{sample_text}"
             "Requirements:\n"
             "1. 'valid' examples: Minimal instance graphs that MUST fully satisfy and conform to the shape and rule.\n"
             "2. 'invalid' examples: Minimal instance graphs that deliberately violate the rule (e.g. negative value, missing mandatory property, wrong type).\n"
+            "   SCOPE TEST (required): at least one 'valid' example must contain an item the rule is NOT about that would break "
+            "the rule's condition if the rule applied to it, e.g. for 'pressure values must be positive' an observation of a "
+            "different parameter (such as a temperature or zeta potential) with a negative value. The shape must accept it; "
+            "a shape that rejects it is too broad.\n"
             "3. Each example must be a self-contained Turtle (.ttl) string including all necessary @prefix declarations (@prefix cmpo: ..., @prefix inst: ..., @prefix xsd: ..., @prefix rdfs: ...).\n"
             "4. Return strictly JSON with exactly this structure:\n"
             "{\n"
@@ -178,7 +285,8 @@ class SHACLVerifier:
         rule_text: str,
         shape_ttl: str,
         schema_ttl: Optional[str] = None,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        instance_ttl: Optional[str] = None
     ) -> Tuple[bool, List[Dict[str, Any]], str]:
         """
         Check 2: Test-data check
@@ -190,7 +298,7 @@ class SHACLVerifier:
         Returns (passed, failed_examples, reason).
         """
         try:
-            valid_raw, invalid_raw = self._generate_test_examples(rule_text, shape_ttl, schema_ttl, model)
+            valid_raw, invalid_raw = self._generate_test_examples(rule_text, shape_ttl, schema_ttl, model, instance_ttl)
         except Exception as e:
             logger.warning(f"Error generating test examples: {e}")
             return False, [], "failed to generate test examples"
@@ -218,7 +326,7 @@ class SHACLVerifier:
         # Retry once if we had broken examples and don't meet the 2 usable threshold
         if (len(valid_clean) < 2 or len(invalid_clean) < 2) and (broken_v or broken_inv):
             try:
-                retry_v, retry_inv = self._generate_test_examples(rule_text, shape_ttl, schema_ttl, model)
+                retry_v, retry_inv = self._generate_test_examples(rule_text, shape_ttl, schema_ttl, model, instance_ttl)
                 v2, _ = filter_parseable(retry_v)
                 inv2, _ = filter_parseable(retry_inv)
                 valid_clean = list(dict.fromkeys(valid_clean + v2))
@@ -309,7 +417,8 @@ class SHACLVerifier:
         unknown_terms: List[str],
         failed_examples: List[Dict[str, Any]],
         schema_ttl: Optional[str] = None,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        instance_ttl: Optional[str] = None
     ) -> str:
         """
         Check 3: Repair loop prompt
@@ -332,11 +441,17 @@ class SHACLVerifier:
             elif fe.get("expected") == "valid" and fe.get("actual") == "violates":
                 issue_descriptions.append(
                     f"- The shape rejected a valid test example that conforms to the rule: {ex_snippet} "
-                    f"(Check for overly strict constraints or wrong targetClass)."
+                    f"(Check for overly strict constraints, a wrong targetClass, or a shape that also checks items "
+                    f"the rule is not about, e.g. observations of other parameters)."
                 )
 
         issues_text = "\n".join(issue_descriptions) or "The shape did not conform to the expected rule behavior."
-        schema_snippet = schema_ttl[:4000] if schema_ttl else "CMP semiconductor ontology."
+        schema_snippet = schema_context(schema_ttl)
+        sample = data_sample(instance_ttl)
+        sample_text = (
+            "EXAMPLE OF THE USER'S REAL INSTANCE DATA (follow the same structure, properties and classes):\n"
+            f"{sample}\n\n"
+        ) if sample else ""
 
         prompt = (
             "You are an expert Semantic Web and SHACL developer.\n"
@@ -344,11 +459,13 @@ class SHACLVerifier:
             f"DETECTED ISSUES:\n{issues_text}\n\n"
             f"CURRENT SHACL SHAPE:\n{current_shape_ttl}\n\n"
             f"ONTOLOGY SCHEMA CONTEXT:\n{schema_snippet}\n\n"
+            f"{sample_text}"
             "Instructions:\n"
             "1. Output ONLY valid, corrected Turtle (.ttl) syntax for the shape.\n"
             "2. Fix all hallucinated terms and constraint logic errors.\n"
             "3. Nest property constraints inside sh:property [ sh:path ... ]. Never attach sh:path directly to sh:NodeShape.\n"
-            "4. Do NOT output any explanations, markdown code blocks, or text before/after the Turtle.\n"
+            "4. Do NOT output any explanations, markdown code blocks, or text before/after the Turtle.\n\n"
+            f"{SHAPE_STRUCTURE_GUIDE}"
         )
         messages = [
             {"role": "system", "content": "You are a SHACL code repair expert. You output only valid Turtle syntax without markdown."},
@@ -367,7 +484,8 @@ class SHACLVerifier:
         schema_ttl: Optional[str] = None,
         known_terms: Optional[Set[str]] = None,
         on_progress: Optional[Callable[[str], None]] = None,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        instance_ttl: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Executes the full verification & repair pipeline:
@@ -431,7 +549,8 @@ class SHACLVerifier:
                     rule_text=rule_text,
                     shape_ttl=current_shape,
                     schema_ttl=schema_ttl,
-                    model=model
+                    model=model,
+                    instance_ttl=instance_ttl
                 )
             except KisteConnectionError:
                 return {
@@ -473,7 +592,8 @@ class SHACLVerifier:
                         unknown_terms=unknown_terms,
                         failed_examples=failed_examples,
                         schema_ttl=schema_ttl,
-                        model=model
+                        model=model,
+                        instance_ttl=instance_ttl
                     )
                 except KisteConnectionError:
                     return {

@@ -173,6 +173,7 @@ async def api_verify_shacl_stream(
     model: Optional[str] = Form(None),
     schema_id: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
+    instance_file: Optional[UploadFile] = File(None),  # real data: known terms + example structure for tests
     current_user: Any = Depends(get_current_user)
 ):
     """SSE endpoint: on-demand check/repair of already generated SHACL shapes."""
@@ -196,10 +197,20 @@ async def api_verify_shacl_stream(
         except Exception as e:
             print(f"Error fetching workspace schema: {e}")
 
+    instance_content = None
+    if instance_file:
+        instance_content = (await instance_file.read()).decode("utf-8")
+    elif schema_id:
+        try:
+            instance_content = _fetch_workspace_instances_ttl(current_user["email"], schema_id)
+        except Exception as e:
+            print(f"Error fetching workspace instances: {e}")
+
     async def event_generator():
         checked = len(indices_list) if indices_list is not None else len(rules_list)
         with _timed(f"SHACL verification ({checked} rules, model={model or 'default'})", start):
-            async for event in validation_service.verify_shacl_shapes_stream(rules_list, shapes_ttl, schema_content, indices_list, model=model):
+            async for event in validation_service.verify_shacl_shapes_stream(rules_list, shapes_ttl, schema_content, indices_list, model=model,
+                                                                       instance_content=instance_content):
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)
 

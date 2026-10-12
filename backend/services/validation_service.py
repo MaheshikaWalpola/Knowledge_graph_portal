@@ -9,7 +9,7 @@ from rdflib import Graph, Namespace, RDF, URIRef
 from pyshacl import validate
 
 from services.local_llm_service import LocalLLMService
-from services.shacl_verifier import SHACLVerifier
+from services.shacl_verifier import SHACLVerifier, SHAPE_STRUCTURE_GUIDE
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -278,20 +278,9 @@ class ValidationService:
             "   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
             "   @prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n"
             "   @prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n"
-            "3. Structure your shapes correctly. A `sh:NodeShape` targets a class (e.g. `sh:targetClass cmpo:Pressure`).\n"
-            "   CRITICAL ERROR PREVENTION: A shape defined as a `sh:NodeShape` cannot be the subject of a `sh:path` predicate. "
-            "   Always nest the path and constraint details inside `sh:property [ sh:path ... ]` block. For example:\n"
-            "   ```turtle\n"
-            "   cmpo:PressureShape a sh:NodeShape ;\n"
-            "       sh:targetClass cmpo:Pressure ;\n"
-            "       sh:property [\n"
-            "           sh:path cmpo:hasNumericValue ;\n"
-            "           sh:datatype xsd:float ;\n"
-            "           sh:minInclusive 0.0 ;\n"
-            "           sh:message \"Pressure parameter value must be a positive float.\"\n"
-            "       ] .\n"
-            "   ```\n"
+            "3. Use only classes and properties that exist in the ontology schema or the standard vocabularies it uses.\n"
             "4. Add descriptive sh:message strings matching the rule descriptions.\n\n"
+            f"{SHAPE_STRUCTURE_GUIDE}\n"
             f"ONTOLOGY SCHEMA:\n{schema_text}"
         )
         
@@ -350,21 +339,9 @@ class ValidationService:
                 "   @prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n"
                 f"3. Name the shape URI specifically like `inst:Question_{index+1}_Shape` or similar.\n"
                 f"4. Include `rdfs:label \"{clean_rule_str}\" ;` on the shape so the exact plain English rule/question is attached to the shape.\n"
-                "5. Structure your shapes correctly. A `sh:NodeShape` targets a class (e.g. `sh:targetClass cmpo:Pressure`).\n"
-                "   CRITICAL ERROR PREVENTION: A shape defined as a `sh:NodeShape` cannot be the subject of a `sh:path` predicate. "
-                "   Always nest the path and constraint details inside `sh:property [ sh:path ... ]` block. For example:\n"
-                "   ```turtle\n"
-                "   inst:Question_1_Shape a sh:NodeShape ;\n"
-                f"       rdfs:label \"{clean_rule_str}\" ;\n"
-                "       sh:targetClass cmpo:Pressure ;\n"
-                "       sh:property [\n"
-                "           sh:path cmpo:hasNumericValue ;\n"
-                "           sh:datatype xsd:float ;\n"
-                "           sh:minInclusive 0.0 ;\n"
-                "           sh:message \"Pressure parameter value must be a positive float.\"\n"
-                "       ] .\n"
-                "   ```\n"
+                "5. Use only classes and properties that exist in the ontology schema or the standard vocabularies it uses.\n"
                 "6. Add a descriptive sh:message matching the rule description.\n\n"
+                f"{SHAPE_STRUCTURE_GUIDE}\n"
                 f"ONTOLOGY SCHEMA:\n{schema_text}"
             )
             messages = [
@@ -552,7 +529,8 @@ class ValidationService:
         yield {"status": "completed", "shacl_ttl": final_ttl.strip(), "verification_map": verification_map}
 
     async def verify_shacl_shapes_stream(self, rules: List[str], shapes_ttl: str, schema_content: Optional[str] = None,
-                                         indices: Optional[List[int]] = None, model: Optional[str] = None):
+                                         indices: Optional[List[int]] = None, model: Optional[str] = None,
+                                         instance_content: Optional[str] = None):
         """
         On-demand verification of already generated SHACL shapes.
         Each rule's shape is located in shapes_ttl (by rdfs:label, falling back to inst:Question_N_Shape),
@@ -565,6 +543,9 @@ class ValidationService:
 
         schema_text = schema_content or "No schema provided."
         known_terms = SHACLVerifier.extract_ontology_terms(schema_text)
+        if known_terms:
+            # Terms the user's real data uses are real (e.g. referenced but undeclared vocabularies)
+            known_terms |= SHACLVerifier.extract_used_terms(instance_content)
         INST = "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/"
 
         g = Graph()
@@ -611,7 +592,8 @@ class ValidationService:
             try:
                 v_res = self.verifier.verify_and_repair(
                     rule_text=rule, initial_shape_ttl=snippet, schema_ttl=schema_text,
-                    known_terms=known_terms, on_progress=on_progress, model=model
+                    known_terms=known_terms, on_progress=on_progress, model=model,
+                    instance_ttl=instance_content
                 )
             except Exception as err:
                 print(f"Verification exception for rule '{rule}': {err}")

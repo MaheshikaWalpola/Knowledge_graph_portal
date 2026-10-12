@@ -258,7 +258,25 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     e.target.value = "";
   };
 
-  //  Step 0 → 1: AI generation 
+  // Ontology + data source for every AI step (questions, SHACL generation, verification):
+  // a GraphDB workspace (validationTarget = its schema_id, also used for validation in step 3) or the uploaded files.
+  const useWorkspace = validationTarget !== "uploaded";
+  const hasUploadedFiles = Boolean(schemaFile || instanceFile || combinedFile);
+  const appendOntologySource = (formData, withInstances) => {
+    if (useWorkspace) {
+      formData.append("schema_id", validationTarget);
+      return;
+    }
+    if (combinedFile) {
+      formData.append("schema_file", combinedFile);
+      if (withInstances) formData.append("instance_file", combinedFile);
+    } else {
+      if (schemaFile) formData.append("schema_file", schemaFile);
+      if (withInstances && instanceFile) formData.append("instance_file", instanceFile);
+    }
+  };
+
+  //  Step 0 → 1: AI generation
   const handleGenerateQuestions = async () => {
     setLoading(true);
     setError(null);
@@ -267,14 +285,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     if (aiContextPrompt) formData.append("user_explanation", aiContextPrompt);
     formData.append("num_questions", numQuestions);
     formData.append("model", selectedModel);
-
-    if (combinedFile) {
-      formData.append("schema_file", combinedFile);
-      formData.append("instance_file", combinedFile);
-    } else {
-      if (schemaFile) formData.append("schema_file", schemaFile);
-      if (instanceFile) formData.append("instance_file", instanceFile);
-    }
+    appendOntologySource(formData, true);
 
     try {
       const res = await axios.post(`${API}/validation/suggest-rules`, formData, getAuthConfig());
@@ -337,8 +348,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     const formData = new FormData();
     formData.append("rules", JSON.stringify(activeRules));
     formData.append("model", selectedModel);
-    if (combinedFile) formData.append("schema_file", combinedFile);
-    else if (schemaFile) formData.append("schema_file", schemaFile);
+    appendOntologySource(formData, false);
 
     try {
       const token = localStorage.getItem("token");
@@ -362,15 +372,24 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
       const decoder = new TextDecoder();
       let buffer = "";
 
-      // Start with initial prefix comments
-      setShaclCode(
-        `@prefix sh: <http://www.w3.org/ns/shacl#> .\n` +
-        `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n` +
-        `@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n` +
-        `@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n` +
-        `@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n\n` +
-        `# Generating SHACL shapes. Please wait...\n`
-      );
+      // Live preview: shapes run in parallel and finish in any order, so keep them by question
+      // index and always show them in question order, with each @prefix line only once at the top.
+      const previewPrefixes = new Set([
+        "@prefix sh: <http://www.w3.org/ns/shacl#> .",
+        "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .",
+        "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .",
+        "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .",
+        "@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .",
+      ]);
+      const previewShapes = {};
+      const renderPreview = () => {
+        const done = Object.keys(previewShapes).map(Number).sort((a, b) => a - b);
+        const pending = activeRules.length - done.length;
+        return [...previewPrefixes].join("\n") + "\n\n" +
+          done.map(idx => `# Question ${idx + 1}\n${previewShapes[idx]}`).join("\n\n") +
+          (pending > 0 ? `${done.length ? "\n\n" : ""}# Generating SHACL shapes (${pending} remaining). Please wait...\n` : "\n");
+      };
+      setShaclCode(renderPreview());
 
       while (true) {
         const { done, value } = await reader.read();
@@ -440,16 +459,15 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   }));
                 }
 
-                // Append shape snippet if successful
+                // Add the finished shape to the live preview in question order
                 if (event.result_status === "success" && event.shacl) {
-                  setShaclCode(prev => {
-                    const separator = prev.endsWith("\n\n") ? "" : prev.endsWith("\n") ? "\n" : "\n\n";
-                    let nextVal = prev;
-                    if (nextVal.includes("# Generating SHACL shapes.")) {
-                      nextVal = nextVal.replace("# Generating SHACL shapes. Please wait...\n", "");
-                    }
-                    return nextVal + separator + event.shacl + "\n";
+                  const body = [];
+                  event.shacl.split("\n").forEach(line => {
+                    if (/^\s*@prefix\b/i.test(line)) previewPrefixes.add(line.trim());
+                    else body.push(line);
                   });
+                  previewShapes[event.index] = body.join("\n").trim();
+                  setShaclCode(renderPreview());
                 }
               } else if (event.status === "completed") {
                 // Complete generation, overwrite with final formatted version
@@ -496,8 +514,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     formData.append("model", selectedModel);
     formData.append("shapes_ttl", shaclCode);
     if (onlyIndices) formData.append("indices", JSON.stringify(onlyIndices));
-    if (combinedFile) formData.append("schema_file", combinedFile);
-    else if (schemaFile) formData.append("schema_file", schemaFile);
+    // Instance data lets verification accept terms the real data uses and build realistic test data
+    appendOntologySource(formData, true);
 
     try {
       const token = localStorage.getItem("token");
@@ -904,9 +922,35 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   </button>
                 </Box>
 
+                {/*  Ontology source: GraphDB workspace or uploaded files (shared with "Validate Against" in step 3)  */}
+                {user && (
+                  <Card variant="outlined" sx={{ mb: 3 }}>
+                    <CardContent>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>Ontology Source</Typography>
+                      <Typography variant="body2" color="textSecondary" sx={{ mb: 1.5 }}>
+                        Use an ontology and its data from your GraphDB workspace, or upload files. The same source is used to generate and verify SHACL shapes and to run the validation.
+                      </Typography>
+                      <FormControl size="small" sx={{ minWidth: 320 }}>
+                        <Select value={validationTarget} onChange={(e) => setValidationTarget(e.target.value)} onOpen={fetchUserSchemas}>
+                          <MenuItem value="uploaded">Upload files</MenuItem>
+                          {schemas.map((s) => (
+                            <MenuItem key={s.schema_id} value={s.schema_id}>
+                              GraphDB: {s.name} ({s.upload_mode})
+                            </MenuItem>
+                          ))}
+                          {schemas.length === 0 && (
+                            <MenuItem disabled>No GraphDB workspaces for this account (upload one in My Ontologies)</MenuItem>
+                          )}
+                        </Select>
+                      </FormControl>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/*  AI Mode  */}
                 {inputMode === "ai" && (
                   <Stack spacing={3}>
+                    {!useWorkspace && (
                     <Grid container spacing={3}>
                       {/* Option A: Separate Files */}
                       <Grid item xs={12} md={6}>
@@ -979,6 +1023,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                         </Card>
                       </Grid>
                     </Grid>
+                    )}
 
                     {/* Context prompt */}
                     <TextField
@@ -1021,6 +1066,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       placeholder={"Every CMP process must have a measurement timestamp\nPressure values must be positive floats\nEvery CMP process must act on at least one Wafer\nSlurry flow rates should not be negative"}
                     />
 
+                    {!useWorkspace && (<>
                     <Alert severity="info">
                       Optionally upload schema/instance files below — they will be used later to generate accurate SHACL shapes from your questions.
                     </Alert>
@@ -1039,6 +1085,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                         <input ref={instanceInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleInstanceFileChange} style={{ display: "none" }} />
                       </CardContent>
                     </Card>
+                    </>)}
                   </Stack>
                 )}
 
@@ -1291,6 +1338,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       <Select
                         value={validationTarget}
                         onChange={(e) => setValidationTarget(e.target.value)}
+                        onOpen={fetchUserSchemas}
                         displayEmpty
                       >
                         <MenuItem value="uploaded" disabled={!schemaFile && !instanceFile && !combinedFile}>
@@ -1303,6 +1351,9 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                             {s.name} ({s.upload_mode})
                           </MenuItem>
                         ))}
+                        {schemas.length === 0 && (
+                          <MenuItem disabled>No GraphDB workspaces for this account (upload one in My Ontologies)</MenuItem>
+                        )}
                       </Select>
                     </FormControl>
                     <Typography variant="caption" color="textSecondary" sx={{ flex: 1 }}>
@@ -1760,7 +1811,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 <Button
                   variant="contained"
                   onClick={handleGenerateQuestions}
-                  disabled={loading || (!schemaFile && !instanceFile && !combinedFile)}
+                  disabled={loading || (!useWorkspace && !hasUploadedFiles)}
                 >
                   {loading ? <CircularProgress size={24} /> : "Generate Questions"}
                 </Button>
