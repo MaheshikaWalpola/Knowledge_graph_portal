@@ -18,7 +18,7 @@ const KISTE_MODELS = [
     label: "Qwen 3.6 35B",
     description: "Best for general-purpose matching tasks",
     contextWindow: "262K",
-    tag: "Recommended",
+    tag: null,
   },
   {
     id: "DeepSeek-V4-Flash-0731-MXFP4-MLX",
@@ -64,9 +64,11 @@ const KISTE_MODELS = [
   },
 ];
 
-export default function ModelSelector({ selectedModel, onModelChange }) {
-  const currentModel = KISTE_MODELS.find((m) => m.id === selectedModel) || KISTE_MODELS[0];
-
+export default function ModelSelector({
+  selectedModel,
+  onModelChange,
+  description = "Choose the AI model for intelligent header-to-schema matching",
+}) {
   return (
     <Card variant="outlined" sx={{ position: "relative", overflow: "visible" }}>
       <CardContent>
@@ -74,7 +76,7 @@ export default function ModelSelector({ selectedModel, onModelChange }) {
           AI Model
         </Typography>
         <Typography variant="body2" color="textSecondary" gutterBottom>
-          Choose the AI model for intelligent header-to-schema matching
+          {description}
         </Typography>
 
         <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>

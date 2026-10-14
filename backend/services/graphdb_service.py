@@ -1972,7 +1972,9 @@ def graph_has_triples(graph_iri: str) -> bool:
     try:
         rows = _exec_select(q)["results"]["bindings"]
         return len(rows) > 0
-    except Exception:
+    except Exception as e:
+        # Surface GraphDB errors: a failed check hides the schema from workspace lists
+        print(f"[WARNING] graph_has_triples failed for <{graph_iri}>: {e}")
         return False
 
 
