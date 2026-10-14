@@ -1,4 +1,5 @@
 import os
+import threading
 import io
 import json
 import re
@@ -9,7 +10,7 @@ from rdflib import Graph, Namespace, RDF, URIRef
 from pyshacl import validate
 
 from services.local_llm_service import LocalLLMService
-from services.shacl_verifier import SHACLVerifier, SHAPE_STRUCTURE_GUIDE
+from services.shacl_verifier import SHACLVerifier, SHAPE_STRUCTURE_GUIDE, compact_schema
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -108,6 +109,18 @@ def _serialize_shapes_in_order(graph: Graph, ordered_subjects: List[Any]) -> str
         blocks.append(body(rest))
 
     return "\n".join(prefix_lines) + "\n\n" + "\n\n".join(b for b in blocks if b) + "\n"
+
+
+def _max_parallel_ai_calls() -> int:
+    """How many AI requests run at once (KISTE_MAX_PARALLEL); Kiste queues extra ones, so more is not faster."""
+    try:
+        return max(1, int(os.getenv("KISTE_MAX_PARALLEL", "3")))
+    except ValueError:
+        return 3
+
+
+class _Cancelled(Exception):
+    """Raised inside worker threads once the client disconnected or the server is stopping."""
 
 
 VERIFICATION_LABELS = {
@@ -212,6 +225,8 @@ class ValidationService:
             "- If instance data is provided, also consider patterns and potential issues visible in the data.\n"
             f"- Output EXACTLY a JSON object with this key structure: {{\"rules\": [\"rule 1\", ..., \"rule {target_count}\"]}}.\n"
             "- DO NOT return any explanatory text or markdown code blocks outside of the JSON.\n\n"
+            # Full schema here (single call): rdfs:comment descriptions carry domain knowledge such as
+            # typical value ranges, which inspires better questions
             f"SCHEMA CONTEXT:\n{schema_text}"
             f"{instance_section}"
         )
@@ -281,7 +296,7 @@ class ValidationService:
             "3. Use only classes and properties that exist in the ontology schema or the standard vocabularies it uses.\n"
             "4. Add descriptive sh:message strings matching the rule descriptions.\n\n"
             f"{SHAPE_STRUCTURE_GUIDE}\n"
-            f"ONTOLOGY SCHEMA:\n{schema_text}"
+            f"ONTOLOGY SCHEMA:\n{compact_schema(schema_content) or schema_text}"
         )
         
         messages = [
@@ -318,6 +333,7 @@ class ValidationService:
         from rdflib import Graph
 
         schema_text = schema_content or "No schema provided."
+        prompt_schema = compact_schema(schema_content) or schema_text
         completed_shapes = {}
         verification_map = {}
         known_terms = SHACLVerifier.extract_ontology_terms(schema_text)
@@ -342,7 +358,7 @@ class ValidationService:
                 "5. Use only classes and properties that exist in the ontology schema or the standard vocabularies it uses.\n"
                 "6. Add a descriptive sh:message matching the rule description.\n\n"
                 f"{SHAPE_STRUCTURE_GUIDE}\n"
-                f"ONTOLOGY SCHEMA:\n{schema_text}"
+                f"ONTOLOGY SCHEMA:\n{prompt_schema}"
             )
             messages = [
                 {"role": "system", "content": "You are a SHACL code generator. You output only valid Turtle (.ttl) code. You structure shapes correctly, attach rdfs:label for each rule, and never place sh:path directly inside a sh:NodeShape."},
@@ -359,8 +375,11 @@ class ValidationService:
 
         loop = asyncio.get_running_loop()
         queue = asyncio.Queue()
+        cancelled = threading.Event()
 
         def process_rule_pipeline(index: int, rule: str):
+            if cancelled.is_set():
+                return
             res = generate_single_shape(index, rule)
             initial_shacl = res.get("shacl", "")
 
@@ -398,6 +417,8 @@ class ValidationService:
                 return
 
             def on_progress(stage: str):
+                if cancelled.is_set():
+                    raise _Cancelled()
                 stage_label = "Checking rule…" if stage != "repairing" else "Fixing rule…"
                 loop.call_soon_threadsafe(queue.put_nowait, {
                     "type": "verifying",
@@ -417,6 +438,8 @@ class ValidationService:
                     on_progress=on_progress,
                     model=model
                 )
+            except _Cancelled:
+                return
             except Exception as err:
                 print(f"Verification exception for rule '{rule}': {err}")
                 v_res = {
@@ -443,7 +466,8 @@ class ValidationService:
         yield {"status": "start", "total": len(rules)}
 
         remaining = len(rules)
-        with ThreadPoolExecutor(max_workers=min(len(rules), 10)) as executor:
+        executor = ThreadPoolExecutor(max_workers=min(len(rules), _max_parallel_ai_calls()))
+        try:
             for i, rule in enumerate(rules):
                 executor.submit(process_rule_pipeline, i, rule)
 
@@ -489,6 +513,11 @@ class ValidationService:
                         "failed_examples": item_meta["failed_examples"],
                         "reason": item_meta["reason"]
                     }
+        finally:
+            # Page closed or server stopping: skip rules not started yet and stop running ones at their
+            # next step, instead of waiting for every remaining AI call
+            cancelled.set()
+            executor.shutdown(wait=False, cancel_futures=True)
 
         self.last_verification_map = verification_map
 
@@ -570,8 +599,11 @@ class ValidationService:
         verification_map = {}
         loop = asyncio.get_running_loop()
         queue = asyncio.Queue()
+        cancelled = threading.Event()
 
         def process(index: int, rule: str):
+            if cancelled.is_set():
+                return
             subj = subjects[index]
             if subj is None:
                 loop.call_soon_threadsafe(queue.put_nowait, {
@@ -583,6 +615,8 @@ class ValidationService:
             snippet = _shape_subgraph(g, subj).serialize(format="turtle")
 
             def on_progress(stage: str):
+                if cancelled.is_set():
+                    raise _Cancelled()
                 label = "Checking rule…" if stage != "repairing" else "Fixing rule…"
                 loop.call_soon_threadsafe(queue.put_nowait, {
                     "type": "verifying", "index": index, "rule": rule, "stage": stage,
@@ -595,6 +629,8 @@ class ValidationService:
                     known_terms=known_terms, on_progress=on_progress, model=model,
                     instance_ttl=instance_content
                 )
+            except _Cancelled:
+                return
             except Exception as err:
                 print(f"Verification exception for rule '{rule}': {err}")
                 v_res = {"verification": "unverified", "attempts": 1, "unknown_terms": [],
@@ -611,7 +647,8 @@ class ValidationService:
             yield {"status": "completed", "shacl_ttl": shapes_ttl, "verification_map": {}}
             return
 
-        with ThreadPoolExecutor(max_workers=min(remaining, 10)) as executor:
+        executor = ThreadPoolExecutor(max_workers=min(remaining, _max_parallel_ai_calls()))
+        try:
             for i in targets:
                 executor.submit(process, i, rules[i])
 
@@ -661,6 +698,9 @@ class ValidationService:
                 remaining -= 1
                 yield {"status": "progress", "index": idx, "rule": event["rule"],
                        **{k: meta[k] for k in ("verification", "attempts", "unknown_terms", "failed_examples", "reason", "advice")}}
+        finally:
+            cancelled.set()
+            executor.shutdown(wait=False, cancel_futures=True)
 
         self.last_verification_map = verification_map
         ordered = [subjects[i] for i in range(len(rules))]

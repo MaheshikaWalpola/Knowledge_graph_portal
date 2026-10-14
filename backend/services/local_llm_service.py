@@ -9,6 +9,8 @@ from typing import List, Dict, Any, Optional
 KISTE_API_URL = os.getenv("KISTE_API_URL")
 KISTE_API_KEY = os.getenv("KISTE_API_KEY")
 MODEL_NAME = os.getenv("KISTE_MODEL")  # "gpt-oss-120b" or "qwen3.6"
+# Seconds to wait for the AI server to respond (slow models with long prompts may need more)
+KISTE_TIMEOUT = int(os.getenv("KISTE_TIMEOUT", "300"))
 
 
 def strip_markdown(text: str) -> str:
@@ -56,7 +58,7 @@ class LocalLLMService:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
             
-            with urllib.request.urlopen(req, context=ssl_context, timeout=120) as response:
+            with urllib.request.urlopen(req, context=ssl_context, timeout=KISTE_TIMEOUT) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 return result.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:

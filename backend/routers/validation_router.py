@@ -6,6 +6,7 @@ import time
 
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from core.auth import get_current_user
 from services.validation_service import ValidationService
@@ -88,7 +89,9 @@ async def api_suggest_rules(
             print(f"Error fetching workspace instances: {e}")
             
     with _timed(f"Rule suggestion ({num_questions} questions, model={model or 'default'})", start):
-        rules = validation_service.suggest_validation_rules(
+        # Blocking AI call: run it in a worker thread so other requests are not frozen meanwhile
+        rules = await run_in_threadpool(
+            validation_service.suggest_validation_rules,
             user_explanation=user_explanation,
             schema_content=schema_content,
             instance_content=instance_content,
@@ -125,7 +128,7 @@ async def api_generate_shacl(
         except Exception as e:
             print(f"Error fetching workspace schema: {e}")
             
-    shacl_ttl = validation_service.generate_shacl_shapes(rules_list, schema_content, model=model)
+    shacl_ttl = await run_in_threadpool(validation_service.generate_shacl_shapes, rules_list, schema_content, model=model)
     return {"status": "ok", "shacl_ttl": shacl_ttl}
 
 

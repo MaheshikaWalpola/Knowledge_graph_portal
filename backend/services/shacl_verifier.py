@@ -1,6 +1,7 @@
 import re
 import json
 import logging
+from functools import lru_cache
 from typing import List, Dict, Any, Optional, Set, Tuple, Callable
 from rdflib import Graph, Namespace, RDF, RDFS, OWL, URIRef, BNode
 import pyshacl
@@ -82,12 +83,39 @@ SHAPE_STRUCTURE_GUIDE = (
 )
 
 
+_PROSE_PREDICATES = {str(RDFS.comment), str(OWL.versionInfo)}
+_DCTERMS = "http://purl.org/dc/terms/"
+
+
+@lru_cache(maxsize=8)
+def compact_schema(schema_ttl: Optional[str]) -> str:
+    """
+    Ontology text for AI prompts: every class, property, label, synonym and hierarchy/domain/range link,
+    without long prose descriptions and metadata (about a third of the size for CMPO), so prompts stay fast.
+    Falls back to the text without comment lines if it cannot be parsed.
+    """
+    if not schema_ttl or not schema_ttl.strip():
+        return ""
+    try:
+        g = Graph()
+        g.parse(data=schema_ttl, format="turtle")
+        small = Graph()
+        for pfx, ns in g.namespaces():
+            small.bind(pfx, ns)
+        for s, p, o in g:
+            if str(p) in _PROSE_PREDICATES or str(p).startswith(_DCTERMS):
+                continue
+            small.add((s, p, o))
+        return small.serialize(format="turtle")
+    except Exception:
+        lines = [ln for ln in schema_ttl.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+        return "\n".join(lines)
+
+
 def schema_context(schema_ttl: Optional[str], limit: int = 12000) -> str:
-    """Schema text for prompts: comment-only lines are dropped so the limit is spent on definitions."""
-    if not schema_ttl:
-        return "CMP semiconductor ontology."
-    lines = [ln for ln in schema_ttl.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
-    return "\n".join(lines)[:limit]
+    """Compact schema text for verification prompts, capped at limit characters."""
+    text = compact_schema(schema_ttl)
+    return text[:limit] if text else "CMP semiconductor ontology."
 
 
 def data_sample(instance_ttl: Optional[str], limit: int = 3000) -> str:
