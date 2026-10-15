@@ -125,7 +125,7 @@ export default function ForgotPassword({
           Enter your email and we'll send you a link to set your password.
         </Typography>
 
-        <div className="login__form">
+        <form className="login__form" onSubmit={(e) => { e.preventDefault(); handleSendPasswordResetLink(); }}>
           <FormControl
             className="formControl"
             style={{ marginBottom: "10px" }}
@@ -159,6 +159,7 @@ export default function ForgotPassword({
           )}
 
           <Button
+            type="submit"
             variant="contained"
             size="large"
             style={{
@@ -168,11 +169,10 @@ export default function ForgotPassword({
               backgroundColor: "#1d4ed8",
               color: "white",
             }}
-            onClick={handleSendPasswordResetLink}
           >
             Send
           </Button>
-        </div>
+        </form>
       </DialogContent>
     </BootstrapDialog>
   );

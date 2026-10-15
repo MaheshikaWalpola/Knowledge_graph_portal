@@ -1,7 +1,5 @@
-// ========================================
-// 📊 Interactive Chart Component
+// Interactive Chart Component
 // Lightweight canvas-based line chart with click-to-view
-// ========================================
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 

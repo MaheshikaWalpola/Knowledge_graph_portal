@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -13,11 +13,13 @@ from services.chat_service import (
 router = APIRouter(prefix="/chats", tags=["chats"])
 
 
-# ── Pydantic models ───────────────────────────────────────────────────────────
+# Pydantic models
 
 class MessageSchema(BaseModel):
     role: str
     content: str
+    options: Optional[List[str]] = None
+    chart_data: Optional[List[dict]] = None
 
 
 class ConversationUpsertBody(BaseModel):
@@ -25,7 +27,7 @@ class ConversationUpsertBody(BaseModel):
     messages: List[MessageSchema]
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# Endpoints
 
 @router.get("")
 def api_get_conversations(

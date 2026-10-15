@@ -5,9 +5,11 @@ const sections = [
   { id: "getting-started", label: "Getting Started", icon: "rocket" },
   { id: "workspace", label: "Workspace", icon: "grid" },
   { id: "schema-ontology", label: "Schema Ontology", icon: "layers" },
-  { id: "ai-assistant", label: "AI Assistant", icon: "cpu" },
-  { id: "main-canvas", label: "Main Canvas", icon: "pen-tool" },
   { id: "search", label: "Search Connections", icon: "search" },
+  { id: "main-canvas", label: "Main Canvas", icon: "pen-tool" },
+  { id: "ai-assistant", label: "AI Assistant", icon: "cpu" },
+  { id: "instance-generation", label: "Instance Generation", icon: "file-text" },
+  { id: "data-validation", label: "Data Validation", icon: "shield" },
   { id: "my-ontologies", label: "My Ontologies", icon: "database" },
   { id: "account", label: "Profile & Account", icon: "user" },
 ];
@@ -65,10 +67,30 @@ const Icon = ({ name, size = 16, className = "" }) => {
         <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
       </svg>
     ),
+    "file-text": (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+        <line x1="10" y1="9" x2="8" y2="9" />
+      </svg>
+    ),
+    shield: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    ),
     user: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+    clock: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
       </svg>
     ),
     lightbulb: (
@@ -222,10 +244,10 @@ const UserGuidance = () => {
               of the portal:
             </p>
             <Steps items={[
-              <><strong>Main Canvas</strong> — Visual graph editor for building and editing knowledge graphs.</>,
-              <><strong>Ontology</strong> — Browse and explore schema-level entities and relationships.</>,
-              <><strong>AI Assistant</strong> — Use natural language to query and generate graph data.</>,
-              <><strong>Workspace</strong> — Manage ontologies, upload files and configure graph settings.</>
+              <><strong>Main Canvas</strong> - Visual graph editor for building and editing knowledge graphs.</>,
+              <><strong>Ontology</strong> - Browse and explore schema-level entities and relationships.</>,
+              <><strong>AI Assistant</strong> - Use natural language to query and generate graph data.</>,
+              <><strong>Workspace</strong> - Manage ontologies, upload files and configure graph settings.</>
             ]} />
           </div>
         </section>
@@ -312,50 +334,32 @@ const UserGuidance = () => {
           </div>
         </section>
 
-        {/* AI Assistant */}
-        <section id="ai-assistant" className="guidance-section">
+        {/* Search Connections */}
+        <section id="search" className="guidance-section">
           <h2 className="guidance-section-title">
-            <span className="guidance-section-icon"><Icon name="cpu" /></span>
-            AI Assistant
+            <span className="guidance-section-icon"><Icon name="search" /></span>
+            Search Connections
           </h2>
 
           <div className="guidance-subsection">
             <h3 className="guidance-subsection-title">Overview</h3>
             <p className="guidance-text">
-              The AI Assistant uses large language models to help you interact with your knowledge
-              graph using natural language. You can ask questions about your data, generate
-              SPARQL queries and get explanations of ontology concepts.
+              The Search Connections feature lets you query instance-level data in your
+              knowledge graph. Find specific entities, explore their properties and discover
+              connections between different instances.
             </p>
-          </div>
-
-          {/* <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Using the AI Chat</h3>
-            <Steps items={[
-              "Navigate to AI Assistant from the navigation bar.",
-              "Type a question or command in the chat input.",
-              "Press Enter or click Send to submit your query.",
-              "The AI will analyze your ontology and respond with relevant information.",
-              "For SPARQL queries, the AI will generate and optionally execute the query.",
-              "Review the response and continue the conversation for follow-up questions."
-            ]} />
-            <Callout type="tip">
-              Be specific in your queries for better results. For example, instead of "Show me data" try "List all classes in the Sensordata ontology with their properties."
-            </Callout>
           </div>
 
           <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Capabilities</h3>
-            <p className="guidance-text">
-              The AI Assistant can help with:
-            </p>
+            <h3 className="guidance-subsection-title">Running a Search</h3>
             <Steps items={[
-              "Explaining ontology concepts and relationships in natural language.",
-              "Generating SPARQL queries from plain English questions.",
-              "Suggesting improvements to your ontology structure.",
-              "Answering questions about specific entities and their connections.",
-              "Creating new ontology elements based on natural language descriptions."
+              "Select an ontology and class from the dropdown menus.",
+              "Enter a search term or filter criteria.",
+              "Click Search to execute the query.",
+              "Browse through the results showing matching instances.",
+              "Click on any result to view its full details and connected entities."
             ]} />
-          </div> */}
+          </div>
         </section>
 
         {/* Main Canvas */}
@@ -397,30 +401,160 @@ const UserGuidance = () => {
           </div>
         </section>
 
-        {/* Search Connections */}
-        <section id="search" className="guidance-section">
+        {/* AI Assistant */}
+        <section id="ai-assistant" className="guidance-section">
           <h2 className="guidance-section-title">
-            <span className="guidance-section-icon"><Icon name="search" /></span>
-            Search Connections
+            <span className="guidance-section-icon"><Icon name="cpu" /></span>
+            AI Assistant
           </h2>
 
           <div className="guidance-subsection">
             <h3 className="guidance-subsection-title">Overview</h3>
             <p className="guidance-text">
-              The Search Connections feature lets you query instance-level data in your
-              knowledge graph. Find specific entities, explore their properties and discover
-              connections between different instances.
+              The AI Assistant helps you query and explore your knowledge graphs using plain English. 
+              It automatically translates your natural language questions into database queries to search 
+              ontology schemas and instance data.
             </p>
           </div>
 
           <div className="guidance-subsection">
-            <h3 className="guidance-subsection-title">Running a Search</h3>
+            <h3 className="guidance-subsection-title">Using the Assistant</h3>
             <Steps items={[
-              "Select an ontology and class from the dropdown menus.",
-              "Enter a search term or filter criteria.",
-              "Click Search to execute the query.",
-              "Browse through the results showing matching instances.",
-              "Click on any result to view its full details and connected entities."
+              "Navigate to the AI Assistant from the top navigation bar.",
+              "Type your question in the chat input. Mentioning the specific ontology name (e.g. \"wafer_ontology\") will help the assistant find information faster.",
+              "Submit your question and view the response. If you ask for statistics or comparisons, the assistant can render an interactive bar chart directly inside the chat window.",
+              "Click on any follow-up response buttons under the message to ask related questions automatically."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">What You Can Ask</h3>
+            <Steps items={[
+              <><strong>General Definitions</strong> - Ask about concepts like RDF, SPARQL, OWL, or namespaces (e.g., <em>"What is a triple?"</em>).</>,
+              <><strong>Schema Structures</strong> - Explore classes and relationships (e.g., <em>"What classes are connected to ProcessStep?"</em>).</>,
+              <><strong>Data Statistics & Plots</strong> - Query averages, counts, or limits, and plot values (e.g., <em>"Plot wafer thickness values"</em> or <em>"What is the average run time?"</em>).</>,
+              <><strong>Instance Search</strong> - Find specific records (e.g., <em>"Show me instances of WaferRun"</em>).</>
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Thinking Console & Chat Settings</h3>
+            <p className="guidance-text">
+              To inspect the compiled database query and search steps, click the header of the <strong>Thinking</strong> console while the assistant generates its response. 
+              To manage your conversation history, click the settings gear icon in the chat header to open the sidebar. Here, you can rename or delete past threads.
+            </p>
+            <Callout type="tip">
+              Be specific with entity names in your questions. If the assistant is unsure, it will suggest options to clarify which ontology you are referring to.
+            </Callout>
+          </div>
+        </section>
+
+        {/* Instance Generation */}
+        <section id="instance-generation" className="guidance-section">
+          <h2 className="guidance-section-title">
+            <span className="guidance-section-icon"><Icon name="file-text" /></span>
+            Instance Generation
+          </h2>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Overview</h3>
+            <p className="guidance-text">
+              The Instance Generation workflow allows you to build rich RDF instance data files based on raw CSV data files aligned with an RDF/OWL/Turtle schema. By utilizing automated header mapping heuristics, custom override options, and batch folder uploads, you can efficiently construct structural triple configurations.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 1: Upload Files</h3>
+            <p className="guidance-text">
+              Begin by providing the structural schema and the corresponding data files:
+            </p>
+            <Steps items={[
+              "Provide a Schema file - Choose an RDF, OWL, or Turtle (.ttl) schema definition file.",
+              "Provide Data files - Choose one or more CSV files, or select a single .zip file. If a .zip file is uploaded, the system recursively scans and extracts all nested CSV files automatically.",
+              "Select an AI Model - Use the model dropdown to choose which AI model will be used for intelligent header-to-schema matching. Different models offer varying speed and accuracy trade-offs.",
+              "To remove any uploaded schema or data file, simply click the small cross (x) button on its display chip."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 2: Analyze</h3>
+            <p className="guidance-text">
+              After selecting your files, click <strong>Analyze Files</strong>. The system reads the column headers of all uploaded CSV files, cross-references them against terms (classes and properties) in your schema, and automatically produces the best prefix and keyword match recommendations.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 3: Review & Custom Mappings</h3>
+            <p className="guidance-text">
+              The Matching Review screen lists matched and unmatched elements. You can modify these to fine-tune the resulting knowledge graph structure:
+            </p>
+            <Steps items={[
+              "Edit Mappings - Click on any CSV header mapping card to open the custom mapping dialog.",
+              "Dual-Mode Mapping - Toggle between mapping a CSV header to a schema term, or a schema term to a CSV header, using the intelligent search/autocomplete dropdown.",
+              "Save Free-form Mappings - If a schema term isn't found in the autocomplete results, you can type your own namespace/URI term and press Enter to save it.",
+              "Delete Mappings - Use the delete icon to remove any incorrect automatic mappings. Unmapped headers will be ignored during output construction.",
+              "Map Missing Schema Terms - A dedicated list card displays all key terms in the schema that are not yet bound. You can easily map these to any available CSV header."
+            ]} />
+            <Callout type="tip">
+              If you are confident in the system's automated suggestions, you can skip the manual review step entirely by clicking <strong>Skip Review</strong> to proceed straight to RDF compilation.
+            </Callout>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 4: Generate & Download</h3>
+            <p className="guidance-text">
+              Once review is complete, click <strong>Generate Instance</strong>. The service constructs Turtle/RDF records conforming to the correct RDFLib naming conventions, mapping CSV attributes to instances (such as wafer runs and parameter details). You can view generating details (file size, triple count, rows processed) and download the completed .ttl file directly to your device.
+            </p>
+          </div>
+        </section>
+
+        {/* Data Validation */}
+        <section id="data-validation" className="guidance-section">
+          <h2 className="guidance-section-title">
+            <span className="guidance-section-icon"><Icon name="shield" /></span>
+            Data Validation
+          </h2>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Overview</h3>
+            <p className="guidance-text">
+              The Data Validation interface allows you to compile human-readable business rules into SHACL (Shapes Constraint Language) shapes and validate RDF graphs against them. The generation is fully streamed and concurrent, ensuring fast processing times.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 1: Upload & Formulate Rules</h3>
+            <Steps items={[
+              "Upload Schema & Instances - Provide your schema (.ttl) and optional instance files to define the validation scope.",
+              "Generate AI Questions - Click \"Generate Questions\" to let the AI suggest 10 data-validation rules in plain English.",
+              "Manual Questions - Switch to the manual input mode to type your own validation rules directly.",
+              "Choose Rules - Select the specific rules you want to turn into SHACL validation shapes."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 2: Generate & Stream SHACL Shapes</h3>
+            <p className="guidance-text">
+              Click <strong>Generate SHACL</strong>. The portal immediately switches to Step 2, running concurrent LLM calls in the background:
+            </p>
+            <Steps items={[
+              "Checklist Progress - A real-time checklist shows the generation status of each rule.",
+              "Streaming Code Editor - Watch the SHACL Turtle shapes stream directly into the code editor.",
+              "Consolidation - Upon completion, the system deduplicates prefixes and presents the final formatted Turtle code. You can copy the code to clipboard or edit it."
+            ]} />
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Step 3: Validation Playground</h3>
+            <p className="guidance-text">
+              Click <strong>Proceed to Playground</strong> to execute validation on the data:
+            </p>
+            <Steps items={[
+              "Validate Against Target - Choose whether to validate against your uploaded files or workspace schemas.",
+              "Run Validation - Click \"Run Validation\" to start testing your instance graph against the generated SHACL shapes.",
+              "Step-by-Step Status - Observe the parsing and validation progress steps as they resolve.",
+              "Detailed Results Table - If violations are found, explore the details (Focus Node, Property, Message, Value) directly in the expandable table to locate data quality errors.",
+              "Export PDF - Export the complete validation report as a professional PDF document."
             ]} />
           </div>
         </section>
@@ -488,6 +622,17 @@ const UserGuidance = () => {
               To sign out, click your avatar icon in the top-right corner and select
               "Logout" from the dropdown menu. This will clear your session and redirect
               you to the home page.
+            </p>
+          </div>
+
+          <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Schema Change History</h3>
+            <p className="guidance-text">
+              Your Profile page includes a <strong>Schema Change History</strong> section that
+              automatically tracks every save you make in the Canvas Editor. Each entry records
+              a version number, a summary of changes (nodes and edges added, removed, or modified),
+              and a timestamp. You can filter logs by ontology, expand any entry to inspect the
+              granular diff, and delete individual log entries when no longer needed.
             </p>
           </div>
         </section>

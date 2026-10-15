@@ -14,7 +14,7 @@ def _serialize(doc: dict) -> dict:
     return doc
 
 
-# ── Read ──────────────────────────────────────────────────────────────────────
+# --- Read ---
 
 def get_conversations(email: str) -> List[dict]:
     """Return all saved conversations for a user, newest first."""
@@ -25,7 +25,7 @@ def get_conversations(email: str) -> List[dict]:
     return [_serialize(d) for d in docs]
 
 
-# ── Write ─────────────────────────────────────────────────────────────────────
+# --- Write ---
 
 def upsert_conversation(email: str, chat_id: float, title: str, messages: list) -> dict:
     """Create or fully replace a conversation document."""
@@ -44,7 +44,7 @@ def upsert_conversation(email: str, chat_id: float, title: str, messages: list) 
     return doc
 
 
-# ── Delete ────────────────────────────────────────────────────────────────────
+# --- Delete ---
 
 def delete_conversation(email: str, chat_id: float) -> int:
     """Delete one conversation. Returns number of documents deleted."""

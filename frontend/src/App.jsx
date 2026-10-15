@@ -22,6 +22,8 @@ import Profile from "./components/User/Profile";
 import ResetPassword from "./components/User/ResetPassword";
 import MyOntologies from "./components/Nodes/MyOntologies";
 import UserGuidance from "./components/Nodes/UserGuidance";
+import InstanceGenerationWorkflow from "./components/Nodes/InstanceGenerationWorkflow";
+import ValidationPage from "./components/Nodes/ValidationPage";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -151,6 +153,8 @@ function App() {
             <Route path="/workspace" element={<Workspace />} />
             <Route path="/my-ontologies" element={<MyOntologies onOpenAuth={handleOpenAuth} />} />
             <Route path="/canvas" element={<CanvasEditor onOpenAuth={handleOpenAuth} />} />
+            <Route path="/instance-generation" element={<InstanceGenerationWorkflow />} />
+            <Route path="/validate" element={<ValidationPage user={user} onOpenAuth={handleOpenAuth} />} />
             <Route path="/termsandconditions" element={<Terms />} />
             <Route
               path="/verify-email"

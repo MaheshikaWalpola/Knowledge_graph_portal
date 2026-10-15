@@ -1,16 +1,17 @@
 from typing import Dict, Any, List, Optional
 
 from fastapi import APIRouter, Query, Body, Depends, Response, UploadFile, File, Form, Path
+from fastapi.responses import StreamingResponse
 
 from controllers.controller import (
-    # base ontology (read-only)
+
     ctrl_full_schema_graph,
     ctrl_neighbors_schema,
     ctrl_neighbors_both,
     ctrl_neighbors_schema_and_instances,
     ctrl_instance_details,
 
-    # multi-schema workspace (per-user-per-schema)
+    # workspace (per-user-per-schema)
     ctrl_init_workspace,
     ctrl_workspace_neighbors,
     ctrl_workspace_add_relation,
@@ -19,7 +20,7 @@ from controllers.controller import (
     ctrl_export_workspace,
     ctrl_workspace_upload_instances,
 
-    # custom uploaded schemas
+    # uploaded schemas
     ctrl_list_user_schemas,
     ctrl_delete_user_schema,
     ctrl_delete_schema,
@@ -27,11 +28,17 @@ from controllers.controller import (
     ctrl_workspace_full_schema_graph,
 )
 
+from controllers.instance_generation_controller import (
+    ctrl_analyze_schema_and_data,
+    ctrl_analyze_schema_and_data_stream,
+    ctrl_generate_instance,
+)
+
 from core.auth import get_current_user
 
 router = APIRouter()
 
-# -------------------------- BASE ONTOLOGY ------------------------------
+# --- Base ontology ---
 
 @router.get("/schema/graph")
 def api_full_schema_graph(
@@ -55,9 +62,7 @@ def api_neighbors_schema_and_instances(
     q: str = Query(...),
     limit: int = Query(5000, ge=1, le=50000),
 ):
-    """
-    Base ontology: schema + instances
-    """
+    """Fetch neighbor graph around a node including both schema concepts and concrete instances."""
     return ctrl_neighbors_schema_and_instances(q, limit)
 
 
@@ -65,11 +70,11 @@ def api_neighbors_schema_and_instances(
 def api_instance_details(
     iri: str = Query(..., description="Full instance IRI"),
 ):
+    """Retrieve detailed properties, types, and predicate values for a specific instance IRI."""
     return ctrl_instance_details(iri)
 
 
-# ---------------------------- WORKSPACE --------------------------------
-# ---------------------- USER-SPECIFIC MULTI-SCHEMA ----------------------
+# --- Workspace (user-specific multi-schema) ---
 
 @router.post("/workspace/init")
 def api_workspace_init(
@@ -91,6 +96,7 @@ def api_workspace_neighbors(
     level: str = Query("schema", description="schema | both"),
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
+    """Query neighbor nodes and relations in the user's isolated workspace schema graph."""
     return ctrl_workspace_neighbors(
         current_user["email"],
         schema_id,
@@ -127,9 +133,9 @@ def api_workspace_add_relation(
     payload: Dict = Body(
         ...,
         example={
-            "subject": "https://tucid/cpmo/Velocity",
+            "subject": "https://tucid/cmpo/Velocity",
             "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-            "object": "https://tucid/cpmo/ProcessVariable",
+            "object": "https://tucid/cmpo/ProcessVariable",
         },
     ),
     current_user: Any = Depends(get_current_user),
@@ -144,9 +150,9 @@ def api_workspace_delete_relation(
     payload: Dict = Body(
         ...,
         example={
-            "subject": "https://tucid/cpmo/Velocity",
+            "subject": "https://tucid/cmpo/Velocity",
             "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-            "object": "https://tucid/cpmo/ProcessVariable",
+            "object": "https://tucid/cmpo/ProcessVariable",
         },
     ),
     current_user: Any = Depends(get_current_user),
@@ -164,10 +170,10 @@ def api_workspace_update_relation(
     payload: Dict = Body(
         ...,
         example={
-            "subject": "https://tucid/cpmo/Velocity",
+            "subject": "https://tucid/cmpo/Velocity",
             "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
-            "old_object": "https://tucid/cpmo/ProcessVariable",
-            "new_object": "https://tucid/cpmo/PhysicalQuantity",
+            "old_object": "https://tucid/cmpo/ProcessVariable",
+            "new_object": "https://tucid/cmpo/PhysicalQuantity",
         },
     ),
     current_user: Any = Depends(get_current_user),
@@ -228,7 +234,8 @@ def api_upload_schema(
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
     """
-    Upload a custom RDF ontology.
+    Upload and register a custom RDF ontology schema (and optional instance TTL)
+    into an isolated GraphDB named graph for the user.
     """
     return ctrl_upload_schema(
         user_email=current_user["email"],
@@ -240,7 +247,7 @@ def api_upload_schema(
     )
 
 
-# ────────────────── CANVAS (import / export) ──────────────────
+# --- Canvas (import / export) ---
 
 from core.parse_errors import friendly_parse_error as _friendly_parse_error
 
@@ -258,7 +265,7 @@ async def api_canvas_import(
     content = await file.read()
     g = RDFGraph()
 
-    # guess format from filename
+    # Guess format from filename
     fname = (file.filename or "").lower()
     fmt = "turtle"
     if fname.endswith(".rdf") or fname.endswith(".owl"):
@@ -278,8 +285,8 @@ async def api_canvas_import(
             "technical": raw,
         })
 
-    # Build nodes from all subjects/objects that are URIs
-    node_map = {}  # iri -> node dict
+    # Detect node types from rdf:type
+    node_map = {}
     edge_list = []
 
     TYPE_MAP = {
@@ -361,7 +368,7 @@ async def api_canvas_import(
         }
         col += 1
 
-    # Build edges (skip rdf:type edges)
+    # Build edges (skip rdf:type, label, comment edges)
     edge_idx = 0
     for s, p, o in g:
         s_str, p_str, o_str = str(s), str(p), str(o)
@@ -401,4 +408,54 @@ async def api_canvas_import(
         "nodes": list(node_map.values()),
         "edges": edge_list,
     }
+
+
+# --- Instance generation workflow ---
+
+@router.post("/instance-generation/analyze")
+async def api_analyze_schema_and_data(
+    schema_file: UploadFile = File(..., description="RDF/Turtle schema file"),
+    data_files: List[UploadFile] = File(..., description="CSV data files"),
+    model: Optional[str] = Form(None, description="Kiste model ID to use for AI matching"),
+    current_user: Any = Depends(get_current_user),
+):
+    """
+    Analyze schema file and CSV data files.
+    Returns a streamed NDJSON matching analysis report with:
+    - matched_headers: CSV headers matched to schema terms
+    - unmatched_data_headers: CSV headers without matches
+    - missing_schema_terms: Schema terms without data headers
+    - available_schema_terms: All schema terms for manual mapping
+    """
+    return await ctrl_analyze_schema_and_data_stream(
+        schema_file=schema_file,
+        data_files=data_files,
+        user_email=current_user["email"],
+        model=model,
+    )
+
+
+@router.post("/instance-generation/generate")
+async def api_generate_instance(
+    schema_file: UploadFile = File(..., description="RDF/Turtle schema file"),
+    data_files: List[UploadFile] = File(..., description="CSV data files"),
+    mappings: str = Form(..., description="JSON string of {data_header: schema_term} mappings"),
+    schema_id: Optional[str] = Form("main", description="Which schema workspace to use"),
+    model: Optional[str] = Form(None, description="Kiste model ID to use for AI matching"),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """
+    Generate RDF instance file from schema and data files.
+    
+    Uses the provided mappings to determine how CSV headers map to schema terms.
+    Returns generated Turtle content and metadata.
+    """
+    return await ctrl_generate_instance(
+        schema_file=schema_file,
+        data_files=data_files,
+        mappings=mappings,
+        user_email=current_user["email"],
+        schema_id=schema_id,
+        model=model,
+    )
 

@@ -1,45 +1,39 @@
-/* ========================================
-   Navbar Container - Floating Glass Effect
-   ======================================== */
+/* ---- Navbar container ---- */
 .navbar {
   position: sticky;
-  top: 12px;
+  top: 8px;
   z-index: 1100;
+  /* Width = viewport - (app padding on each side)
+     This keeps navbar edges aligned with page content edges */
+  width: calc(100% - var(--app-pad-x) * 2) !important;
+  max-width: calc(var(--app-max-w) + var(--app-pad-x) * 2) !important;
+  margin: 0 auto;
   background: var(--bg-glass) !important;
   backdrop-filter: blur(var(--blur-xl)) saturate(200%) !important;
   -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(200%) !important;
-  border-radius: var(--radius-2xl) !important;
+  border-radius: var(--app-radius) !important;
   border: 1px solid var(--border-light) !important;
-  box-shadow:
-    var(--shadow-lg),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
-  max-width: 1920px;
-  width: calc(100% - (var(--space-2xl) * 2)) !important;
-  margin: 0 auto;
-  padding: 4px 8px !important;
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.05) inset !important;
+  /* No padding-x on the navbar container itself — handled by toolbar */
+  padding: 0 !important;
   transition: all var(--transition-normal) !important;
 }
 
 .navbar:hover {
-  box-shadow:
-    var(--shadow-xl),
-    var(--shadow-glow),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  box-shadow: var(--shadow-xl), var(--shadow-glow), 0 0 0 1px rgba(255,255,255,0.08) inset !important;
   border-color: var(--border-medium) !important;
 }
 
-/* Toolbar */
+/* ---- Toolbar ---- */
 .navbar .MuiToolbar-root {
-  padding: 8px 16px !important;
-  min-height: 56px !important;
-  gap: 8px;
+  padding: clamp(4px, 0.4vw, 8px) clamp(14px, 1.5vw, 28px) !important;
+  min-height: clamp(52px, 4.5vw, 64px) !important;
+  gap: clamp(4px, 0.5vw, 10px);
 }
 
-/* ========================================
-   🏷️ Logo / Title
-   ======================================== */
+/* LOGO / BRAND TITLE */
 .navbar .title {
-  font-size: 20px !important;
+  font-size: clamp(15px, 1.3vw, 20px) !important;
   font-weight: 800 !important;
   letter-spacing: -0.02em;
   background: var(--gradient-primary);
@@ -47,48 +41,30 @@
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
   margin: 0;
-  padding: 6px 12px;
+  padding: 4px clamp(6px, 0.6vw, 12px);
   user-select: none;
   white-space: nowrap;
   transition: all var(--transition-normal);
 }
+.navbar .title:hover { transform: scale(1.02); }
 
-.navbar .title:hover {
-  transform: scale(1.02);
-}
-
-/* ========================================
-   🔗 Navigation Links
-   ======================================== */
-.navbar__link {
-  text-decoration: none;
-  color: inherit;
-}
+/*    NAV LINKS   */
+.navbar__link { text-decoration: none; color: inherit; }
 
 .header__links_sub {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary) !important;
-  font-size: 14px !important;
+  font-size: clamp(12px, 0.95vw, 14px) !important;
   font-weight: 500 !important;
   letter-spacing: 0.01em;
-  padding: 10px 18px !important;
+  padding: clamp(6px, 0.6vw, 10px) clamp(10px, 1vw, 18px) !important;
   border-radius: var(--radius-lg) !important;
   text-transform: none !important;
   transition: all var(--transition-normal) !important;
   position: relative;
-  overflow: hidden;
-}
-
-.header__links_sub::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--gradient-primary);
-  opacity: 0;
-  transition: opacity var(--transition-normal);
-  border-radius: inherit;
+  white-space: nowrap;
 }
 
 .header__links_sub:hover {
@@ -97,36 +73,27 @@
   transform: translateY(-1px);
 }
 
-.header__links_sub:active {
-  transform: translateY(0);
-}
-
-/* Active state for nav links */
 .header__links_sub.active {
   color: white !important;
   background: var(--gradient-primary) !important;
   box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
 }
 
-/* ========================================
-   🎛️ Right Side Controls
-   ======================================== */
+/*    RIGHT-SIDE CONTROLS   */
 .header__Rightlinks {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: clamp(6px, 0.7vw, 14px);
 }
 
-/* ========================================
-   Sign In Button - Aurora Style
-   ======================================== */
+/*    SIGN IN BUTTON   */
 .navbar .MuiButton-contained {
   background: var(--gradient-primary) !important;
   border: none !important;
   border-radius: var(--radius-full) !important;
-  padding: 10px 24px !important;
-  font-size: 14px !important;
+  padding: clamp(6px, 0.6vw, 10px) clamp(16px, 1.6vw, 26px) !important;
+  font-size: clamp(12px, 0.85vw, 14px) !important;
   font-weight: 600 !important;
   text-transform: none !important;
   letter-spacing: 0.02em;
@@ -134,98 +101,58 @@
   transition: all var(--transition-normal) !important;
   position: relative;
   overflow: hidden;
+  white-space: nowrap;
 }
-
 .navbar .MuiButton-contained::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.25),
-    transparent
-  );
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
   transition: left 0.5s ease;
 }
-
 .navbar .MuiButton-contained:hover {
   transform: translateY(-2px) !important;
   box-shadow: 0 6px 25px rgba(37, 99, 235, 0.45) !important;
 }
+.navbar .MuiButton-contained:hover::before { left: 100%; }
+.navbar .MuiButton-contained:active { transform: translateY(0) !important; }
 
-.navbar .MuiButton-contained:hover::before {
-  left: 100%;
-}
-
-.navbar .MuiButton-contained:active {
-  transform: translateY(0) !important;
-}
-
-/* ========================================
-   Avatar Button
-   ======================================== */
+/*    AVATAR   */
 .navbar .MuiIconButton-root {
-  padding: 4px !important;
+  padding: 3px !important;
   transition: all var(--transition-normal) !important;
 }
-
-.navbar .MuiIconButton-root:hover {
-  transform: scale(1.08);
-}
+.navbar .MuiIconButton-root:hover { transform: scale(1.08); }
 
 .navbar .MuiAvatar-root {
-  width: 42px !important;
-  height: 42px !important;
-  font-size: 16px !important;
+  width: clamp(34px, 2.6vw, 44px) !important;
+  height: clamp(34px, 2.6vw, 44px) !important;
+  font-size: clamp(13px, 1.1vw, 17px) !important;
   font-weight: 700 !important;
   color: white !important;
   border: 2px solid rgba(37, 99, 235, 0.3) !important;
   box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25) !important;
   transition: all var(--transition-normal) !important;
 }
-
 .navbar .MuiAvatar-root:hover {
   box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4) !important;
   border-color: rgba(37, 99, 235, 0.6) !important;
 }
 
-/* ========================================
-   Menu Icon (Mobile)
-   ======================================== */
-.navbar .menu-icon {
-  color: var(--text-primary) !important;
-  transition: all var(--transition-normal) !important;
-}
-
-.navbar .menu-icon:hover {
-  transform: scale(1.1);
-  color: var(--accent-primary) !important;
-}
-
-/* ========================================
-   Mobile Drawer - Glass Effect
-   ======================================== */
+/*    MOBILE DRAWER   */
 .MuiDrawer-paper {
   background: var(--bg-glass-strong) !important;
   backdrop-filter: blur(var(--blur-xl)) saturate(180%) !important;
   -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(180%) !important;
   border-right: 1px solid var(--border-light) !important;
 }
-
 .MuiDrawer-paper .MuiListItem-root {
   margin: 4px 8px;
   border-radius: var(--radius-md);
   transition: all var(--transition-normal);
 }
-
-.MuiDrawer-paper .MuiListItem-root:hover {
-  background: rgba(37, 99, 235, 0.08);
-}
-
+.MuiDrawer-paper .MuiListItem-root:hover { background: rgba(37, 99, 235, 0.08); }
 .MuiDrawer-paper .MuiButton-root {
   color: var(--text-secondary) !important;
   font-weight: 500 !important;
@@ -233,139 +160,59 @@
   border-radius: var(--radius-md) !important;
   transition: all var(--transition-normal) !important;
 }
-
 .MuiDrawer-paper .MuiButton-root:hover {
   background: rgba(37, 99, 235, 0.08) !important;
   color: var(--text-primary) !important;
 }
-
-/* Close button in drawer */
 .MuiDrawer-paper .MuiIconButton-root {
   color: var(--text-secondary) !important;
   transition: all var(--transition-normal) !important;
 }
-
 .MuiDrawer-paper .MuiIconButton-root:hover {
   color: var(--accent-error) !important;
   background: rgba(239, 68, 68, 0.1) !important;
 }
-
-/* ========================================
-   Profile Drawer (Right Side)
-   ======================================== */
-.MuiDrawer-paperAnchorRight {
-  background: var(--bg-glass-strong) !important;
-  backdrop-filter: blur(var(--blur-xl)) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(var(--blur-xl)) saturate(180%) !important;
-  border-left: 1px solid var(--border-light) !important;
-}
-
-/* Profile header in drawer */
-.MuiDrawer-paperAnchorRight .MuiTypography-subtitle1 {
-  font-weight: 700 !important;
-  color: var(--text-primary) !important;
-}
-
-.MuiDrawer-paperAnchorRight .MuiTypography-body2 {
-  color: var(--text-secondary) !important;
-}
-
-/* Divider */
 .MuiDrawer-paper .MuiDivider-root {
   border-color: var(--border-light) !important;
   margin: 8px 0 !important;
 }
 
-/* Profile menu items */
+/* Profile drawer (right side) */
+.MuiDrawer-paperAnchorRight {
+  background: var(--bg-glass-strong) !important;
+  backdrop-filter: blur(var(--blur-xl)) saturate(180%) !important;
+  border-left: 1px solid var(--border-light) !important;
+}
 .MuiDrawer-paperAnchorRight .MuiListItem-root {
   margin: 4px 8px;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-normal);
 }
-
-.MuiDrawer-paperAnchorRight .MuiListItem-root:hover {
-  background: rgba(37, 99, 235, 0.08);
-}
-
+.MuiDrawer-paperAnchorRight .MuiListItem-root:hover { background: rgba(37, 99, 235, 0.08); }
 .MuiDrawer-paperAnchorRight .MuiListItemText-primary {
   font-weight: 500 !important;
   color: var(--text-primary) !important;
 }
-
-/* Profile drawer avatar - ensure initials are visible */
 .MuiDrawer-paperAnchorRight .MuiAvatar-root {
   color: white !important;
   font-weight: 700 !important;
-  font-size: 18px !important;
 }
 
-/* ========================================
-   Focus States (Accessibility)
-   ======================================== */
+/*    MOBILE BREAKPOINTS   */
+@media screen and (max-width: 600px) {
+  .navbar .title { font-size: 14px !important; }
+  .navbar { top: 6px; border-radius: var(--radius-xl) !important; }
+}
+
+/* Focus rings in navbar */
 .navbar :where(a, button):focus-visible {
   outline: 2px solid var(--accent-primary) !important;
   outline-offset: 2px;
   border-radius: var(--radius-md) !important;
 }
 
-/* ========================================
-   Responsive Adjustments
-   ======================================== */
-@media screen and (max-width: 910px) {
-  .navbar {
-    width: calc(100% - (var(--space-lg) * 2)) !important;
-    margin: 0 auto;
-    top: 8px;
-    border-radius: var(--radius-xl) !important;
-  }
-
-  .navbar .MuiToolbar-root {
-    padding: 6px 12px !important;
-    min-height: 52px !important;
-  }
-}
-
-@media screen and (max-width: 600px) {
-  .navbar .title {
-    font-size: 16px !important;
-    padding: 4px 8px;
-  }
-
-  .navbar {
-    top: 6px;
-  }
-}
-
-/* ========================================
-   Special Effects
-   ======================================== */
-
-/* Subtle glow around navbar on scroll */
-.navbar.scrolled {
-  box-shadow:
-    var(--shadow-xl),
-    0 0 60px rgba(37, 99, 235, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
-}
-
-/* Page background padding for floating nav */
-body {
-  padding-top: 12px;
-}
-
-.MuiDrawer-paper .list-item .MuiButton-root {
-  justify-content: flex-start !important;
-  text-align: left !important;
-}
-
-.MuiDrawer-paper .list-item .MuiListItemText-root {
-  margin: 0 !important;
-  text-align: left !important;
-}
-
-.MuiDrawer-paper .list-item .MuiListItemText-secondary {
-  display: block !important;
-  text-align: left !important;
-}
+/* Drawer list-item text alignment */
+.MuiDrawer-paper .list-item .MuiButton-root { justify-content: flex-start !important; }
+.MuiDrawer-paper .list-item .MuiListItemText-root { margin: 0 !important; }

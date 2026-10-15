@@ -94,7 +94,7 @@ export default function VerifyEmail({ onLoginSuccess }) {
       {status === "success" && (
         <>
           <Typography variant="h5" sx={{ mb: 1 }}>
-            Email verified 🎉
+            Email verified!
           </Typography>
           <Typography sx={{ color: "text.secondary" }}>
             Your account is now activated. Redirecting you to the home page…

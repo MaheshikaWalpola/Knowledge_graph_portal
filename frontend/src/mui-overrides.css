@@ -1,11 +1,4 @@
-/* ========================================
-   MUI COMPONENT OVERRIDES
-   Global Material-UI Styling
-   ======================================== */
-
-/* ========================================
-   Dialog / Modal Overrides
-   ======================================== */
+/*    Dialog / Modal Overrides   */
 .MuiDialog-paper {
   background: var(--bg-glass-strong) !important;
   backdrop-filter: blur(var(--blur-xl)) saturate(180%) !important;
@@ -32,9 +25,7 @@
   gap: var(--space-sm) !important;
 }
 
-/* ========================================
-   Tab Overrides
-   ======================================== */
+/*    Tab Overrides   */
 .MuiTabs-root {
   min-height: 48px !important;
 }
@@ -64,9 +55,7 @@
   border-radius: var(--radius-full) var(--radius-full) 0 0 !important;
 }
 
-/* ========================================
-   Button Overrides
-   ======================================== */
+/*    Button Overrides   */
 .MuiButton-root {
   font-family: var(--font-sans) !important;
   font-weight: 600 !important;
@@ -92,9 +81,7 @@
   background: rgba(37, 99, 235, 0.05) !important;
 }
 
-/* ========================================
-   TextField Overrides
-   ======================================== */
+/*    TextField Overrides   */
 .MuiTextField-root .MuiOutlinedInput-root {
   font-family: var(--font-sans) !important;
   border-radius: var(--radius-lg) !important;
@@ -128,9 +115,7 @@
   color: var(--accent-primary) !important;
 }
 
-/* ========================================
-   Select Overrides
-   ======================================== */
+/*    Select Overrides   */
 .MuiSelect-root {
   font-family: var(--font-sans) !important;
 }
@@ -158,9 +143,7 @@
   background: rgba(37, 99, 235, 0.12) !important;
 }
 
-/* ========================================
-   Alert / Snackbar Overrides
-   ======================================== */
+/*    Alert / Snackbar Overrides   */
 .MuiAlert-root {
   font-family: var(--font-sans) !important;
   border-radius: var(--radius-lg) !important;
@@ -179,9 +162,7 @@
   box-shadow: var(--shadow-xl) !important;
 }
 
-/* ========================================
-   Table Overrides
-   ======================================== */
+/*    Table Overrides   */
 .MuiTable-root {
   font-family: var(--font-sans) !important;
 }
@@ -208,9 +189,7 @@
   background: rgba(37, 99, 235, 0.04) !important;
 }
 
-/* ========================================
-   Chip Overrides
-   ======================================== */
+/*    Chip Overrides   */
 .MuiChip-root {
   font-family: var(--font-sans) !important;
   font-weight: 500 !important;
@@ -222,16 +201,12 @@
   color: white !important;
 }
 
-/* ========================================
-   Circular Progress
-   ======================================== */
+/*    Circular Progress   */
 .MuiCircularProgress-colorPrimary {
   color: var(--accent-primary) !important;
 }
 
-/* ========================================
-   Card Overrides
-   ======================================== */
+/*    Card Overrides   */
 .MuiCard-root {
   background: var(--bg-glass-strong) !important;
   backdrop-filter: blur(var(--blur-lg)) !important;
@@ -255,9 +230,7 @@
   font-family: var(--font-sans) !important;
 }
 
-/* ========================================
-   Paper Overrides
-   ======================================== */
+/*    Paper Overrides   */
 .MuiPaper-root {
   background: var(--bg-secondary) !important;
 }
@@ -274,16 +247,12 @@
   box-shadow: var(--shadow-lg) !important;
 }
 
-/* ========================================
-   Divider
-   ======================================== */
+/*    Divider   */
 .MuiDivider-root {
   border-color: var(--border-light) !important;
 }
 
-/* ========================================
-   Tooltip
-   ======================================== */
+/*    Tooltip   */
 .MuiTooltip-tooltip {
   font-family: var(--font-sans) !important;
   font-size: 12px !important;
@@ -295,9 +264,7 @@
   box-shadow: var(--shadow-md) !important;
 }
 
-/* ========================================
-   List Overrides
-   ======================================== */
+/*    List Overrides   */
 .MuiList-root {
   font-family: var(--font-sans) !important;
 }
@@ -321,9 +288,7 @@
   color: var(--text-secondary) !important;
 }
 
-/* ========================================
-   Dark Mode for MUI components
-   ======================================== */
+/*    Dark Mode for MUI components   */
 @media (prefers-color-scheme: dark) {
   .MuiDialog-paper,
   .MuiMenu-paper,

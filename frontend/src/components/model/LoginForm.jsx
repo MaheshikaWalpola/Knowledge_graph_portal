@@ -114,7 +114,7 @@ export default function LoginForm({ onLoginSuccess }) {
   };
 
   return (
-    <div className="login__form">
+    <form className="login__form" onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
       <FormControl className="formControl" style={{ marginBottom: "10px" }}>
         <TextField
           id="outlined-basic-email"
@@ -168,6 +168,7 @@ export default function LoginForm({ onLoginSuccess }) {
       </FormControl>
 
       <Button
+        type="submit"
         variant="contained"
         size="large"
         style={{
@@ -177,7 +178,6 @@ export default function LoginForm({ onLoginSuccess }) {
           backgroundColor: "#1d4ed8",
           color: "white",
         }}
-        onClick={handleLogin}
       >
         Login
       </Button>
@@ -213,6 +213,6 @@ export default function LoginForm({ onLoginSuccess }) {
           Successfully sent the reset password link!
         </Alert>
       </Snackbar>
-    </div>
+    </form>
   );
 }

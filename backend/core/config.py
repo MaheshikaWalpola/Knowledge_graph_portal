@@ -19,24 +19,27 @@ class Settings:
     BASE_SCHEMA_GRAPH = os.getenv("BASE_SCHEMA_GRAPH")
     BASE_INSTANCE_GRAPH = os.getenv("BASE_INSTANCE_GRAPH")
 
-    # ---- NEW: MongoDB
+    # MongoDB
     MONGODB_URI = os.getenv("MONGODB_URI")
     MONGODB_DB  = os.getenv("MONGODB_DB")
 
-    # ---- NEW: JWT
+    # JWT
     JWT_SECRET    = os.getenv("JWT_SECRET")
     JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
-    # ---- NEW: Email
-    # Public URL of the frontend incl. any path prefix; used to build links in e-mails
-    FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+    # Email
+    FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")
     SMTP_USER   = os.getenv("SMTP_USER")
     SMTP_PASS   = os.getenv("SMTP_PASS")
     MAIL_FROM   = os.getenv("MAIL_FROM", SMTP_USER)
     MAIL_PORT   = int(os.getenv("MAIL_PORT", "587"))
     MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
 
-    # ---- OPENAI
+    # OpenAI
     OPEN_API_KEY = os.getenv("OPEN_API_KEY")
 
+    # SHACL Verification & Repair Pipeline
+    ENABLE_SHACL_VERIFICATION = os.getenv("ENABLE_SHACL_VERIFICATION", "true").lower() in ("true", "1", "yes")
+
 settings = Settings()
+

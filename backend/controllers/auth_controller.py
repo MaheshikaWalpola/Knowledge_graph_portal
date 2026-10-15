@@ -22,7 +22,6 @@ def ctrl_register_user(email: str, password: str, firstName: str, lastName: str)
     return {"status": "ok", "message": "User registered. Please check your email to verify."}
 
 def ctrl_verify_email(token: str) -> Dict:
-    # This sets is_verified=True and removes verification_token in DB
     user = verify_user_by_token(token)
 
     access_token = create_access_token(email=user["email"])

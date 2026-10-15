@@ -1,8 +1,3 @@
-/* ========================================
-   🦶 FOOTER
-   MacBook-Inspired Premium Design
-   ======================================== */
-
 /* Footer Container */
 .footer {
   padding: var(--space-2xl) var(--space-lg);
@@ -85,12 +80,31 @@ footer.MuiBox-root::before {
   opacity: 0.4;
 }
 
-/* ========================================
-   📱 Responsive Adjustments
-   ======================================== */
+/* Footer Links */
+.footer-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: color var(--transition-fast);
+}
+
+.footer-link:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
+.footer-link-divider {
+  color: var(--border-strong);
+  font-size: 0.8rem;
+  user-select: none;
+}
+
+/* Responsive */
 @media (max-width: 600px) {
   .footer,
   footer.MuiBox-root {
     padding: var(--space-xl) var(--space-md) !important;
   }
 }
+

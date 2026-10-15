@@ -76,13 +76,15 @@ function buildTTL(model) {
 }
 
 //  Element Tab ─
-function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAuth, onQuickConnect }) {
-  // Save-to-workspace state (lives here so it appears at bottom of Element tab)
+function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAuth, onQuickConnect, onPerformSave, saving: savingProp, saveSuccess: saveSuccessProp, saveError: saveErrorProp }) {
+  // Save-to-workspace state — name is local, save execution is delegated to parent
   const [saveName, setSaveName] = useState(originalName || "");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(null);
   const [showSaveTechnical, setShowSaveTechnical] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState("");
+
+  // Use parent-provided save state
+  const saving = savingProp;
+  const saveSuccess = saveSuccessProp;
+  const saveError = saveErrorProp;
 
   // Quick Connect States
   const [quickNodeType, setQuickNodeType] = useState("classNode");
@@ -138,47 +140,10 @@ function ElementTab({ selected, model, originalSchemaId, originalName, onOpenAut
   );
 
   const handleSaveToWorkspace = async () => {
-    setSaveError(null);
     setShowSaveTechnical(false);
-    setSaveSuccess("");
-    if (!saveName.trim()) {
-      setSaveError({ summary: "Please provide a name for the ontology.", technical: "" });
-      return;
-    }
-    const token = localStorage.getItem("token");
-    if (!token) {
-      if (onOpenAuth) onOpenAuth();
-      else setSaveError({ summary: "You must be logged in to save.", technical: "" });
-      return;
-    }
-    setSaving(true);
-    try {
-      const ttlContent = buildTTL(model);
-      const blob = new Blob([ttlContent], { type: "text/turtle" });
-      const file = new File([blob], `${saveName.trim().replace(/\s+/g, "_")}.ttl`, { type: "text/turtle" });
-      const form = new FormData();
-      form.append("name", saveName.trim());
-      form.append("mode", "combined");
-      form.append("schema_file", file);
-      if (isUpdate) form.append("update_schema_id", originalSchemaId);
-      const resp = await fetch(`${API}/workspace/schema/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
-      if (!resp.ok) {
-        const detail = await resp.json().catch(() => ({}));
-        const d = detail.detail;
-        if (d && typeof d === "object" && d.summary) throw { summary: d.summary, technical: d.technical || "" };
-        throw { summary: (typeof d === "string" ? d : null) || "Save failed", technical: "" };
-      }
-      setSaveSuccess(`"${saveName.trim()}" ${isUpdate ? "updated in" : "saved to"} your workspace!`);
-      if (!isUpdate) setSaveName("");
-      setTimeout(() => setSaveSuccess(""), 3000);
-    } catch (err) {
-      setSaveError(err.summary ? err : { summary: err.message || "Save failed", technical: "" });
-    } finally {
-      setSaving(false);
+    if (onPerformSave) {
+      const success = await onPerformSave(saveName);
+      if (success && !isUpdate) setSaveName("");
     }
   };
 
@@ -760,7 +725,7 @@ function ImportExportTab({ model, onImport, originalSchemaId, originalName, onOp
   );
 }
 
-export default function PropertyPanel({ selected, model, onImport, originalSchemaId, originalName, onOpenAuth, onQuickConnect }) {
+export default function PropertyPanel({ selected, model, onImport, originalSchemaId, originalName, onOpenAuth, onQuickConnect, onTriggerSave, onPerformSave, saving, saveSuccess, saveError }) {
   const [tab, setTab] = useState("element");
 
   return (
@@ -791,6 +756,10 @@ export default function PropertyPanel({ selected, model, onImport, originalSchem
             originalName={originalName}
             onOpenAuth={onOpenAuth}
             onQuickConnect={onQuickConnect}
+            onPerformSave={onPerformSave}
+            saving={saving}
+            saveSuccess={saveSuccess}
+            saveError={saveError}
           />
         )}
         {tab === "io" && (
