@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./ResetPassword.css";
+import { API } from "../../config";
 
-const API = import.meta.env.VITE_API_URL;
 
 export default function ResetPassword() {
   const [params] = useSearchParams();

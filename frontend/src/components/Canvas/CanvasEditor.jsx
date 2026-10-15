@@ -20,6 +20,7 @@ import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import LayersClearIcon from "@mui/icons-material/LayersClear";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
+import { API } from "../../config";
 
 export default function CanvasEditor({ onOpenAuth }) {
   const [activeEdgeType, setActiveEdgeType] = useState("subClassOf");
@@ -38,7 +39,6 @@ export default function CanvasEditor({ onOpenAuth }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const API = import.meta.env.VITE_API_URL;
 
   // Toggle a CSS class on the root element to hide/show the app header & footer
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function CanvasEditor({ onOpenAuth }) {
     };
 
     loadSchema();
-  }, [location.search, handleImport, API]);
+  }, [location.search, handleImport]);
 
   const handleClearCanvas = useCallback(() => {
     setModel({ nodes: [], edges: [] });

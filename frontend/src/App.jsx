@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import axios from "axios";
 import "./App.css";
+import { ROUTER_BASENAME, appUrl } from "./config";
 
 import Footer from "./components/Common/Footer/Footer";
 import Header from "./components/Common/Header/Header";
@@ -55,7 +56,8 @@ function App() {
     setAuthOpen(false);
 
     if (redirectAfterAuth) {
-      window.location.href = redirectAfterAuth;
+      // redirectAfterAuth is an app route such as "/workspace"; keep the deployment prefix
+      window.location.href = appUrl(redirectAfterAuth);
     }
   };
 
@@ -63,7 +65,7 @@ function App() {
     localStorage.removeItem("kgp_user");
     localStorage.removeItem("token");
     setUser(null);
-    window.location.href = "/";
+    window.location.href = appUrl("/");
   };
 
   // Global axios interceptor for 401 Unauthorized
@@ -123,12 +125,12 @@ function App() {
 
   const handleLoginRouteSuccess = (userData) => {
     handleAuthSuccess(userData);
-    window.location.href = "/";
+    window.location.href = appUrl("/");
   };
 
   return (
     <div className="app-wrapper">
-      <Router>
+      <Router basename={ROUTER_BASENAME}>
         <Header
           user={user}
           onOpenAuth={handleOpenAuth}

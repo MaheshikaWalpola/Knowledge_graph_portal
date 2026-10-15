@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import "./Profile.css";
+import { API } from "../../config";
 
-const API = import.meta.env.VITE_API_URL;
 
 const authHeaders = () => {
   const token = localStorage.getItem("token");

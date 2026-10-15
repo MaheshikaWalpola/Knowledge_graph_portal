@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import axios from "axios";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import "./AIAssistance.css";
+import { API } from "../../config";
 
-const API = import.meta.env.VITE_API_URL;
 
 const INITIAL_MESSAGE = {
   role: "assistant",

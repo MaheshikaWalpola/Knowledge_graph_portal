@@ -18,8 +18,8 @@ import axios from "axios";
 import "./Form.css";
 import ForgotPassword from "./ForgotPassword";
 import { useNavigate } from "react-router-dom";
+import { API } from "../../config";
 
-const API = import.meta.env.VITE_API_URL;
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;

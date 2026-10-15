@@ -10,8 +10,8 @@ import {
   strideSample,
 } from "../../utils/labelUtils";
 import SimpleChart from "../Common/SimpleChart";
+import { API } from "../../config";
 
-const API = import.meta.env.VITE_API_URL;
 const CMP_NS = import.meta.env.VITE_CMP_NS || "https://tucid/cpmo/";
 
 // ---------- helpers ----------

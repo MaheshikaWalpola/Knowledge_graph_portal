@@ -12,6 +12,10 @@ class Settings:
 
     CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
 
+    # Path prefix under which the reverse proxy serves the API (e.g. /knowledgegraphportal/api); empty locally.
+    # Lets FastAPI generate correct URLs for /docs and the OpenAPI schema behind the proxy.
+    API_ROOT_PATH = os.getenv("API_ROOT_PATH", "").rstrip("/")
+
     BASE_SCHEMA_GRAPH = os.getenv("BASE_SCHEMA_GRAPH")
     BASE_INSTANCE_GRAPH = os.getenv("BASE_INSTANCE_GRAPH")
 
@@ -24,7 +28,8 @@ class Settings:
     JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
     # ---- NEW: Email
-    FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")
+    # Public URL of the frontend incl. any path prefix; used to build links in e-mails
+    FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
     SMTP_USER   = os.getenv("SMTP_USER")
     SMTP_PASS   = os.getenv("SMTP_PASS")
     MAIL_FROM   = os.getenv("MAIL_FROM", SMTP_USER)

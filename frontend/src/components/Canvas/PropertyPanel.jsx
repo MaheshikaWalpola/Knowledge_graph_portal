@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { API } from "../../config";
 
 const EDGE_TYPE_OPTIONS = [
   { value: "subClassOf", label: "rdfs:subClassOf" },
@@ -15,7 +16,6 @@ const TYPE_LABELS = {
   literalNode: "Literal",
 };
 
-const API = import.meta.env.VITE_API_URL;
 
 //  Shared TTL builder 
 function buildTTL(model) {
