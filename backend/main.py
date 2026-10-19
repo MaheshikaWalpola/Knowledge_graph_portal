@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI
 from routers.router import router as graph_router
 from routers.auth_router import router as auth_router
@@ -9,7 +10,14 @@ from routers.history_router import router as history_router
 from fastapi.middleware.cors import CORSMiddleware
 from core.config import settings
 
-app = FastAPI()
+app = FastAPI(root_path=settings.API_ROOT_PATH)
+
+if not settings.CORS_ORIGINS:
+    # Fine for local development, but in production CORS_ORIGINS must list the frontend origin(s)
+    logging.getLogger("uvicorn.error").warning(
+        "CORS_ORIGINS is not set: allowing requests from ANY origin. "
+        "Set CORS_ORIGINS in backend/.env for production (e.g. https://vsr.informatik.tu-chemnitz.de)."
+    )
 
 app.add_middleware(
     CORSMiddleware,

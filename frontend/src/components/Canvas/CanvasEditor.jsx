@@ -20,6 +20,7 @@ import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import LayersClearIcon from "@mui/icons-material/LayersClear";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
+import { API } from "../../config";
 
 // ─── Diff Engine ───────────────────────────────────────────
 // Computes granular changes between two canvas model snapshots.
@@ -245,7 +246,6 @@ export default function CanvasEditor({ onOpenAuth }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const API = import.meta.env.VITE_API_URL;
 
   // Derive schema context from URL
   const originalSchemaId = new URLSearchParams(location.search).get("schema_id");
@@ -318,7 +318,7 @@ export default function CanvasEditor({ onOpenAuth }) {
     };
 
     loadSchema();
-  }, [location.search, handleImport, API]);
+  }, [location.search, handleImport]);
 
   const handleClearCanvas = useCallback(() => {
     setModel({ nodes: [], edges: [] });

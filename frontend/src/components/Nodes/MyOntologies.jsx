@@ -24,8 +24,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import { useNavigate } from "react-router-dom";
 import "./MyOntologies.css";
+import { API } from "../../config";
 
-const API = import.meta.env.VITE_API_URL;
 
 export default function MyOntologies({ onOpenAuth }) {
   const [schemas, setSchemas] = useState([]);

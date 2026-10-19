@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import axios from "axios";
 import "./SchemaOntology.css";
+import { API } from "../../config";
 
-const API = import.meta.env.VITE_API_URL;
 const local = (iri = "") => (iri || "").split("#").pop().split("/").pop();
 
 function hashToIndex(str, modulo) {

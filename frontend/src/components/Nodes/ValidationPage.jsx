@@ -56,7 +56,7 @@ import ModelSelector from "./InstanceGen/ModelSelector";
 
 import "./ValidationPage.css";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import { API } from "../../config";
 
 const STEPS = [
   "Define Questions",

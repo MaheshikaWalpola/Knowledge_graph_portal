@@ -17,7 +17,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import axios from "axios";
 import "./InstanceGenerationWorkflow.css";
 
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../../config";
 
 import FileUploadStep from "./InstanceGen/FileUploadStep";
 import AnalysisReportStep from "./InstanceGen/AnalysisReportStep";
