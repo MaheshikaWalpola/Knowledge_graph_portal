@@ -430,7 +430,10 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                           attempts: event.attempts || 1,
                           unknown_terms: event.unknown_terms || [],
                           failed_examples: event.failed_examples || [],
-                          reason: event.reason || ""
+                          reason: event.reason || "",
+                          advice: event.advice || "",
+                          meaning: event.meaning || null,
+                          tests: event.tests || null
                         } 
                       : step
                   )
@@ -446,7 +449,10 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       attempts: event.attempts || 1,
                       unknown_terms: event.unknown_terms || [],
                       failed_examples: event.failed_examples || [],
-                      reason: event.reason || ""
+                      reason: event.reason || "",
+                      advice: event.advice || "",
+                      meaning: event.meaning || null,
+                      tests: event.tests || null
                     },
                     [String(event.index)]: {
                       rule_text: event.rule,
@@ -454,7 +460,10 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       attempts: event.attempts || 1,
                       unknown_terms: event.unknown_terms || [],
                       failed_examples: event.failed_examples || [],
-                      reason: event.reason || ""
+                      reason: event.reason || "",
+                      advice: event.advice || "",
+                      meaning: event.meaning || null,
+                      tests: event.tests || null
                     }
                   }));
                 }
@@ -562,7 +571,9 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       unknown_terms: event.unknown_terms || [],
                       failed_examples: event.failed_examples || [],
                       reason: event.reason || "",
-                      advice: event.advice || ""
+                      advice: event.advice || "",
+                      meaning: event.meaning || null,
+                      tests: event.tests || null
                     }
                   : step
               ));
@@ -1207,6 +1218,12 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                                    : "AI could not verify this shape"}
                                 </Typography>
                               )}
+                              {step.status === "success" && step.meaning?.back_translation && (
+                                <Typography variant="caption" display="block" sx={{ color: "var(--text-secondary)", mt: 0.25, whiteSpace: "normal" }}>
+                                  AI reads this shape as: "{step.meaning.back_translation}"
+                                  {step.tests?.total ? ` · Tests passed: ${step.tests.total - (step.tests.failed || 0)} of ${step.tests.total}` : ""}
+                                </Typography>
+                              )}
                               {step.status === "success" && step.verification === "unverified" && step.advice && (
                                 <Typography variant="caption" display="block" sx={{ color: "#d97706", mt: 0.25, whiteSpace: "normal" }}>
                                   {step.advice}
@@ -1554,7 +1571,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                             </TableContainer>
 
                             {/* Advanced details (collapsed) */}
-                            {(rule.unknown_terms?.length > 0 || rule.failed_examples?.length > 0 || rule.attempts > 1 || rule.reason) && (
+                            {(rule.unknown_terms?.length > 0 || rule.failed_examples?.length > 0 || rule.attempts > 1 || rule.reason || rule.meaning?.back_translation) && (
                               <Box sx={{ mt: 1.5 }}>
                                 <Box 
                                   sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", userSelect: "none" }}
@@ -1572,6 +1589,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                                     )}
                                     {rule.attempts > 1 && (
                                       <Typography variant="caption" display="block" sx={{ mb: 0.5 }}><b>Attempts:</b> {rule.attempts}</Typography>
+                                    )}
+                                    {rule.meaning?.back_translation && (
+                                      <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+                                        <b>AI reads this shape as:</b> "{rule.meaning.back_translation}" (meaning check: {rule.meaning.verdict})
+                                      </Typography>
+                                    )}
+                                    {rule.tests?.total > 0 && (
+                                      <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+                                        <b>Tests passed:</b> {rule.tests.total - (rule.tests.failed || 0)} of {rule.tests.total}
+                                      </Typography>
                                     )}
                                     {rule.reason && (
                                       <Typography variant="caption" display="block" sx={{ mb: 0.5 }}><b>Reason:</b> {rule.reason}</Typography>

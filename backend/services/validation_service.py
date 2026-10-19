@@ -146,6 +146,13 @@ def _verification_advice(meta: Dict[str, Any]) -> str:
     if unknown:
         tips.append(f"It uses terms that are not in your ontology ({', '.join(unknown[:5])}); "
                     "replace them with the correct class or property names.")
+    meaning = meta.get("meaning") or {}
+    if meaning.get("verdict") in ("broader", "narrower", "different") and meaning.get("back_translation"):
+        tips.append(f"The AI reads the shape as: \"{meaning['back_translation']}\", which is {meaning['verdict']} "
+                    "than the question" + (f" ({meaning['explanation']})." if meaning.get("explanation") else "."))
+    if "not enough test data" in reason or "could not create" in reason:
+        tips.append("The AI could not write test data for this question; check that the question names classes "
+                    "and properties from your ontology.")
     for fe in (meta.get("failed_examples") or [])[:2]:
         if fe.get("expected") == "invalid" and fe.get("actual") == "conforms":
             tips.append("It accepted test data that breaks the rule, so it may be too loose "
@@ -493,9 +500,12 @@ class ValidationService:
                         "attempts": event.get("attempts", 1),
                         "unknown_terms": event.get("unknown_terms", []),
                         "failed_examples": event.get("failed_examples", []),
-                        "reason": event.get("reason", "")
+                        "reason": event.get("reason", ""),
+                        "meaning": event.get("meaning"),
+                        "tests": event.get("tests")
                     }
                     if item_meta["verification"]:
+                        item_meta["advice"] = _verification_advice(item_meta)
                         verification_map[shape_key] = item_meta
                         verification_map[str(idx)] = item_meta
 
@@ -511,7 +521,10 @@ class ValidationService:
                         "attempts": item_meta["attempts"],
                         "unknown_terms": item_meta["unknown_terms"],
                         "failed_examples": item_meta["failed_examples"],
-                        "reason": item_meta["reason"]
+                        "reason": item_meta["reason"],
+                        "meaning": item_meta["meaning"],
+                        "tests": item_meta["tests"],
+                        "advice": item_meta.get("advice", "")
                     }
         finally:
             # Page closed or server stopping: skip rules not started yet and stop running ones at their
@@ -689,6 +702,8 @@ class ValidationService:
                     "unknown_terms": event.get("unknown_terms", []),
                     "failed_examples": event.get("failed_examples", []),
                     "reason": event.get("reason", ""),
+                    "meaning": event.get("meaning"),
+                    "tests": event.get("tests"),
                 }
                 meta["advice"] = _verification_advice(meta)
                 verification_map[f"inst:Question_{idx+1}_Shape"] = meta
@@ -697,7 +712,8 @@ class ValidationService:
                     verification_map[str(subjects[idx])] = meta
                 remaining -= 1
                 yield {"status": "progress", "index": idx, "rule": event["rule"],
-                       **{k: meta[k] for k in ("verification", "attempts", "unknown_terms", "failed_examples", "reason", "advice")}}
+                       **{k: meta[k] for k in ("verification", "attempts", "unknown_terms", "failed_examples", "reason",
+                                               "advice", "meaning", "tests")}}
         finally:
             cancelled.set()
             executor.shutdown(wait=False, cancel_futures=True)
@@ -1047,6 +1063,8 @@ class ValidationService:
                 "failed_examples": failed_examples,
                 "reason": reason,
                 "advice": advice,
+                "meaning": meta.get("meaning") if meta else None,
+                "tests": meta.get("tests") if meta else None,
                 "verification_label": VERIFICATION_LABELS.get(verification_status, verification_status),
                 "question_number": int(q_match.group(1)) if q_match else None
             })
@@ -1223,6 +1241,18 @@ class ValidationService:
         if text is None:
             return ""
         return _xml_escape(str(text))
+
+    @staticmethod
+    def _meaning_summary(rule: Dict[str, Any]) -> str:
+        """How the AI read the shape (back-translation), its verdict, and the test result, for the report."""
+        meaning = rule.get("meaning") or {}
+        if not meaning.get("back_translation"):
+            return ""
+        text = f"The AI reads this check as: \"{meaning['back_translation']}\" Verdict: {meaning.get('verdict', 'unknown')}."
+        tests = rule.get("tests") or {}
+        if tests.get("total"):
+            text += f" Tests passed: {tests['total'] - tests.get('failed', 0)} of {tests['total']}."
+        return text
 
     def generate_pdf_report(self, report_data: Dict[str, Any]) -> bytes:
         """
@@ -1490,13 +1520,18 @@ class ValidationService:
                     [Paragraph("<b>Target Class:</b>", style_body), Paragraph(target_cls, style_body), Paragraph("<b>Property:</b>", style_body), Paragraph(path, style_mono)],
                     [Paragraph("<b>Description:</b>", style_body), Paragraph(msg, style_body), Paragraph("<b>Status:</b>", style_body), Paragraph("<font color='#dc2626'><b>Flagged Problem</b></font>", style_body)]
                 ]
-                dt_table = Table(details_data, colWidths=[94, 173, 94, 173])
-                dt_table.setStyle(TableStyle([
+                dt_style = [
                     ('BACKGROUND', (0, 0), (-1, -1), c_bg_light),
                     ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#f1f5f9")),
                     ('PADDING', (0, 0), (-1, -1), 4),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ]))
+                ]
+                meaning_text = self._meaning_summary(rule)
+                if meaning_text:
+                    details_data.append([Paragraph("<b>Meaning check:</b>", style_body), Paragraph(self._safe_xml(meaning_text), style_body), "", ""])
+                    dt_style.append(('SPAN', (1, 2), (3, 2)))
+                dt_table = Table(details_data, colWidths=[94, 173, 94, 173])
+                dt_table.setStyle(TableStyle(dt_style))
                 card_elements.append(dt_table)
 
                 if rule_viols:
@@ -1572,8 +1607,10 @@ class ValidationService:
                     [Paragraph("<b>Review Note:</b>", style_body), Paragraph(f"<i>{review_note}</i>", style_body), Paragraph("<b>Flagged:</b>", style_body), Paragraph(f"{failed_count} items", style_body)]
                 ]
                 advice = rule.get("advice") or ""
-                if advice:
-                    details_data.append([Paragraph("<b>What to do:</b>", style_body), Paragraph(self._safe_xml(advice), style_body), "", ""])
+                meaning_text = self._meaning_summary(rule)
+                for heading, text in (("What to do:", advice), ("Meaning check:", meaning_text)):
+                    if text:
+                        details_data.append([Paragraph(f"<b>{heading}</b>", style_body), Paragraph(self._safe_xml(text), style_body), "", ""])
                 dt_table = Table(details_data, colWidths=[94, 173, 94, 173])
                 dt_style = [
                     ('BACKGROUND', (0, 0), (-1, -1), c_bg_light),
@@ -1581,8 +1618,8 @@ class ValidationService:
                     ('PADDING', (0, 0), (-1, -1), 4),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ]
-                if advice:
-                    dt_style.append(('SPAN', (1, 2), (3, 2)))
+                for row in range(2, len(details_data)):
+                    dt_style.append(('SPAN', (1, row), (3, row)))
                 dt_table.setStyle(TableStyle(dt_style))
                 card_elements.append(dt_table)
 

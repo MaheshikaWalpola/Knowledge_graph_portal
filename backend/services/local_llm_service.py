@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 # Kiste API Configuration (OpenAI-compatible)
 KISTE_API_URL = os.getenv("KISTE_API_URL")
 KISTE_API_KEY = os.getenv("KISTE_API_KEY")
-MODEL_NAME = os.getenv("KISTE_MODEL")  # "gpt-oss-120b" or "qwen3.6"
+MODEL_NAME = os.getenv("KISTE_MODEL")  # e.g. "Qwen3.6-35B-A3B-MLX-8bit" or "gpt-oss-120b-MXFP4-Q8"
 # Seconds to wait for the AI server to respond (slow models with long prompts may need more)
 KISTE_TIMEOUT = int(os.getenv("KISTE_TIMEOUT", "300"))
 
@@ -28,8 +28,12 @@ class KisteConnectionError(Exception):
 
 
 class LocalLLMService:
-    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7, model_override: str = None) -> str:
-        """Call Kiste API (OpenAI-compatible). Use model_override to dynamically select a different model."""
+    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7, model_override: str = None,
+                    reasoning_effort: Optional[str] = None) -> str:
+        """
+        Call Kiste API (OpenAI-compatible). Use model_override to dynamically select a different model.
+        reasoning_effort ("low", "medium", "high") limits hidden reasoning on models that support it, such as gpt-oss.
+        """
         if not KISTE_API_KEY:
             raise KisteConnectionError("We are experiencing connection issues with the AI server. Please try again shortly.")
         
@@ -41,6 +45,8 @@ class LocalLLMService:
         }
         if json_mode:
             data["response_format"] = {"type": "json_object"}
+        if reasoning_effort:
+            data["reasoning_effort"] = reasoning_effort
 
         headers = {
             "Content-Type": "application/json",
