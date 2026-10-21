@@ -26,7 +26,8 @@ class KisteConnectionError(Exception):
 
 
 class LocalLLMService:
-    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7, model_override: str = None) -> str:
+    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7, model_override: str = None,
+                    timeout: int = 120, max_tokens: Optional[int] = None) -> str:
         """Call Kiste API (OpenAI-compatible). Use model_override to dynamically select a different model."""
         if not KISTE_API_KEY:
             raise KisteConnectionError("We are experiencing connection issues with the AI server. Please try again shortly.")
@@ -39,6 +40,8 @@ class LocalLLMService:
         }
         if json_mode:
             data["response_format"] = {"type": "json_object"}
+        if max_tokens:
+            data["max_tokens"] = max_tokens
 
         headers = {
             "Content-Type": "application/json",
@@ -56,7 +59,7 @@ class LocalLLMService:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
             
-            with urllib.request.urlopen(req, context=ssl_context, timeout=120) as response:
+            with urllib.request.urlopen(req, context=ssl_context, timeout=timeout) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 return result.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:

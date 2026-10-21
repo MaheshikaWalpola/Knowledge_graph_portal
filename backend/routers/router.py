@@ -32,6 +32,7 @@ from controllers.instance_generation_controller import (
     ctrl_analyze_schema_and_data,
     ctrl_analyze_schema_and_data_stream,
     ctrl_generate_instance,
+    ctrl_convert_pdfs_to_csv_stream,
 )
 
 from core.auth import get_current_user
@@ -459,3 +460,23 @@ async def api_generate_instance(
         model=model,
     )
 
+
+
+
+@router.post("/instance-generation/pdf-to-csv")
+async def api_convert_pdfs_to_csv(
+    schema_file: UploadFile = File(..., description="RDF/Turtle schema file"),
+    pdf_files: List[UploadFile] = File(..., description="PDF files or ZIP archives of PDFs"),
+    model: Optional[str] = Form(None, description="Kiste model ID to use for AI mapping"),
+    current_user: Any = Depends(get_current_user),
+):
+    """
+    Convert PDFs into CSV files aligned with the schema, for the user to review
+    before uploading them as data files. Streams NDJSON progress events; the
+    final "done" event contains one CSV per schema class plus review.csv.
+    """
+    return await ctrl_convert_pdfs_to_csv_stream(
+        schema_file=schema_file,
+        pdf_files=pdf_files,
+        model=model,
+    )
