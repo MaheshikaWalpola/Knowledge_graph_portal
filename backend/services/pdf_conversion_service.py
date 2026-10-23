@@ -6,6 +6,9 @@ Pipeline per PDF:
   2. map (Kiste LLM)                    -> JSON records {class, values, raw}
   3. verify                             -> source check (value appears in the PDF)
                                            + schema check (domain / range)
+                                           + label check (value read next to a fitting label)
+                                           + one value under several properties, empty keys,
+                                             records without data of their own (removed)
 Results of all PDFs are combined into one CSV per schema class plus a
 review.csv that lists every value with its checks, unmapped data and warnings.
 """
@@ -13,6 +16,8 @@ review.csv that lists every value with its checks, unmapped data and warnings.
 import csv
 import json
 import re
+import unicodedata
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
 from io import StringIO
@@ -47,8 +52,13 @@ LLM_TIMEOUT = 900
 
 REVIEW_COLUMNS = [
     "type", "source_file", "page", "class", "csv_file", "csv_line",
-    "property", "value", "raw", "source_check", "schema_check", "message",
+    "property", "value", "raw", "label", "source_check", "schema_check", "message",
 ]
+
+# Words of a property name that say nothing about which label it belongs to
+GENERIC_WORDS = {"has", "is", "of", "the", "a", "an", "in", "id", "name", "number", "value"}
+# Common label abbreviations -> the word used in property names
+ABBREVIATIONS = {"no": "number", "nr": "number", "num": "number", "temp": "temperature", "qty": "quantity"}
 
 XSD_NUMERIC = {"decimal", "double", "float", "integer", "int", "long", "short",
                "nonNegativeInteger", "positiveInteger", "negativeInteger", "nonPositiveInteger"}
@@ -197,15 +207,19 @@ The document text was extracted automatically:
 - "[IMAGE ...]" marks an image whose content is not available. Never guess what it contains.
 
 Rules:
-1. Use only class and property names from the schema, spelled exactly as given.
+1. Use only class and property names from the schema, spelled exactly the same or similarly (e.g. "testTemperature" for a label "Test Temp."). If the schema has no property that fits a value, put it into "unmapped" instead of inventing a new property.
 2. Decide what the records are. A document can describe zero, one or many things (e.g. a product, several part numbers, a wafer, many measured dies, several process steps). Create one record per real-world thing, with the class that fits best. Only use properties whose domain is the record's class or one of its superclasses (domain "any" fits every class).
-3. Only use information that is explicitly in the document. Never guess, infer or invent values. If a value is not in the document, leave the property out.
+3. Only use information that is explicitly written in the document text. Never guess, infer, estimate or invent values. If a value is not in the text, leave the property out, even if a typical value is known.
+   - Images are not available to you. Anything that would only be visible in an image (a chart or curve, a drawing, a stamp, a logo, a wafer map) is missing: leave it out.
+   - A value belongs to the label it stands next to. Never use the value of one label for a different property (e.g. a sample name is not a device name, a lot number is not a wafer ID).
+   - Only create a record for a thing the text names or describes. If the only data for a record would be borrowed from other labels, do not create it.
 4. "values" maps property name -> value. Write the value so it fits the property's range: for numeric ranges a plain number with "." as decimal separator and no unit; for date ranges YYYY-MM-DD; for dateTime ranges YYYY-MM-DDTHH:MM:SS; otherwise the text as written.
-5. Give every record an "id" that is unique within your reply ("r1", "r2", ...). For an object property whose related thing is one of your records, give that record's id as the value, e.g. a measurement run that has a result record: "hasResult": "r2". Create a record for the related thing whenever the document contains data about it. Only if the related thing is not one of your records, give its identifier or name as written in the document.
-6. Whenever a value is not an exact copy of the document text (unit removed, number or date reformatted, text shortened), put the exact original text in "raw" under the same property name.
-7. Put every other piece of data that fits no schema property into "unmapped" as [key, value, page]. Skip boilerplate such as page numbers.
-8. Reply with ONE JSON object and nothing else, in exactly this format:
-{"records": [{"id": "r1", "class": "ClassName", "page": 1, "values": {"propertyName": "value"}, "raw": {"propertyName": "original text"}}], "unmapped": [["key", "value", 1]], "notes": "one or two sentences on how you identified the records"}"""
+5. Give every record an "id" that is unique within your reply ("r1", "r2", ...). For an object property whose related thing is one of your records, give that record's id as the value, e.g. a measurement run that has a result record: "hasResult": "r2". Create a record for the related thing only if the text gives at least one value of its own for it (not just a link and not a value that belongs to another label). Only if the related thing is not one of your records, give its identifier or name as written in the document.
+6. Whenever a value is not an exact copy of the document text (unit removed, number or date reformatted, text shortened), put the exact original text of the value in "raw" under the same property name. "raw" holds only the value text, never its label.
+7. For every value, put the label it stands next to in the document, exactly as written (e.g. "Max. Junction Temp."), in "label" under the same property name. A value from a table column gets the column header as its label.
+8. Put every other piece of data that fits no schema property into "unmapped" as [key, value, page]. Skip boilerplate such as page numbers.
+9. Reply with ONE JSON object and nothing else, in exactly this format:
+{"records": [{"id": "r1", "class": "ClassName", "page": 1, "values": {"propertyName": "value"}, "raw": {"propertyName": "original text"}, "label": {"propertyName": "label in the document"}}], "unmapped": [["key", "value", 1]], "notes": "one or two sentences on how you identified the records"}"""
 
 
 def _context_tokens(model: Optional[str]) -> int:
@@ -292,11 +306,85 @@ def map_document(doc: PdfDocument, schema_text: str, model: Optional[str]) -> Tu
 # Verification
 # ---------------------------------------------------------------------------
 def source_check(value: str, raw: str, haystack: str) -> str:
-    for candidate in (raw, value):
+    # The AI sometimes puts the label into raw ("Start | 2025-03-14 08:12:45") and writes
+    # date-times with "T" where the document has a space
+    candidates = [raw, raw.rsplit("|", 1)[-1], raw.rsplit(":", 1)[-1] if re.match(r"[^\d:]+:", raw) else "",
+                  value, re.sub(r"(?<=\d)T(?=\d)", " ", value)]
+    for candidate in candidates:
         needle = normalize_for_search(candidate or "")
         if needle and needle in haystack:
             return "found (weak: short value)" if len(needle) <= 2 else "found"
     return "NOT FOUND"
+
+
+def _words(text: str) -> List[str]:
+    """Lower-case words of a label or camelCase property name ("maxJunctionTemp." -> max, junction, temp)."""
+    text = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", text or "")
+    return re.findall(r"[a-z0-9]+", text.lower())
+
+
+def property_terms(prop: SchemaProperty) -> List[str]:
+    """How a property may be labelled in a document: label, alt labels, its name in words."""
+    words = _words(prop.name)
+    unprefixed = words[1:] if words[0] in {"has", "is"} and len(words) > 1 else words  # hasWaferId -> wafer id
+    specific = [w for w in words if w not in GENERIC_WORDS]
+    terms = [prop.label, *prop.alt_labels, " ".join(words), " ".join(unprefixed), " ".join(specific)]
+    return sorted({t.strip() for t in terms if t and len(t.strip()) >= 2}, key=len, reverse=True)
+
+
+def strip_label(value: str, prop: SchemaProperty) -> str:
+    """
+    Remove the property's own label from the start of a value ("Lot L-4412" -> "L-4412"
+    for lotId). Only when a colon follows the label or the rest looks like an identifier
+    (has a digit), so that names like "Device Data" stay untouched.
+    """
+    if prop.kind == "object" or (prop.range and prop.range != "string"):
+        return value
+    for term in property_terms(prop):
+        pattern = r"\s*".join(re.escape(w) for w in term.split())
+        m = re.match(rf"{pattern}\.?\s*(:|#|\s)\s*(?P<rest>\S.*)$", value, flags=re.IGNORECASE)
+        if m and (m.group(1) == ":" or re.search(r"\d", m.group("rest"))):
+            return m.group("rest").strip()
+    return value
+
+
+def label_check(label: str, prop: SchemaProperty) -> Optional[str]:
+    """
+    Problem message if the label the AI read the value from does not fit the property,
+    e.g. "Max. Junction Temp." for testTemperature. At least half of the label's words
+    must match a word of the property's name, label or alt labels (words of 3+ letters
+    may be abbreviated: "Temp." matches "temperature").
+    """
+    if not label:
+        return None
+    norm = " ".join(_words(label))
+    if any(norm == " ".join(_words(t)) for t in [prop.label, *prop.alt_labels] if t):
+        return None
+    prop_words = {ABBREVIATIONS.get(w, w) for t in [prop.name, prop.label, *prop.alt_labels] for w in _words(t)}
+    label_words = [ABBREVIATIONS.get(w, w) for w in _words(label) if w not in GENERIC_WORDS - {"id", "name", "number"}]
+    if not label_words:
+        return None
+
+    def matches(w: str) -> bool:
+        return any(w == p or (len(w) >= 3 and len(p) >= 3 and (p.startswith(w) or w.startswith(p)))
+                   for p in prop_words)
+
+    if 2 * sum(matches(w) for w in label_words) >= len(label_words):
+        return None
+    return f"label '{label}' does not fit {prop.name}"
+
+
+def count_in_text(value: str, text: str) -> int:
+    """How often a value occurs in the document text as a whole word or number."""
+    needle = re.sub(r"\s+", r"\\s*", re.escape(normalize_text(value)))
+    return len(re.findall(rf"(?<![a-z0-9.]){needle}(?![a-z0-9])", text)) if needle else 0
+
+
+def normalize_text(text: str) -> str:
+    """Like normalize_for_search, but keeps word boundaries (single spaces)."""
+    text = unicodedata.normalize("NFKC", text or "").lower()
+    text = re.sub(r"(?<=\d),(?=\d)", ".", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _parse_date(value: str, with_time: bool) -> bool:
@@ -365,14 +453,19 @@ class ConversionResult:
 
     def add_document(self, doc: PdfDocument, mapped: Dict[str, Any]) -> Dict[str, int]:
         haystack = searchable_text(doc)
-        stats = {"records": 0, "values": 0, "flagged": 0, "unmapped": 0}
+        stats = {"records": 0, "values": 0, "flagged": 0, "unmapped": 0, "links_added": 0,
+                 "records_dropped": 0, "keys_missing": 0}
         record_ids = self._assign_ids(doc, mapped["records"])
+        doc_rows: List[Tuple[str, Dict[str, str], int, Any]] = []  # (class, row, csv line, page)
 
+        # 1. Parse the AI records into rows; values pending = (prop, value, raw, label, target)
+        parsed: List[Tuple[str, Any, Dict[str, str], List[Tuple[SchemaProperty, str, str, str, Any]]]] = []
         for rec in mapped["records"]:
             cls = str(rec.get("class", "")).strip()
             page = rec.get("page", "")
             values = rec.get("values") if isinstance(rec.get("values"), dict) else {}
             raws = rec.get("raw") if isinstance(rec.get("raw"), dict) else {}
+            labels = rec.get("label") if isinstance(rec.get("label"), dict) else {}
 
             if cls not in self.ctx.classes:
                 for prop, val in values.items():
@@ -392,31 +485,50 @@ class ConversionResult:
                     stats["unmapped"] += 1
                     continue
                 raw = str(raws.get(prop_name, "") or "").strip()
+                label = str(labels.get(prop_name, "") or "").strip()
+                stripped = strip_label(val, prop)
+                if stripped != val:
+                    raw, val = raw or val, stripped
                 # A link to another record of this reply refers to it by its document-wide id
                 target = record_ids.get((rec["_chunk"], val)) if prop.kind == "object" else None
                 if target:
                     val = target[0]
                 row[prop_name] = val
-                pending.append((prop, val, raw, target))
-            if len(row) == 1:
-                continue
+                pending.append((prop, val, raw, label, target))
+            if len(row) > 1:
+                parsed.append((cls, page, row, pending))
 
+        # 2. Records without data of their own, and the links to them, are removed
+        parsed = self._drop_link_only(doc, parsed, stats)
+
+        # 3. One value under several properties (e.g. the sample name also as device name)
+        shared = self._shared_values(doc, parsed)
+
+        for cls, page, row, pending in parsed:
             self.rows.setdefault(cls, []).append(row)
             cols = self.columns.setdefault(cls, ["id"])
             cols += [p for p in row if p not in cols]
             line = len(self.rows[cls]) + 1  # line 1 is the header
+            doc_rows.append((cls, row, line, page))
             stats["records"] += 1
 
-            for prop, val, raw, target in pending:
+            for prop, val, raw, label, target in pending:
                 src = "link to record" if target else source_check(val, raw, haystack)
                 sch = schema_check(cls, prop, val, self.ctx, target_class=target[1] if target else None)
-                flagged = src == "NOT FOUND" or sch != "ok"
+                problems = [p for p in (
+                    None if target or prop.kind == "object" else label_check(label, prop),
+                    shared.get((row["id"], prop.name)),
+                ) if p]
+                flagged = src == "NOT FOUND" or sch != "ok" or bool(problems)
                 stats["values"] += 1
                 stats["flagged"] += flagged
+                message = "; ".join(["CHECK", *problems]) if flagged else ""
                 self.add_review(type="value", source_file=doc.filename, page=page, class_=cls,
                                 csv_file=f"{cls}.csv", csv_line=line, property=prop.name, value=val,
-                                raw=raw, source_check=src, schema_check=sch,
-                                message="CHECK" if flagged else "")
+                                raw=raw, label=label, source_check=src, schema_check=sch, message=message)
+
+        self._check_links(doc, doc_rows, stats)
+        self._check_keys(doc, doc_rows, stats)
 
         for item in mapped["unmapped"]:
             if isinstance(item, dict):
@@ -430,6 +542,123 @@ class ConversionResult:
             self.add_review(type="ai_note", source_file=doc.filename, message=note)
         self.add_warnings(doc)
         return stats
+
+    def _has_own_data(self, cls: str, pending) -> bool:
+        """
+        True if a record has a value that is specific to its class: a property whose
+        domain includes the class, or a name/identifier given as text for a link.
+        Properties without a domain count only for classes the schema gives no
+        properties of their own.
+        """
+        own = self.ctx.class_and_ancestors(cls)
+        has_specific = any(p.kind != "object" and p.domains & own for p in self.ctx.properties.values())
+        for prop, _, _, _, target in pending:
+            if prop.kind == "object":
+                if not target:
+                    return True
+            elif prop.domains & own or (not prop.domains and not has_specific):
+                return True
+        return False
+
+    def _drop_link_only(self, doc: PdfDocument, parsed, stats: Dict[str, int]):
+        """
+        Remove records that hold only links (and values not specific to their class),
+        e.g. a Device the AI created because the run "measures a device", with nothing
+        but fromWafer. Links from other records to them are removed as well; everything
+        removed is listed in review.csv.
+        """
+        dropped = {row["id"]: (cls, page, row, pending) for cls, page, row, pending in parsed
+                   if not self._has_own_data(cls, pending)}
+        if not dropped:
+            return parsed
+        incoming: Dict[str, List[str]] = {}
+        kept = []
+        for cls, page, row, pending in parsed:
+            if row["id"] in dropped:
+                continue
+            for item in [i for i in pending if i[4] and i[4][0] in dropped]:
+                incoming.setdefault(item[4][0], []).append(f"{cls}.{item[0].name}")
+                pending.remove(item)
+                del row[item[0].name]
+            kept.append((cls, page, row, pending))
+        for rid, (cls, page, row, pending) in dropped.items():
+            values = ", ".join(f"{p.name}={v}" for p, v, _, _, _ in pending)
+            links = f"; links to it removed: {', '.join(incoming[rid])}" if rid in incoming else ""
+            stats["records_dropped"] += 1
+            self.add_review(type="record_dropped", source_file=doc.filename, page=page, class_=cls,
+                            value=rid, raw=values,
+                            message=f"CHECK: removed, no data of its own ({values}){links}")
+        return kept
+
+    def _shared_values(self, doc: PdfDocument, parsed) -> Dict[Tuple[str, str], str]:
+        """
+        (record id, property) -> problem, for values that one PDF has under several
+        different properties more often than the value occurs in the text, e.g. 152 as
+        both maxJunctionTemperature and testTemperature when "152" is written once.
+        """
+        text = normalize_text("\n".join(
+            b.text if b.kind == "text" else "\n".join(" ".join(r) for r in b.rows)
+            for b in doc.blocks if b.kind in ("text", "table")))
+        uses: Dict[str, List[Tuple[str, str]]] = {}  # normalized value -> [(record id, property)]
+        for _, _, row, pending in parsed:
+            for prop, val, raw, _, target in pending:
+                if prop.kind != "object" and len(normalize_for_search(val)) > 2:
+                    uses.setdefault(normalize_text(val), []).append((row["id"], prop.name))
+        problems = {}
+        for val, where in uses.items():
+            props = {p for _, p in where}
+            if len(props) > 1 and count_in_text(val, text) < len(props):
+                for rid, prop in where:
+                    others = ", ".join(sorted(props - {prop}))
+                    problems[(rid, prop)] = f"same value as {others}, but written only once in the PDF"
+        return problems
+
+    def _check_keys(self, doc: PdfDocument, doc_rows: List[Tuple[str, Dict[str, str], int, Any]],
+                    stats: Dict[str, int]):
+        """Records whose owl:hasKey is empty cannot be merged with the same thing from other PDFs."""
+        for cls, row, line, page in doc_rows:
+            own = self.ctx.class_and_ancestors(cls)
+            key_props = next((self.ctx.keys[c] for c in [cls, *sorted(own - {cls})] if c in self.ctx.keys), [])
+            missing = [p for p in key_props if not row.get(p)]
+            if missing:
+                stats["keys_missing"] += 1
+                self.add_review(type="key_missing", source_file=doc.filename, page=page, class_=cls,
+                                csv_file=f"{cls}.csv", csv_line=line, property=", ".join(missing),
+                                message=f"CHECK: key {', '.join(missing)} is empty; the record is named "
+                                        f"after its id and is not merged with the same {cls} from other PDFs")
+
+    def _check_links(self, doc: PdfDocument, doc_rows: List[Tuple[str, Dict[str, str], int, Any]],
+                     stats: Dict[str, int]):
+        """
+        Links the AI left empty. When the target class has exactly one record in this PDF,
+        the link is filled with it; when there are several candidates, or the class has
+        several links to that target class (e.g. issuedBy / issuedTo), it is only flagged.
+        """
+        for cls, row, line, page in doc_rows:
+            own = self.ctx.class_and_ancestors(cls)
+            links = [p for p in self.ctx.properties.values()
+                     if p.kind == "object" and p.domains & own and p.range in self.ctx.classes]
+            per_range = Counter(p.range for p in links)
+            for prop in links:
+                if row.get(prop.name):
+                    continue
+                candidates = [r for c, r, _, _ in doc_rows
+                              if r is not row and prop.range in self.ctx.class_and_ancestors(c)]
+                if not candidates:
+                    continue
+                review = dict(source_file=doc.filename, page=page, class_=cls, csv_file=f"{cls}.csv",
+                              csv_line=line, property=prop.name)
+                if len(candidates) == 1 and per_range[prop.range] == 1:
+                    row[prop.name] = candidates[0]["id"]
+                    cols = self.columns[cls]
+                    cols += [prop.name] if prop.name not in cols else []
+                    stats["links_added"] += 1
+                    self.add_review(type="link_added", value=row[prop.name], **review,
+                                    message=f"filled automatically: the only {prop.range} record in this PDF")
+                else:
+                    stats["flagged"] += 1
+                    self.add_review(type="link_missing", **review,
+                                    message=f"CHECK: empty, {len(candidates)} {prop.range} record(s) in this PDF")
 
     @staticmethod
     def _assign_ids(doc: PdfDocument, records: List[Dict[str, Any]]) -> Dict[Tuple[int, str], Tuple[str, str]]:
@@ -486,8 +715,12 @@ class ConversionResult:
         return {
             "records_per_class": {cls: len(rows) for cls, rows in sorted(self.rows.items())},
             "values": sum(1 for r in self.review if r["type"] == "value"),
-            "flagged_values": sum(1 for r in self.review if r["type"] == "value" and r["message"] == "CHECK"),
+            "flagged_values": sum(1 for r in self.review if r["type"] == "value" and r["message"].startswith("CHECK")),
             "unmapped": sum(1 for r in self.review if r["type"] == "unmapped"),
+            "links_added": sum(1 for r in self.review if r["type"] == "link_added"),
+            "links_missing": sum(1 for r in self.review if r["type"] == "link_missing"),
+            "records_dropped": sum(1 for r in self.review if r["type"] == "record_dropped"),
+            "keys_missing": sum(1 for r in self.review if r["type"] == "key_missing"),
             "images_not_read": sum(1 for r in self.review if r["type"] == "image_not_read"),
         }
 

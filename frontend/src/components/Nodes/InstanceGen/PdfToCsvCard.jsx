@@ -236,11 +236,29 @@ export default function PdfToCsvCard({ schemaFile, selectedModel }) {
 
         {result && (
           <Box sx={{ mt: 2 }}>
-            <Alert severity={summary.flagged_values || summary.files_failed ? "warning" : "success"}>
+            <Alert
+              severity={
+                summary.flagged_values ||
+                summary.links_missing ||
+                summary.records_dropped ||
+                summary.keys_missing ||
+                summary.files_failed
+                  ? "warning"
+                  : "success"
+              }
+            >
               {recordCount} record(s) in {Object.keys(summary.records_per_class).length} CSV file(s)
               from {summary.files_total - summary.files_failed} of {summary.files_total} PDF(s).
               {summary.flagged_values > 0 &&
                 ` ${summary.flagged_values} value(s) are marked CHECK in review.csv.`}
+              {summary.links_missing > 0 &&
+                ` ${summary.links_missing} empty link(s) are marked CHECK.`}
+              {summary.records_dropped > 0 &&
+                ` ${summary.records_dropped} record(s) without data of their own were removed.`}
+              {summary.keys_missing > 0 &&
+                ` ${summary.keys_missing} record(s) have an empty key and will not merge across PDFs.`}
+              {summary.links_added > 0 &&
+                ` ${summary.links_added} link(s) were filled in automatically (see review.csv).`}
               {summary.images_not_read > 0 &&
                 ` ${summary.images_not_read} image(s) could not be read - check them manually.`}
             </Alert>

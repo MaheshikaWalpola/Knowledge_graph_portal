@@ -143,6 +143,9 @@ class _Builder:
             key_props = next((self.ctx.keys[c] for c in [cls, *sorted(own - {cls})] if c in self.ctx.keys), [])
             parts = [row.get(p, "") for p in key_props]
             keys = ["_".join(parts)] if key_props and all(parts) else []
+            if key_props and not keys:
+                self.warnings.append(f"{cls} '{row.get(ID_COLUMN, '')}': key {', '.join(key_props)} is empty; "
+                                     f"named after its id, so it is not merged with the same {cls} from other files")
         else:
             def own_values(pattern: re.Pattern) -> List[str]:
                 return [row[h] for h in headers if row.get(h) and h != ID_COLUMN
@@ -163,11 +166,17 @@ class _Builder:
         for key in keys:
             self.index[(cls, key)] = iri
 
+        own = self.ctx.class_and_ancestors(cls)
         for header in headers:
             value = row.get(header, "")
             if not value or header == ID_COLUMN:
                 continue
             prop = self.ctx.properties[header]
+            # A property the schema gives to other classes would make the graph contradict the schema
+            if prop.domains and not prop.domains & own:
+                self.warnings.append(f"{cls}.{header}: belongs to {', '.join(sorted(prop.domains))}, "
+                                     f"not {cls}; '{value}' skipped")
+                continue
             if prop.kind == "object":
                 self.pending_links.append((iri, prop, value))
                 continue

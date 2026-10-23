@@ -38,3 +38,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+example_datasheets
+samples
+samples.zip
