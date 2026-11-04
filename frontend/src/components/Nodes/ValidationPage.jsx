@@ -1106,6 +1106,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                     selectedModel={selectedModel}
                     onModelChange={setSelectedModel}
                     description="Choose the AI model used to suggest questions, generate SHACL shapes and verify them"
+                    includeCloud
                   />
                 </Box>
               </Box>

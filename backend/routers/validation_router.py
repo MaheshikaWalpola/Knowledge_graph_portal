@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from core.auth import get_current_user
+from services.llm_providers import cloud_providers
 from services.validation_service import ValidationService
 from services.user_schema_service import get_user_schema
 from services.graphdb_service import (
@@ -51,6 +52,15 @@ def _fetch_workspace_instances_ttl(user_email: str, schema_id: str) -> str:
     # Fallback to base instance graph for workspace
     graph_iri = user_schema_instance_graph(user_email, schema_id)
     return export_graph_turtle(graph_iri)
+
+
+@router.get("/validation/models")
+async def api_models():
+    """
+    Cloud AI providers (Claude, OpenAI) available for the validation workflow, with their models.
+    Only providers whose API key is configured on the server are listed; the Kiste models are listed by the frontend.
+    """
+    return {"providers": cloud_providers()}
 
 
 @router.post("/validation/suggest-rules")
