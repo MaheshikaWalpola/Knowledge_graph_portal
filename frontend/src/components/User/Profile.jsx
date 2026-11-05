@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Profile.css";
 import { getAvatarColorPair } from "../../utils/avatarUtils";
-
+import { API } from "../../config";
 
 const authHeaders = () => {
   const token = localStorage.getItem("token");

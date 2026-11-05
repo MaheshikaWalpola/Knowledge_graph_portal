@@ -270,3 +270,118 @@ Knowledge_graph_portal/
 └── READMe.md             # Project documentation
 ```
 
+---
+
+## Production Deployment
+
+On the server the portal runs under a path prefix:
+
+| Part | Public URL |
+|---|---|
+| Frontend (static files) | `https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal/` |
+| Backend API (FastAPI) | `https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal/api/` |
+
+The API needs its own prefix because its routes (`/auth`, `/workspace`, `/validation`,
+`/assistant`, ...) are served at the root and several share names with frontend pages.
+All server-specific settings live in `.env` files, which git ignores, so a `git pull`
+never overwrites them.
+
+### Frontend
+
+Create `frontend/.env.production` once (values are compiled in at build time):
+
+```
+VITE_API_URL=https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal/api
+VITE_BASE_PATH=/knowledgegraphportal/
+VITE_CMP_NS=https://tucid/cmpo/
+```
+
+Build, and rebuild after every `git pull`:
+
+```
+cd frontend
+npm ci
+npm run build
+```
+
+nginx serves `frontend/dist/` as static files. This is the recommended setup.
+
+**Alternative: dev server behind the reverse proxy.** If the server runs `npm run dev`
+instead of serving the build, Vite reads `frontend/.env` (not `.env.production`). Put the
+same values there and add the public address of the server:
+
+```
+VITE_API_URL=https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal/api
+VITE_BASE_PATH=/knowledgegraphportal/
+VITE_PUBLIC_ORIGIN=https://vsr.informatik.tu-chemnitz.de
+VITE_CMP_NS=https://tucid/cmpo/
+```
+
+`vite.config.js` derives the dev server's `origin`, `allowedHosts` and the hot-reload
+websocket (`wss` on port 443 for an `https` address) from `VITE_PUBLIC_ORIGIN`, so no
+domain is hard-coded. Leave the variable unset for local development.
+
+### Backend
+
+Set these in `backend/.env` in addition to the values from the Local Setup Guide:
+
+```
+FRONTEND_BASE_URL=https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal
+CORS_ORIGINS=https://vsr.informatik.tu-chemnitz.de
+API_ROOT_PATH=/knowledgegraphportal/api
+```
+
+- `FRONTEND_BASE_URL` is used for the links in verification and password-reset e-mails.
+- `CORS_ORIGINS`: if it is empty, every origin is allowed and a warning is logged at startup.
+- `API_ROOT_PATH` lets FastAPI accept the prefixed paths and generate correct URLs for
+  `/docs` and redirects.
+
+Run (without `--reload`):
+
+```
+cd backend
+uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips='*'
+```
+
+`--proxy-headers` makes FastAPI use the scheme (`https`) forwarded by nginx.
+API docs: `https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal/api/docs`.
+
+### nginx
+
+```nginx
+# Backend API. No trailing slash after the port: nginx forwards the full path
+# (with /knowledgegraphportal/api); the backend removes the prefix via API_ROOT_PATH.
+location /knowledgegraphportal/api/ {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_set_header Host $host;                 # otherwise redirects point to the internal hostname
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_buffering off;                         # live progress streams (server-sent events)
+    proxy_read_timeout 3600s;                    # SHACL generation/verification can take many minutes
+    client_max_body_size 100m;                   # ontology and instance uploads (35 MB and more)
+}
+
+# Frontend (React app). Unknown paths fall back to index.html so React routes
+# such as /knowledgegraphportal/validate survive a page reload.
+location /knowledgegraphportal/ {
+    alias /path/to/Knowledge_graph_portal/frontend/dist/;
+    try_files $uri $uri/ /knowledgegraphportal/index.html;
+}
+```
+
+### Update procedure
+
+```
+git pull
+cd frontend && npm ci && npm run build
+# restart the backend process (uvicorn)
+```
+
+### Checks after deployment
+
+- Every page URL keeps the `/knowledgegraphportal/` prefix, and F5 on any page does not give a 404.
+- The browser console shows no requests to `localhost:8000` and no websocket to `localhost:5173`.
+- The link in a verification e-mail starts with `https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal/`.
+- `https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal/api/docs` opens.
+
+

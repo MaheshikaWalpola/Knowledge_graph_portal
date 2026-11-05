@@ -28,7 +28,8 @@ class Settings:
     JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
     # Email
-    FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173")
+    # Public URL of the frontend incl. any path prefix; used to build links in e-mails
+    FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
     SMTP_USER   = os.getenv("SMTP_USER")
     SMTP_PASS   = os.getenv("SMTP_PASS")
     MAIL_FROM   = os.getenv("MAIL_FROM", SMTP_USER)

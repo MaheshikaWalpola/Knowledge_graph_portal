@@ -53,10 +53,9 @@ import VerifiedIcon from "@mui/icons-material/Verified";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import BuildIcon from "@mui/icons-material/Build";
 import ModelSelector from "./InstanceGen/ModelSelector";
+import { API } from "../../config";
 
 import "./ValidationPage.css";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const STEPS = [
   "Define Questions",
