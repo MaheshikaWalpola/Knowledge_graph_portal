@@ -34,3 +34,22 @@ Each entry in `cmp_rules_gold.json` has the following format:
 3. **Provide Positive Test Cases**: Minimal RDF Turtle graphs where all constraints are satisfied.
 4. **Provide Negative Test Cases**: Minimal RDF Turtle graphs where each distinct violation condition (e.g. out of range, missing property, invalid unit, wrong datatype) is isolated and triggered.
 5. **Verify with pySHACL**: Ensure the positive cases conform (`conforms=True`) and negative cases fail (`conforms=False`) against the gold SHACL before committing.
+
+## Evaluating the verifier
+
+`../verify_eval.py` measures how well the SHACL verifier separates correct shapes from wrong ones. For every rule it
+checks the gold shape plus automatic mutants (a dropped constraint, a shifted or flipped value limit, a wrong required
+value, a wrong target class). Each candidate is labelled correct or wrong with the gold test cases above, then judged by
+the verifier without repair.
+
+```bash
+cd backend
+python evaluation/verify_eval.py --schema path/to/cmpo.ttl --csv results.csv            # detection only
+python evaluation/verify_eval.py --schema path/to/cmpo.ttl --repair --csv results.csv   # plus one repair
+```
+
+It reports precision / recall / F1 for catching wrong shapes, the share of "verified" shapes that are really correct,
+the same for each signal alone (blind tests, back-translation), repair results, and AI calls and seconds per shape.
+
+The numbers are only as good as the gold cases: include boundary values (e.g. exactly 0, just below 0) so a mutant
+with a shifted limit is really caught, and aim for 30 or more rules covering every kind of question the portal asks.

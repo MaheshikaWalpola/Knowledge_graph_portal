@@ -13,8 +13,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import Typography from "@mui/material/Typography";
 import FormHelperText from "@mui/material/FormHelperText";
 import "./Form.css";
+import { API } from "../../config";
 
-const API = import.meta.env.VITE_API_URL;
 
 const BootstrapDialog = styled(Dialog)(({ theme }) => ({
   "& .MuiDialogContent-root": {

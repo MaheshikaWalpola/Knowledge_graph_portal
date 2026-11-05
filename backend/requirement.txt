@@ -7,3 +7,8 @@ rdflib
 pymongo
 pyshacl==0.31.0
 reportlab==5.0.0
+# Auth (password hashing)
+passlib
+# Optional cloud AI providers for the validation page (needs ANTHROPIC_API_KEY / OPENAI_API_KEY)
+anthropic
+openai

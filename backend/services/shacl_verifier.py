@@ -1,8 +1,12 @@
+import os
 import re
 import json
 import logging
+from concurrent.futures import Future, ThreadPoolExecutor
+from functools import lru_cache
 from typing import List, Dict, Any, Optional, Set, Tuple, Callable
-from rdflib import Graph, Namespace, RDF, RDFS, OWL, URIRef, BNode
+from rdflib import Graph, Namespace, RDF, RDFS, OWL, XSD, URIRef, BNode
+from rdflib.compare import isomorphic
 import pyshacl
 
 from core.config import settings
@@ -82,12 +86,39 @@ SHAPE_STRUCTURE_GUIDE = (
 )
 
 
+_PROSE_PREDICATES = {str(RDFS.comment), str(OWL.versionInfo)}
+_DCTERMS = "http://purl.org/dc/terms/"
+
+
+@lru_cache(maxsize=8)
+def compact_schema(schema_ttl: Optional[str]) -> str:
+    """
+    Ontology text for AI prompts: every class, property, label, synonym and hierarchy/domain/range link,
+    without long prose descriptions and metadata (about a third of the size for CMPO), so prompts stay fast.
+    Falls back to the text without comment lines if it cannot be parsed.
+    """
+    if not schema_ttl or not schema_ttl.strip():
+        return ""
+    try:
+        g = Graph()
+        g.parse(data=schema_ttl, format="turtle")
+        small = Graph()
+        for pfx, ns in g.namespaces():
+            small.bind(pfx, ns)
+        for s, p, o in g:
+            if str(p) in _PROSE_PREDICATES or str(p).startswith(_DCTERMS):
+                continue
+            small.add((s, p, o))
+        return small.serialize(format="turtle")
+    except Exception:
+        lines = [ln for ln in schema_ttl.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+        return "\n".join(lines)
+
+
 def schema_context(schema_ttl: Optional[str], limit: int = 12000) -> str:
-    """Schema text for prompts: comment-only lines are dropped so the limit is spent on definitions."""
-    if not schema_ttl:
-        return "CMP semiconductor ontology."
-    lines = [ln for ln in schema_ttl.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
-    return "\n".join(lines)[:limit]
+    """Compact schema text for verification prompts, capped at limit characters."""
+    text = compact_schema(schema_ttl)
+    return text[:limit] if text else "CMP semiconductor ontology."
 
 
 def data_sample(instance_ttl: Optional[str], limit: int = 3000) -> str:
@@ -95,6 +126,108 @@ def data_sample(instance_ttl: Optional[str], limit: int = 3000) -> str:
     if not instance_ttl or not instance_ttl.strip():
         return ""
     return instance_ttl.strip()[:limit]
+
+
+CMPO = "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#"
+INST = "https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/"
+
+# Prefixes declared for the AI's test graphs, so it does not have to write them (shorter answers, fewer parse errors)
+BASE_PREFIXES = {
+    "rdf": str(RDF), "rdfs": str(RDFS), "owl": str(OWL), "xsd": str(XSD), "sh": str(SH),
+    "sosa": _SOSA, "ssn": _SSN, "cmpo": CMPO, "inst": INST,
+}
+
+# Text a shape carries for humans. Removed before back-translation, so the AI has to read the logic instead of
+# repeating the rule it was given in the label.
+_HUMAN_TEXT_PREDICATES = {RDFS.label, RDFS.comment, SH.message, SH.name, SH.description}
+
+MEANING_VERDICTS = ("equivalent", "broader", "narrower", "different")
+
+# Optional reasoning effort for verification AI calls (e.g. "low" for gpt-oss); unset sends nothing extra
+VERIFY_REASONING_EFFORT = os.getenv("KISTE_VERIFY_REASONING_EFFORT") or None
+
+
+@lru_cache(maxsize=8)
+def parse_schema(schema_ttl: Optional[str]) -> Optional[Graph]:
+    """Parsed ontology, cached per text (treat as read-only); None if missing or not parseable."""
+    if not schema_ttl or not schema_ttl.strip():
+        return None
+    # No rdflib default prefixes (brick, foaf, ...): only the ones the ontology declares reach the prompts
+    g = Graph(bind_namespaces="none")
+    try:
+        g.parse(data=schema_ttl, format="turtle")
+        return g
+    except Exception:
+        return None
+
+
+@lru_cache(maxsize=8)
+def prefix_block(schema_ttl: Optional[str]) -> str:
+    """@prefix lines for the common vocabularies plus every prefix the ontology declares."""
+    prefixes = dict(BASE_PREFIXES)
+    g = parse_schema(schema_ttl)
+    if g is not None:
+        for pfx, ns in g.namespaces():
+            if pfx and pfx not in prefixes and str(ns) not in prefixes.values():
+                prefixes[pfx] = str(ns)
+    return "\n".join(f"@prefix {p}: <{ns}> ." for p, ns in prefixes.items())
+
+
+@lru_cache(maxsize=8)
+def ontology_digest(schema_ttl: Optional[str]) -> str:
+    """
+    One line per class and property (parents, domain -> range, label) for verification prompts. Several times
+    shorter than Turtle, so the whole ontology fits in the prompt instead of being cut off at a character limit.
+    """
+    g = parse_schema(schema_ttl)
+    if g is None:
+        return schema_context(schema_ttl)
+    names = Graph()
+    for line in prefix_block(schema_ttl).splitlines():
+        m = re.match(r"@prefix (\S*): <([^>]*)> \.", line)
+        if m:
+            names.bind(m.group(1), m.group(2), override=True)
+
+    def qn(term) -> str:
+        try:
+            return names.namespace_manager.normalizeUri(term)
+        except Exception:
+            return f"<{term}>"
+
+    def label(term) -> str:
+        lbl = next((str(o) for o in g.objects(term, RDFS.label)), "")
+        local = re.split(r"[#/]", str(term))[-1]
+        return f'  "{lbl}"' if lbl and lbl.replace(" ", "").lower() != local.lower() else ""
+
+    classes = {s for t in (OWL.Class, RDFS.Class) for s in g.subjects(RDF.type, t) if isinstance(s, URIRef)}
+    classes |= {s for s in g.subjects(RDFS.subClassOf, None) if isinstance(s, URIRef)}
+    props: Dict[URIRef, str] = {}
+    for kind, t in (("object", OWL.ObjectProperty), ("datatype", OWL.DatatypeProperty), ("property", RDF.Property)):
+        for s in g.subjects(RDF.type, t):
+            if isinstance(s, URIRef):
+                props.setdefault(s, kind)
+    for pred in (RDFS.domain, RDFS.range):
+        for s in g.subjects(pred, None):
+            if isinstance(s, URIRef):
+                props.setdefault(s, "property")
+    if not classes and not props:
+        return schema_context(schema_ttl)
+
+    lines = ["CLASSES (class < parent classes):"]
+    for c in sorted(classes, key=str):
+        parents = [qn(o) for o in g.objects(c, RDFS.subClassOf) if isinstance(o, URIRef)]
+        lines.append(qn(c) + (f" < {', '.join(parents)}" if parents else "") + label(c))
+    lines.append("PROPERTIES (property [kind] domain -> range):")
+    for p in sorted(props, key=str):
+        dom = ", ".join(qn(o) for o in g.objects(p, RDFS.domain) if isinstance(o, URIRef)) or "any"
+        rng = ", ".join(qn(o) for o in g.objects(p, RDFS.range) if isinstance(o, URIRef)) or "any"
+        lines.append(f"{qn(p)} [{props[p]}] {dom} -> {rng}{label(p)}")
+    return "\n".join(lines)
+
+
+def _strip_fences(text: str) -> str:
+    text = re.sub(r"^```[a-zA-Z]*\n", "", (text or "").strip())
+    return re.sub(r"```$", "", text).strip()
 
 
 class SHACLVerifier:
@@ -212,7 +345,7 @@ class SHACLVerifier:
 
         # sh:node
         for _, _, node in g_shape.triples((None, SH.node, None)):
-            if isinstance(node, URIRef):
+            if isinstance(node, URIRef) and (node, None, None) not in g_shape:
                 used_terms.add(str(node))
 
         # sh:path
@@ -235,247 +368,309 @@ class SHACLVerifier:
 
         return unknown_terms
 
-    def _generate_test_examples(self, rule_text: str, shape_ttl: str, schema_ttl: Optional[str], model: Optional[str] = None,
-                                instance_ttl: Optional[str] = None) -> Tuple[List[str], List[str]]:
+    def check_static(self, shape_ttl: str, known_terms: Set[str]) -> Tuple[Optional[Graph], List[str], List[str]]:
         """
-        Calls LLM to generate 3 valid and 3 invalid tiny Turtle instance graphs.
-        Returns (valid_examples, invalid_examples).
+        Check 1, no AI: the shape is valid Turtle, is valid SHACL (checked against the W3C SHACL-for-SHACL
+        shapes), has a target, and uses only terms from the ontology.
+        Returns (parsed shape or None, problems, unknown terms).
         """
-        schema_snippet = schema_context(schema_ttl)
+        g = Graph()
+        try:
+            g.parse(data=shape_ttl, format="turtle")
+        except Exception as e:
+            return None, [f"The shape is not valid Turtle: {str(e)[:150]}"], []
+
+        problems = []
+        try:
+            pyshacl.validate(Graph(), shacl_graph=g, meta_shacl=True)
+        except Exception as e:
+            msgs = list(dict.fromkeys(re.findall(r"Message: (.+)", str(e))))
+            problems.append("The shape is not valid SHACL: " + ("; ".join(msgs[:3]) if msgs else str(e)[:150]))
+
+        targets = (SH.targetClass, SH.targetNode, SH.targetSubjectsOf, SH.targetObjectsOf)
+        if not any(next(g.triples((None, t, None)), None) for t in targets):
+            problems.append("The shape has no target (e.g. sh:targetClass), so it never checks anything.")
+
+        unknown = self.check_grounding(shape_ttl, known_terms)
+        if unknown:
+            problems.append("It uses terms that are not in the ontology: " + ", ".join(unknown))
+        return g, problems, unknown
+
+    def generate_test_cases(self, rule_text: str, schema_ttl: Optional[str] = None, model: Optional[str] = None,
+                            instance_ttl: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Check 2a: blind test data. Written from the English rule and the ontology only, never from the shape, so
+        the tests say what the rule means instead of repeating what the shape does. Each invalid graph is a copy
+        of a valid one with one change, which keeps the examples realistic and the failure easy to explain.
+        Asks again once if fewer than 2 usable pairs come back.
+        Returns [{"ttl", "graph", "expected": "valid" | "invalid", "note"}].
+        """
+        cases = self._request_test_cases(rule_text, schema_ttl, model, instance_ttl)
+        if sum(1 for c in cases if c["expected"] == "invalid") < 2:
+            seen = {c["ttl"] for c in cases}
+            cases += [c for c in self._request_test_cases(rule_text, schema_ttl, model, instance_ttl)
+                      if c["ttl"] not in seen]
+        return cases
+
+    def _request_test_cases(self, rule_text: str, schema_ttl: Optional[str], model: Optional[str],
+                            instance_ttl: Optional[str]) -> List[Dict[str, Any]]:
+        prefixes = prefix_block(schema_ttl)
+        prefix_names = ", ".join(re.findall(r"@prefix (\S*):", prefixes))
         sample = data_sample(instance_ttl)
         sample_text = (
-            "EXAMPLE OF THE USER'S REAL INSTANCE DATA (follow the same structure, properties and classes):\n"
+            "EXAMPLE OF THE USER'S REAL DATA (build the test data with the same structure, classes and properties):\n"
             f"{sample}\n\n"
         ) if sample else ""
         prompt = (
-            "You are a Semantic Web and SHACL validation test engineer.\n"
-            "Given the plain-English data quality rule, the generated SHACL shape, and the ontology context, "
-            "generate exactly 3 VALID and 3 INVALID minimal RDF Turtle instance graphs to test the SHACL shape.\n\n"
-            f"Rule: \"{rule_text}\"\n\n"
-            f"Generated SHACL Shape:\n{shape_ttl}\n\n"
-            f"Ontology snippet:\n{schema_snippet}\n\n"
+            "Write test data for a data quality rule on an RDF knowledge graph. You do not see how the rule is "
+            "implemented; work only from the rule and the ontology.\n\n"
+            f"RULE: \"{rule_text}\"\n\n"
+            f"ONTOLOGY:\n{ontology_digest(schema_ttl)}\n\n"
             f"{sample_text}"
-            "Requirements:\n"
-            "1. 'valid' examples: Minimal instance graphs that MUST fully satisfy and conform to the shape and rule.\n"
-            "2. 'invalid' examples: Minimal instance graphs that deliberately violate the rule (e.g. negative value, missing mandatory property, wrong type).\n"
-            "   SCOPE TEST (required): at least one 'valid' example must contain an item the rule is NOT about that would break "
-            "the rule's condition if the rule applied to it, e.g. for 'pressure values must be positive' an observation of a "
-            "different parameter (such as a temperature or zeta potential) with a negative value. The shape must accept it; "
-            "a shape that rejects it is too broad.\n"
-            "3. Each example must be a self-contained Turtle (.ttl) string including all necessary @prefix declarations (@prefix cmpo: ..., @prefix inst: ..., @prefix xsd: ..., @prefix rdfs: ...).\n"
-            "4. Return strictly JSON with exactly this structure:\n"
-            "{\n"
-            "  \"valid\": [\"<turtle snippet 1>\", \"<turtle snippet 2>\", \"<turtle snippet 3>\"],\n"
-            "  \"invalid\": [\"<turtle snippet 1>\", \"<turtle snippet 2>\", \"<turtle snippet 3>\"],\n"
-            "}\n"
+            "Write 3 test PAIRS:\n"
+            "- \"valid\": a minimal Turtle graph that follows the rule. Give every node its rdf:type and include every "
+            "link and value the rule talks about, shaped like the real data.\n"
+            "- \"invalid\": a copy of \"valid\" with ONE small change that breaks the rule (a value out of range, a "
+            "missing required link or value, a wrong unit or datatype). If the rule has several parts, break a "
+            "different part in each pair.\n"
+            "- \"change\": a few words saying what you changed.\n"
+            "Also write \"out_of_scope\": a minimal graph with an item the rule is NOT about that would break the "
+            "rule's condition if the rule applied to it (e.g. for a pressure rule, an observation of another parameter "
+            "with a bad value). Use \"\" if there is no such item.\n\n"
+            f"Do NOT write @prefix lines. These prefixes are already declared: {prefix_names}. "
+            "Write any other IRI in full as <...>.\n"
+            "Return JSON only: {\"pairs\": [{\"valid\": \"...\", \"invalid\": \"...\", \"change\": \"...\"}], "
+            "\"out_of_scope\": \"...\"}"
         )
         messages = [
-            {"role": "system", "content": "You are a SHACL test dataset generator. You output only valid JSON."},
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": "You write minimal RDF test data in Turtle. You output only valid JSON."},
+            {"role": "user", "content": prompt},
         ]
-
-        response = self.llm._call_kiste(messages, json_mode=True, temperature=0.1, model_override=model)
-        data = json.loads(response)
-        valid = data.get("valid", [])
-        invalid = data.get("invalid", [])
-        return (valid if isinstance(valid, list) else [], invalid if isinstance(invalid, list) else [])
-
-    def check_test_data(
-        self,
-        rule_text: str,
-        shape_ttl: str,
-        schema_ttl: Optional[str] = None,
-        model: Optional[str] = None,
-        instance_ttl: Optional[str] = None
-    ) -> Tuple[bool, List[Dict[str, Any]], str]:
-        """
-        Check 2: Test-data check
-        - Ask LLM for 3 valid and 3 invalid tiny Turtle graphs.
-        - Run pyshacl.validate on each.
-        - Verify valid -> conforms, invalid -> does not conform.
-        - Discard broken example and retry once.
-        - If fewer than 2 valid and 2 invalid usable examples remain: return unverified ("not enough test examples").
-        Returns (passed, failed_examples, reason).
-        """
+        response = self.llm._call_kiste(messages, json_mode=True, temperature=0.2, model_override=model,
+                                        reasoning_effort=VERIFY_REASONING_EFFORT)
         try:
-            valid_raw, invalid_raw = self._generate_test_examples(rule_text, shape_ttl, schema_ttl, model, instance_ttl)
+            data = json.loads(_strip_fences(response))
         except Exception as e:
-            logger.warning(f"Error generating test examples: {e}")
-            return False, [], "failed to generate test examples"
+            logger.warning(f"Test data answer was not JSON: {e}")
+            return []
+        if not isinstance(data, dict):
+            return []
 
-        def filter_parseable(examples: List[str]) -> Tuple[List[str], List[str]]:
-            clean_good = []
-            broken = []
-            for ex in examples:
-                if not isinstance(ex, str) or not ex.strip():
-                    continue
-                # Clean code fences if LLM included any inside string
-                clean_ex = re.sub(r"^```[a-zA-Z]*\n", "", ex.strip())
-                clean_ex = re.sub(r"```$", "", clean_ex).strip()
-                g = Graph()
-                try:
-                    g.parse(data=clean_ex, format="turtle")
-                    clean_good.append(clean_ex)
-                except Exception:
-                    broken.append(clean_ex)
-            return clean_good, broken
-
-        valid_clean, broken_v = filter_parseable(valid_raw)
-        invalid_clean, broken_inv = filter_parseable(invalid_raw)
-
-        # Retry once if we had broken examples and don't meet the 2 usable threshold
-        if (len(valid_clean) < 2 or len(invalid_clean) < 2) and (broken_v or broken_inv):
+        def parse(body: Any) -> Optional[Tuple[str, Graph]]:
+            if not isinstance(body, str) or not body.strip():
+                return None
+            body = _strip_fences(body)
+            g = Graph()
             try:
-                retry_v, retry_inv = self._generate_test_examples(rule_text, shape_ttl, schema_ttl, model, instance_ttl)
-                v2, _ = filter_parseable(retry_v)
-                inv2, _ = filter_parseable(retry_inv)
-                valid_clean = list(dict.fromkeys(valid_clean + v2))
-                invalid_clean = list(dict.fromkeys(invalid_clean + inv2))
-            except Exception as e:
-                logger.warning(f"Retry generating test examples failed: {e}")
-
-        if len(valid_clean) < 2 or len(invalid_clean) < 2:
-            return False, [], "not enough test examples"
-
-        failed_examples = []
-        ont_graph = None
-        if schema_ttl and schema_ttl.strip():
-            try:
-                ont_graph = Graph()
-                ont_graph.parse(data=schema_ttl, format="turtle")
+                g.parse(data=prefixes + "\n" + body, format="turtle")
             except Exception:
-                ont_graph = None
+                return None
+            return (body, g) if len(g) else None
 
-        g_shape = Graph()
+        cases = []
+        pairs = data.get("pairs") if isinstance(data.get("pairs"), list) else []
+        for pair in pairs:
+            if not isinstance(pair, dict):
+                continue
+            valid, invalid = parse(pair.get("valid")), parse(pair.get("invalid"))
+            # A pair is only useful if both graphs parse and the "broken" copy really differs
+            if not valid or not invalid or isomorphic(valid[1], invalid[1]):
+                continue
+            change = str(pair.get("change") or "one change that breaks the rule")[:120]
+            if all(c["ttl"] != valid[0] for c in cases):
+                cases.append({"ttl": valid[0], "graph": valid[1], "expected": "valid", "note": "data that follows the rule"})
+            cases.append({"ttl": invalid[0], "graph": invalid[1], "expected": "invalid", "note": change})
+        out_of_scope = parse(data.get("out_of_scope"))
+        if out_of_scope and cases:
+            cases.append({"ttl": out_of_scope[0], "graph": out_of_scope[1], "expected": "valid",
+                          "note": "an item the rule is not about"})
+        return cases
+
+    @staticmethod
+    def run_tests(shape_graph: Graph, cases: List[Dict[str, Any]], ont_graph: Optional[Graph] = None) -> List[Dict[str, Any]]:
+        """Check 2b, no AI: runs pySHACL on every test graph and returns the ones the shape got wrong."""
+        failed = []
+        for case in cases:
+            expected_valid = case["expected"] == "valid"
+            try:
+                conforms, _, _ = pyshacl.validate(case["graph"], shacl_graph=shape_graph, ont_graph=ont_graph,
+                                                  inference="none", abort_on_first=True)
+            except Exception as e:
+                failed.append({"example": case["ttl"], "expected": case["expected"], "actual": "error",
+                               "message": f"The shape could not be run on test data ({case['note']}): {str(e)[:100]}"})
+                continue
+            if conforms == expected_valid:
+                continue
+            if expected_valid:
+                message = f"The shape rejected test data it should accept ({case['note']})"
+            else:
+                message = f"The shape accepted test data that breaks the rule ({case['note']})"
+            failed.append({"example": case["ttl"], "expected": case["expected"],
+                           "actual": "violates" if expected_valid else "conforms", "message": message})
+        return failed
+
+    @staticmethod
+    def logic_only(shape_graph: Graph) -> str:
+        """The shape without labels, messages and comments, i.e. only what it actually checks."""
+        g = Graph()
+        for pfx, ns in shape_graph.namespaces():
+            g.bind(pfx, ns)
+        for t in shape_graph:
+            if t[1] not in _HUMAN_TEXT_PREDICATES:
+                g.add(t)
+        return g.serialize(format="turtle")
+
+    def check_meaning(self, rule_text: str, shape_graph: Graph, model: Optional[str] = None) -> Dict[str, str]:
+        """
+        Check 3: back-translation. One AI call describes what the shape does without seeing the rule (labels and
+        messages are removed), and a second compares that description with the rule.
+        Returns {"verdict": equivalent | broader | narrower | different | unknown, "explanation", "back_translation"}.
+        """
+        describe = (
+            "Describe in plain English what this SHACL shape checks, in one or two sentences: which items it checks, "
+            "which properties, and which values, counts, datatypes or units it accepts or rejects. Describe what the "
+            "code really does, including mistakes; do not guess what it was meant to do.\n\n"
+            f"{self.logic_only(shape_graph)}"
+        )
+        back_translation = self.llm._call_kiste(
+            [{"role": "system", "content": "You explain SHACL shapes literally and briefly. Plain text only."},
+             {"role": "user", "content": describe}],
+            json_mode=False, temperature=0.0, model_override=model, reasoning_effort=VERIFY_REASONING_EFFORT
+        ).strip()
+
+        compare = (
+            "A data quality rule was turned into a SHACL check. Compare what the rule asks with what the check does.\n\n"
+            f"RULE: \"{rule_text}\"\n"
+            f"WHAT THE CHECK DOES: \"{back_translation}\"\n\n"
+            "Choose one verdict:\n"
+            "- \"equivalent\": the check rejects exactly the data the rule forbids. Different wording is fine, and so "
+            "are details the rule implies (e.g. a numeric datatype for a value limit, or requiring the value to exist).\n"
+            "- \"broader\": the check also rejects data the rule allows (stricter limits, or it checks items the rule "
+            "is not about).\n"
+            "- \"narrower\": the check misses data the rule forbids (part of the rule is missing, or limits are looser).\n"
+            "- \"different\": the check is about something else.\n"
+            "Return JSON only: {\"verdict\": \"...\", \"explanation\": \"one short sentence naming the difference, "
+            "or empty if equivalent\"}"
+        )
+        response = self.llm._call_kiste(
+            [{"role": "system", "content": "You compare rules with what code does. You output only valid JSON."},
+             {"role": "user", "content": compare}],
+            json_mode=True, temperature=0.0, model_override=model, reasoning_effort=VERIFY_REASONING_EFFORT
+        )
         try:
-            g_shape.parse(data=shape_ttl, format="turtle")
-        except Exception as e:
-            return False, [{"example": shape_ttl, "expected": "valid", "actual": "parse_error", "message": str(e)}], "shape syntax error"
-
-        # Test valid examples (expected: conforms == True)
-        for ex in valid_clean[:3]:
-            g_data = Graph()
-            try:
-                g_data.parse(data=ex, format="turtle")
-                conforms, _, results_text = pyshacl.validate(
-                    g_data,
-                    shacl_graph=g_shape,
-                    ont_graph=ont_graph,
-                    inference="none",
-                    abort_on_first=False
-                )
-                if not conforms:
-                    failed_examples.append({
-                        "example": ex,
-                        "expected": "valid",
-                        "actual": "violates",
-                        "message": "Expected valid instance to conform, but SHACL shape rejected it."
-                    })
-            except Exception as e:
-                failed_examples.append({
-                    "example": ex,
-                    "expected": "valid",
-                    "actual": "error",
-                    "message": f"Execution error: {str(e)[:100]}"
-                })
-
-        # Test invalid examples (expected: conforms == False)
-        for ex in invalid_clean[:3]:
-            g_data = Graph()
-            try:
-                g_data.parse(data=ex, format="turtle")
-                conforms, _, results_text = pyshacl.validate(
-                    g_data,
-                    shacl_graph=g_shape,
-                    ont_graph=ont_graph,
-                    inference="none",
-                    abort_on_first=False
-                )
-                if conforms:
-                    failed_examples.append({
-                        "example": ex,
-                        "expected": "invalid",
-                        "actual": "conforms",
-                        "message": "Expected invalid instance to violate shape, but SHACL shape accepted it."
-                    })
-            except Exception as e:
-                failed_examples.append({
-                    "example": ex,
-                    "expected": "invalid",
-                    "actual": "error",
-                    "message": f"Execution error: {str(e)[:100]}"
-                })
-
-        passed = (len(failed_examples) == 0)
-        reason = "" if passed else f"{len(failed_examples)} behavioral test case(s) failed"
-        return passed, failed_examples, reason
+            data = json.loads(_strip_fences(response))
+            verdict = str(data.get("verdict", "")).strip().lower()
+            explanation = str(data.get("explanation") or "").strip()
+        except Exception:
+            verdict, explanation = "unknown", ""
+        if verdict not in MEANING_VERDICTS:
+            verdict = "unknown"
+        return {"verdict": verdict, "explanation": explanation, "back_translation": back_translation}
 
     def repair_shape(
         self,
         rule_text: str,
         current_shape_ttl: str,
-        unknown_terms: List[str],
+        problems: List[str],
         failed_examples: List[Dict[str, Any]],
+        meaning: Optional[Dict[str, str]] = None,
         schema_ttl: Optional[str] = None,
         model: Optional[str] = None,
         instance_ttl: Optional[str] = None
     ) -> str:
-        """
-        Check 3: Repair loop prompt
-        Sends original sentence, current shape, unknown terms and failed examples explained in words.
-        Returns corrected Turtle shape code.
-        """
-        issue_descriptions = []
-        if unknown_terms:
-            issue_descriptions.append(
-                f"- Unknown/hallucinated terms not found in the ontology schema: {', '.join(unknown_terms)}. "
-                f"You MUST use only valid classes and properties from the ontology."
-            )
+        """Asks the AI for a corrected shape, given everything the checks found. Returns Turtle."""
+        issues = [f"- {p}" for p in problems]
+        if meaning and meaning.get("back_translation"):
+            issues.append(f"- What the shape currently does: \"{meaning['back_translation']}\"")
         for fe in failed_examples[:3]:
-            ex_snippet = fe.get("example", "")[:200]
-            if fe.get("expected") == "invalid" and fe.get("actual") == "conforms":
-                issue_descriptions.append(
-                    f"- The shape accepted an invalid test example that it should have rejected: {ex_snippet} "
-                    f"(Make sure constraints like sh:minInclusive, sh:minCount, or sh:datatype are properly placed inside sh:property)."
-                )
-            elif fe.get("expected") == "valid" and fe.get("actual") == "violates":
-                issue_descriptions.append(
-                    f"- The shape rejected a valid test example that conforms to the rule: {ex_snippet} "
-                    f"(Check for overly strict constraints, a wrong targetClass, or a shape that also checks items "
-                    f"the rule is not about, e.g. observations of other parameters)."
-                )
-
-        issues_text = "\n".join(issue_descriptions) or "The shape did not conform to the expected rule behavior."
-        schema_snippet = schema_context(schema_ttl)
+            issues.append(f"- {fe.get('message', '')}. Test data:\n{fe.get('example', '')[:600]}")
         sample = data_sample(instance_ttl)
         sample_text = (
-            "EXAMPLE OF THE USER'S REAL INSTANCE DATA (follow the same structure, properties and classes):\n"
+            "EXAMPLE OF THE USER'S REAL DATA (the shape must fit this structure):\n"
             f"{sample}\n\n"
         ) if sample else ""
 
         prompt = (
             "You are an expert Semantic Web and SHACL developer.\n"
-            f"The following SHACL shape was generated for the rule: \"{rule_text}\", but verification found issues:\n\n"
-            f"DETECTED ISSUES:\n{issues_text}\n\n"
+            f"This SHACL shape was written for the rule \"{rule_text}\", but checking it found problems:\n\n"
+            + "\n".join(issues) + "\n\n"
             f"CURRENT SHACL SHAPE:\n{current_shape_ttl}\n\n"
-            f"ONTOLOGY SCHEMA CONTEXT:\n{schema_snippet}\n\n"
+            f"ONTOLOGY:\n{ontology_digest(schema_ttl)}\n\n"
             f"{sample_text}"
             "Instructions:\n"
-            "1. Output ONLY valid, corrected Turtle (.ttl) syntax for the shape.\n"
-            "2. Fix all hallucinated terms and constraint logic errors.\n"
-            "3. Nest property constraints inside sh:property [ sh:path ... ]. Never attach sh:path directly to sh:NodeShape.\n"
-            "4. Do NOT output any explanations, markdown code blocks, or text before/after the Turtle.\n\n"
+            "1. Output ONLY the corrected shape in valid Turtle, with its @prefix lines.\n"
+            "2. Keep the same shape IRI and rdfs:label.\n"
+            "3. Fix the problems so the shape checks exactly what the rule says, no more and no less.\n"
+            "4. Nest property constraints inside sh:property [ sh:path ... ]. Never attach sh:path directly to sh:NodeShape.\n"
+            "5. No explanations, markdown code blocks, or text before/after the Turtle.\n\n"
             f"{SHAPE_STRUCTURE_GUIDE}"
         )
         messages = [
             {"role": "system", "content": "You are a SHACL code repair expert. You output only valid Turtle syntax without markdown."},
             {"role": "user", "content": prompt}
         ]
-
         response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1, model_override=model)
-        clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
-        clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
-        return clean_ttl.strip()
+        return _strip_fences(response)
+
+    def _check_once(self, rule_text: str, shape_ttl: str, known_terms: Set[str], ont_graph: Optional[Graph],
+                    tests_future: Future, pool: ThreadPoolExecutor, model: Optional[str],
+                    progress: Callable[[str], None]) -> Dict[str, Any]:
+        """Runs all checks on one version of the shape and decides whether it is verified."""
+        shape_graph, problems, unknown = self.check_static(shape_ttl, known_terms)
+        if problems:
+            # Fix the obvious problems before spending AI calls on the meaning
+            return {"passed": False, "repairable": True, "problems": problems, "unknown_terms": unknown,
+                    "failed_examples": [], "meaning": None, "tests_total": 0}
+
+        progress("testing")
+        meaning_future = pool.submit(self.check_meaning, rule_text, shape_graph, model)
+        try:
+            cases = tests_future.result()
+        except KisteConnectionError:
+            raise
+        except Exception as e:
+            logger.warning(f"Could not create test data for rule '{rule_text}': {e}")
+            cases = []
+        failed = self.run_tests(shape_graph, cases, ont_graph) if cases else []
+        meaning = meaning_future.result()
+
+        verdict = meaning["verdict"]
+        enough_tests = sum(1 for c in cases if c["expected"] == "invalid") >= 2
+        # AI-written test data is itself sometimes wrong. With enough tests, one disagreement is tolerated when
+        # the independent meaning check confirms the shape; a real mistake would show in both checks.
+        tolerated = 1 if len(cases) >= 6 and verdict == "equivalent" else 0
+
+        if not enough_tests:
+            problems.append("Could not create enough test data for this rule.")
+        if verdict in ("broader", "narrower", "different"):
+            problems.append(f"The shape's meaning is {verdict} than the rule"
+                            + (f": {meaning['explanation']}" if meaning["explanation"] else "."))
+        elif verdict == "unknown":
+            problems.append("Could not compare the shape's meaning with the rule.")
+        if len(failed) > tolerated:
+            problems.append(f"{len(failed)} of {len(cases)} tests failed.")
+
+        passed = enough_tests and verdict == "equivalent" and len(failed) <= tolerated
+        # Repair only when a check found something wrong with the shape itself, not when the tests are missing
+        repairable = not passed and (verdict in ("broader", "narrower", "different") or len(failed) > tolerated)
+        return {"passed": passed, "repairable": repairable, "problems": problems, "unknown_terms": [],
+                "failed_examples": failed, "meaning": meaning, "tests_total": len(cases)}
+
+    @staticmethod
+    def _result(rule_text: str, shape_ttl: str, verification: str, attempts: int, check: Dict[str, Any],
+                reason: Optional[str] = None) -> Dict[str, Any]:
+        failed = check.get("failed_examples", [])
+        return {
+            "rule_text": rule_text,
+            "shape_ttl": shape_ttl,
+            "verification": verification,
+            "attempts": attempts,
+            "unknown_terms": check.get("unknown_terms", []),
+            "failed_examples": failed,
+            "reason": reason if reason is not None else ("" if verification != "unverified" else " ".join(check.get("problems", []))),
+            "meaning": check.get("meaning"),
+            "tests": {"total": check.get("tests_total", 0), "failed": len(failed)},
+        }
 
     def verify_and_repair(
         self,
@@ -485,143 +680,52 @@ class SHACLVerifier:
         known_terms: Optional[Set[str]] = None,
         on_progress: Optional[Callable[[str], None]] = None,
         model: Optional[str] = None,
-        instance_ttl: Optional[str] = None
+        instance_ttl: Optional[str] = None,
+        max_repairs: int = 1
     ) -> Dict[str, Any]:
         """
-        Executes the full verification & repair pipeline:
-        1. Grounding check
-        2. Test-data check
-        3. Repair loop (up to 3 attempts)
-        Returns:
-        {
-          "rule_text": str,
-          "shape_ttl": str,
-          "verification": "verified" | "repaired" | "unverified",
-          "attempts": int,
-          "unknown_terms": list,
-          "failed_examples": list,
-          "reason": str
-        }
+        Checks that a shape means what its English rule says, using three independent checks:
+        1. Static (no AI): valid Turtle and SHACL, has a target, only ontology terms.
+        2. Blind tests: test data written from the rule alone must be accepted or rejected as the rule says.
+        3. Back-translation: the AI describes the shape without its labels and the description is compared with the rule.
+        The shape is verified when all three agree; otherwise it is repaired up to max_repairs times. Test data is
+        created once and reused, so re-checking a repaired shape only costs the back-translation.
+        Returns {rule_text, shape_ttl, verification: verified | repaired | unverified, attempts, unknown_terms,
+                 failed_examples, reason, meaning, tests}.
         """
-        # If verification is disabled by config, return verified immediately
         if not getattr(settings, "ENABLE_SHACL_VERIFICATION", True):
-            return {
-                "rule_text": rule_text,
-                "shape_ttl": initial_shape_ttl,
-                "verification": "verified",
-                "attempts": 1,
-                "unknown_terms": [],
-                "failed_examples": [],
-                "reason": "verification disabled"
-            }
+            return self._result(rule_text, initial_shape_ttl, "verified", 1, {}, reason="verification disabled")
 
         if known_terms is None and schema_ttl:
             known_terms = self.extract_ontology_terms(schema_ttl)
         known_terms = known_terms or set()
+        ont_graph = parse_schema(schema_ttl)
+        progress = on_progress or (lambda stage: None)
 
-        current_shape = initial_shape_ttl
+        shape_ttl = initial_shape_ttl
         attempts = 1
-        max_attempts = 4  # Initial attempt + up to 3 repair attempts
-
-        last_unknown_terms = []
-        last_failed_examples = []
-        last_reason = ""
-
-        while attempts <= max_attempts:
-            # Check 1: Grounding check
-            if on_progress:
-                on_progress("grounding" if attempts == 1 else "repairing")
-
-            unknown_terms = self.check_grounding(current_shape, known_terms)
-            grounding_passed = (len(unknown_terms) == 0)
-            last_unknown_terms = unknown_terms
-
-            # Check 2: Test-data check
-            if on_progress:
-                on_progress("testing" if attempts == 1 else "repairing")
-
-            test_passed = False
-            failed_examples = []
-            test_reason = ""
-
-            try:
-                test_passed, failed_examples, test_reason = self.check_test_data(
-                    rule_text=rule_text,
-                    shape_ttl=current_shape,
-                    schema_ttl=schema_ttl,
-                    model=model,
-                    instance_ttl=instance_ttl
-                )
-            except KisteConnectionError:
-                return {
-                    "rule_text": rule_text,
-                    "shape_ttl": current_shape,
-                    "verification": "unverified",
-                    "attempts": attempts,
-                    "unknown_terms": last_unknown_terms,
-                    "failed_examples": [],
-                    "reason": "verification unavailable"
-                }
-            except Exception as ex:
-                test_passed = False
-                test_reason = str(ex)
-
-            last_failed_examples = failed_examples
-            last_reason = test_reason
-
-            # If both checks passed
-            if grounding_passed and test_passed:
-                return {
-                    "rule_text": rule_text,
-                    "shape_ttl": current_shape,
-                    "verification": "verified" if attempts == 1 else "repaired",
-                    "attempts": attempts,
-                    "unknown_terms": [],
-                    "failed_examples": [],
-                    "reason": ""
-                }
-
-            # If failed and attempts remain, try repair
-            if attempts < max_attempts:
-                if on_progress:
-                    on_progress("repairing")
+        check: Dict[str, Any] = {}
+        pool = ThreadPoolExecutor(max_workers=2)
+        try:
+            progress("grounding")
+            # Test data does not depend on the shape, so it is written while the shape is being checked
+            tests_future = pool.submit(self.generate_test_cases, rule_text, schema_ttl, model, instance_ttl)
+            while True:
+                check = self._check_once(rule_text, shape_ttl, known_terms, ont_graph, tests_future, pool, model, progress)
+                if check["passed"]:
+                    return self._result(rule_text, shape_ttl, "verified" if attempts == 1 else "repaired", attempts, check)
+                if attempts > max_repairs or not check["repairable"]:
+                    return self._result(rule_text, shape_ttl, "unverified", attempts, check)
+                progress("repairing")
                 try:
-                    current_shape = self.repair_shape(
-                        rule_text=rule_text,
-                        current_shape_ttl=current_shape,
-                        unknown_terms=unknown_terms,
-                        failed_examples=failed_examples,
-                        schema_ttl=schema_ttl,
-                        model=model,
-                        instance_ttl=instance_ttl
-                    )
+                    shape_ttl = self.repair_shape(rule_text, shape_ttl, check["problems"], check["failed_examples"],
+                                                  check["meaning"], schema_ttl, model, instance_ttl)
                 except KisteConnectionError:
-                    return {
-                        "rule_text": rule_text,
-                        "shape_ttl": current_shape,
-                        "verification": "unverified",
-                        "attempts": attempts,
-                        "unknown_terms": last_unknown_terms,
-                        "failed_examples": last_failed_examples,
-                        "reason": "verification unavailable"
-                    }
-                except Exception as ex:
-                    last_reason = f"Repair failed: {ex}"
-                    break
-
-            attempts += 1
-
-        # Still failing after repair limit or test example shortage
-        final_reason = last_reason
-        if last_unknown_terms and not final_reason:
-            final_reason = f"Unknown terms: {', '.join(last_unknown_terms)}"
-
-        return {
-            "rule_text": rule_text,
-            "shape_ttl": current_shape,
-            "verification": "unverified",
-            "attempts": min(attempts, max_attempts),
-            "unknown_terms": last_unknown_terms,
-            "failed_examples": last_failed_examples,
-            "reason": final_reason or "shape failed verification tests"
-        }
+                    raise
+                except Exception as e:
+                    return self._result(rule_text, shape_ttl, "unverified", attempts, check, reason=f"Repair failed: {e}")
+                attempts += 1
+        except KisteConnectionError:
+            return self._result(rule_text, shape_ttl, "unverified", attempts, check, reason="verification unavailable")
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)

@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./Profile.css";
 import { getAvatarColorPair } from "../../utils/avatarUtils";
-
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../../config";
 
 const authHeaders = () => {
   const token = localStorage.getItem("token");
