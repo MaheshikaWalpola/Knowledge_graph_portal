@@ -1,4 +1,5 @@
 import os
+import threading
 import io
 import json
 import re
@@ -9,7 +10,7 @@ from rdflib import Graph, Namespace, RDF, URIRef
 from pyshacl import validate
 
 from services.local_llm_service import LocalLLMService
-from services.shacl_verifier import SHACLVerifier, SHAPE_STRUCTURE_GUIDE
+from services.shacl_verifier import SHACLVerifier, SHAPE_STRUCTURE_GUIDE, compact_schema
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -110,6 +111,18 @@ def _serialize_shapes_in_order(graph: Graph, ordered_subjects: List[Any]) -> str
     return "\n".join(prefix_lines) + "\n\n" + "\n\n".join(b for b in blocks if b) + "\n"
 
 
+def _max_parallel_ai_calls() -> int:
+    """How many AI requests run at once (KISTE_MAX_PARALLEL); Kiste queues extra ones, so more is not faster."""
+    try:
+        return max(1, int(os.getenv("KISTE_MAX_PARALLEL", "3")))
+    except ValueError:
+        return 3
+
+
+class _Cancelled(Exception):
+    """Raised inside worker threads once the client disconnected or the server is stopping."""
+
+
 VERIFICATION_LABELS = {
     "verified": "Verified by AI",
     "repaired": "Fixed by AI",
@@ -133,6 +146,13 @@ def _verification_advice(meta: Dict[str, Any]) -> str:
     if unknown:
         tips.append(f"It uses terms that are not in your ontology ({', '.join(unknown[:5])}); "
                     "replace them with the correct class or property names.")
+    meaning = meta.get("meaning") or {}
+    if meaning.get("verdict") in ("broader", "narrower", "different") and meaning.get("back_translation"):
+        tips.append(f"The AI reads the shape as: \"{meaning['back_translation']}\", which is {meaning['verdict']} "
+                    "than the question" + (f" ({meaning['explanation']})." if meaning.get("explanation") else "."))
+    if "not enough test data" in reason or "could not create" in reason:
+        tips.append("The AI could not write test data for this question; check that the question names classes "
+                    "and properties from your ontology.")
     for fe in (meta.get("failed_examples") or [])[:2]:
         if fe.get("expected") == "invalid" and fe.get("actual") == "conforms":
             tips.append("It accepted test data that breaks the rule, so it may be too loose "
@@ -212,6 +232,8 @@ class ValidationService:
             "- If instance data is provided, also consider patterns and potential issues visible in the data.\n"
             f"- Output EXACTLY a JSON object with this key structure: {{\"rules\": [\"rule 1\", ..., \"rule {target_count}\"]}}.\n"
             "- DO NOT return any explanatory text or markdown code blocks outside of the JSON.\n\n"
+            # Full schema here (single call): rdfs:comment descriptions carry domain knowledge such as
+            # typical value ranges, which inspires better questions
             f"SCHEMA CONTEXT:\n{schema_text}"
             f"{instance_section}"
         )
@@ -281,7 +303,7 @@ class ValidationService:
             "3. Use only classes and properties that exist in the ontology schema or the standard vocabularies it uses.\n"
             "4. Add descriptive sh:message strings matching the rule descriptions.\n\n"
             f"{SHAPE_STRUCTURE_GUIDE}\n"
-            f"ONTOLOGY SCHEMA:\n{schema_text}"
+            f"ONTOLOGY SCHEMA:\n{compact_schema(schema_content) or schema_text}"
         )
         
         messages = [
@@ -318,6 +340,7 @@ class ValidationService:
         from rdflib import Graph
 
         schema_text = schema_content or "No schema provided."
+        prompt_schema = compact_schema(schema_content) or schema_text
         completed_shapes = {}
         verification_map = {}
         known_terms = SHACLVerifier.extract_ontology_terms(schema_text)
@@ -342,7 +365,7 @@ class ValidationService:
                 "5. Use only classes and properties that exist in the ontology schema or the standard vocabularies it uses.\n"
                 "6. Add a descriptive sh:message matching the rule description.\n\n"
                 f"{SHAPE_STRUCTURE_GUIDE}\n"
-                f"ONTOLOGY SCHEMA:\n{schema_text}"
+                f"ONTOLOGY SCHEMA:\n{prompt_schema}"
             )
             messages = [
                 {"role": "system", "content": "You are a SHACL code generator. You output only valid Turtle (.ttl) code. You structure shapes correctly, attach rdfs:label for each rule, and never place sh:path directly inside a sh:NodeShape."},
@@ -359,8 +382,11 @@ class ValidationService:
 
         loop = asyncio.get_running_loop()
         queue = asyncio.Queue()
+        cancelled = threading.Event()
 
         def process_rule_pipeline(index: int, rule: str):
+            if cancelled.is_set():
+                return
             res = generate_single_shape(index, rule)
             initial_shacl = res.get("shacl", "")
 
@@ -398,6 +424,8 @@ class ValidationService:
                 return
 
             def on_progress(stage: str):
+                if cancelled.is_set():
+                    raise _Cancelled()
                 stage_label = "Checking rule…" if stage != "repairing" else "Fixing rule…"
                 loop.call_soon_threadsafe(queue.put_nowait, {
                     "type": "verifying",
@@ -417,6 +445,8 @@ class ValidationService:
                     on_progress=on_progress,
                     model=model
                 )
+            except _Cancelled:
+                return
             except Exception as err:
                 print(f"Verification exception for rule '{rule}': {err}")
                 v_res = {
@@ -443,7 +473,8 @@ class ValidationService:
         yield {"status": "start", "total": len(rules)}
 
         remaining = len(rules)
-        with ThreadPoolExecutor(max_workers=min(len(rules), 10)) as executor:
+        executor = ThreadPoolExecutor(max_workers=min(len(rules), _max_parallel_ai_calls()))
+        try:
             for i, rule in enumerate(rules):
                 executor.submit(process_rule_pipeline, i, rule)
 
@@ -469,9 +500,12 @@ class ValidationService:
                         "attempts": event.get("attempts", 1),
                         "unknown_terms": event.get("unknown_terms", []),
                         "failed_examples": event.get("failed_examples", []),
-                        "reason": event.get("reason", "")
+                        "reason": event.get("reason", ""),
+                        "meaning": event.get("meaning"),
+                        "tests": event.get("tests")
                     }
                     if item_meta["verification"]:
+                        item_meta["advice"] = _verification_advice(item_meta)
                         verification_map[shape_key] = item_meta
                         verification_map[str(idx)] = item_meta
 
@@ -487,8 +521,16 @@ class ValidationService:
                         "attempts": item_meta["attempts"],
                         "unknown_terms": item_meta["unknown_terms"],
                         "failed_examples": item_meta["failed_examples"],
-                        "reason": item_meta["reason"]
+                        "reason": item_meta["reason"],
+                        "meaning": item_meta["meaning"],
+                        "tests": item_meta["tests"],
+                        "advice": item_meta.get("advice", "")
                     }
+        finally:
+            # Page closed or server stopping: skip rules not started yet and stop running ones at their
+            # next step, instead of waiting for every remaining AI call
+            cancelled.set()
+            executor.shutdown(wait=False, cancel_futures=True)
 
         self.last_verification_map = verification_map
 
@@ -570,8 +612,11 @@ class ValidationService:
         verification_map = {}
         loop = asyncio.get_running_loop()
         queue = asyncio.Queue()
+        cancelled = threading.Event()
 
         def process(index: int, rule: str):
+            if cancelled.is_set():
+                return
             subj = subjects[index]
             if subj is None:
                 loop.call_soon_threadsafe(queue.put_nowait, {
@@ -583,6 +628,8 @@ class ValidationService:
             snippet = _shape_subgraph(g, subj).serialize(format="turtle")
 
             def on_progress(stage: str):
+                if cancelled.is_set():
+                    raise _Cancelled()
                 label = "Checking rule…" if stage != "repairing" else "Fixing rule…"
                 loop.call_soon_threadsafe(queue.put_nowait, {
                     "type": "verifying", "index": index, "rule": rule, "stage": stage,
@@ -595,6 +642,8 @@ class ValidationService:
                     known_terms=known_terms, on_progress=on_progress, model=model,
                     instance_ttl=instance_content
                 )
+            except _Cancelled:
+                return
             except Exception as err:
                 print(f"Verification exception for rule '{rule}': {err}")
                 v_res = {"verification": "unverified", "attempts": 1, "unknown_terms": [],
@@ -611,7 +660,8 @@ class ValidationService:
             yield {"status": "completed", "shacl_ttl": shapes_ttl, "verification_map": {}}
             return
 
-        with ThreadPoolExecutor(max_workers=min(remaining, 10)) as executor:
+        executor = ThreadPoolExecutor(max_workers=min(remaining, _max_parallel_ai_calls()))
+        try:
             for i in targets:
                 executor.submit(process, i, rules[i])
 
@@ -652,6 +702,8 @@ class ValidationService:
                     "unknown_terms": event.get("unknown_terms", []),
                     "failed_examples": event.get("failed_examples", []),
                     "reason": event.get("reason", ""),
+                    "meaning": event.get("meaning"),
+                    "tests": event.get("tests"),
                 }
                 meta["advice"] = _verification_advice(meta)
                 verification_map[f"inst:Question_{idx+1}_Shape"] = meta
@@ -660,7 +712,11 @@ class ValidationService:
                     verification_map[str(subjects[idx])] = meta
                 remaining -= 1
                 yield {"status": "progress", "index": idx, "rule": event["rule"],
-                       **{k: meta[k] for k in ("verification", "attempts", "unknown_terms", "failed_examples", "reason", "advice")}}
+                       **{k: meta[k] for k in ("verification", "attempts", "unknown_terms", "failed_examples", "reason",
+                                               "advice", "meaning", "tests")}}
+        finally:
+            cancelled.set()
+            executor.shutdown(wait=False, cancel_futures=True)
 
         self.last_verification_map = verification_map
         ordered = [subjects[i] for i in range(len(rules))]
@@ -1007,6 +1063,8 @@ class ValidationService:
                 "failed_examples": failed_examples,
                 "reason": reason,
                 "advice": advice,
+                "meaning": meta.get("meaning") if meta else None,
+                "tests": meta.get("tests") if meta else None,
                 "verification_label": VERIFICATION_LABELS.get(verification_status, verification_status),
                 "question_number": int(q_match.group(1)) if q_match else None
             })
@@ -1183,6 +1241,18 @@ class ValidationService:
         if text is None:
             return ""
         return _xml_escape(str(text))
+
+    @staticmethod
+    def _meaning_summary(rule: Dict[str, Any]) -> str:
+        """How the AI read the shape (back-translation), its verdict, and the test result, for the report."""
+        meaning = rule.get("meaning") or {}
+        if not meaning.get("back_translation"):
+            return ""
+        text = f"The AI reads this check as: \"{meaning['back_translation']}\" Verdict: {meaning.get('verdict', 'unknown')}."
+        tests = rule.get("tests") or {}
+        if tests.get("total"):
+            text += f" Tests passed: {tests['total'] - tests.get('failed', 0)} of {tests['total']}."
+        return text
 
     def generate_pdf_report(self, report_data: Dict[str, Any]) -> bytes:
         """
@@ -1450,13 +1520,18 @@ class ValidationService:
                     [Paragraph("<b>Target Class:</b>", style_body), Paragraph(target_cls, style_body), Paragraph("<b>Property:</b>", style_body), Paragraph(path, style_mono)],
                     [Paragraph("<b>Description:</b>", style_body), Paragraph(msg, style_body), Paragraph("<b>Status:</b>", style_body), Paragraph("<font color='#dc2626'><b>Flagged Problem</b></font>", style_body)]
                 ]
-                dt_table = Table(details_data, colWidths=[94, 173, 94, 173])
-                dt_table.setStyle(TableStyle([
+                dt_style = [
                     ('BACKGROUND', (0, 0), (-1, -1), c_bg_light),
                     ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#f1f5f9")),
                     ('PADDING', (0, 0), (-1, -1), 4),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ]))
+                ]
+                meaning_text = self._meaning_summary(rule)
+                if meaning_text:
+                    details_data.append([Paragraph("<b>Meaning check:</b>", style_body), Paragraph(self._safe_xml(meaning_text), style_body), "", ""])
+                    dt_style.append(('SPAN', (1, 2), (3, 2)))
+                dt_table = Table(details_data, colWidths=[94, 173, 94, 173])
+                dt_table.setStyle(TableStyle(dt_style))
                 card_elements.append(dt_table)
 
                 if rule_viols:
@@ -1532,8 +1607,10 @@ class ValidationService:
                     [Paragraph("<b>Review Note:</b>", style_body), Paragraph(f"<i>{review_note}</i>", style_body), Paragraph("<b>Flagged:</b>", style_body), Paragraph(f"{failed_count} items", style_body)]
                 ]
                 advice = rule.get("advice") or ""
-                if advice:
-                    details_data.append([Paragraph("<b>What to do:</b>", style_body), Paragraph(self._safe_xml(advice), style_body), "", ""])
+                meaning_text = self._meaning_summary(rule)
+                for heading, text in (("What to do:", advice), ("Meaning check:", meaning_text)):
+                    if text:
+                        details_data.append([Paragraph(f"<b>{heading}</b>", style_body), Paragraph(self._safe_xml(text), style_body), "", ""])
                 dt_table = Table(details_data, colWidths=[94, 173, 94, 173])
                 dt_style = [
                     ('BACKGROUND', (0, 0), (-1, -1), c_bg_light),
@@ -1541,8 +1618,8 @@ class ValidationService:
                     ('PADDING', (0, 0), (-1, -1), 4),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ]
-                if advice:
-                    dt_style.append(('SPAN', (1, 2), (3, 2)))
+                for row in range(2, len(details_data)):
+                    dt_style.append(('SPAN', (1, row), (3, row)))
                 dt_table.setStyle(TableStyle(dt_style))
                 card_elements.append(dt_table)
 

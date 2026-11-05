@@ -5,10 +5,16 @@ import os
 import ssl
 from typing import List, Dict, Any, Optional
 
+from services.llm_providers import (
+    KisteConnectionError, LLMProviderError, split_model, json_text, call_anthropic, call_openai,
+)
+
 # Kiste API Configuration (OpenAI-compatible)
 KISTE_API_URL = os.getenv("KISTE_API_URL")
 KISTE_API_KEY = os.getenv("KISTE_API_KEY")
-MODEL_NAME = os.getenv("KISTE_MODEL")  # "gpt-oss-120b" or "qwen3.6"
+MODEL_NAME = os.getenv("KISTE_MODEL")  # e.g. "Qwen3.6-35B-A3B-MLX-8bit" or "gpt-oss-120b-MXFP4-Q8"
+# Seconds to wait for an AI server (Kiste or a cloud provider) to respond; slow models with long prompts may need more
+KISTE_TIMEOUT = int(os.getenv("KISTE_TIMEOUT", "300"))
 
 
 def strip_markdown(text: str) -> str:
@@ -20,18 +26,35 @@ def strip_markdown(text: str) -> str:
     return text
 
 
-class KisteConnectionError(Exception):
-    """Raised when the Kiste LLM API cannot be reached or fails to respond."""
-    pass
-
-
 class LocalLLMService:
-    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7, model_override: str = None) -> str:
-        """Call Kiste API (OpenAI-compatible). Use model_override to dynamically select a different model."""
+    def _call_kiste(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7, model_override: str = None,
+                    reasoning_effort: Optional[str] = None) -> str:
+        """
+        Send a chat request to the selected AI model and return its answer text.
+        model_override is a Kiste model name, or "anthropic/<model>" / "openai/<model>" for the cloud providers
+        (see services.llm_providers); without it the Kiste default model (KISTE_MODEL) is used.
+        json_mode asks for a JSON object and strips any code fences or chatter around it.
+        reasoning_effort ("low", "medium", "high") limits hidden reasoning on models that support it.
+        The name is kept because every service calls it; the Kiste HTTP call itself is _call_kiste_server.
+        """
+        provider, model = split_model(model_override)
+        if provider == "anthropic":
+            text = call_anthropic(model, messages, json_mode, reasoning_effort, timeout=KISTE_TIMEOUT)
+        elif provider == "openai":
+            text = call_openai(model, messages, json_mode, reasoning_effort, timeout=KISTE_TIMEOUT)
+        elif provider == "kiste":
+            text = self._call_kiste_server(messages, json_mode, temperature, model, reasoning_effort)
+        else:
+            raise LLMProviderError(f"Unknown AI provider '{provider}' in model '{model_override}'.")
+        return json_text(text) if json_mode else text
+
+    def _call_kiste_server(self, messages: List[Dict[str, str]], json_mode: bool, temperature: float,
+                           model: Optional[str], reasoning_effort: Optional[str]) -> str:
+        """Call the Kiste API (OpenAI-compatible endpoint at KISTE_API_URL)."""
         if not KISTE_API_KEY:
             raise KisteConnectionError("We are experiencing connection issues with the AI server. Please try again shortly.")
         
-        effective_model = model_override or MODEL_NAME
+        effective_model = model or MODEL_NAME
         data = {
             "model": effective_model,
             "messages": messages,
@@ -39,6 +62,8 @@ class LocalLLMService:
         }
         if json_mode:
             data["response_format"] = {"type": "json_object"}
+        if reasoning_effort:
+            data["reasoning_effort"] = reasoning_effort
 
         headers = {
             "Content-Type": "application/json",
@@ -56,7 +81,7 @@ class LocalLLMService:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
             
-            with urllib.request.urlopen(req, context=ssl_context, timeout=120) as response:
+            with urllib.request.urlopen(req, context=ssl_context, timeout=KISTE_TIMEOUT) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 return result.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:

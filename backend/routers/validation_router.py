@@ -6,8 +6,10 @@ import time
 
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from core.auth import get_current_user
+from services.llm_providers import cloud_providers
 from services.validation_service import ValidationService
 from services.user_schema_service import get_user_schema
 from services.graphdb_service import (
@@ -52,6 +54,15 @@ def _fetch_workspace_instances_ttl(user_email: str, schema_id: str) -> str:
     return export_graph_turtle(graph_iri)
 
 
+@router.get("/validation/models")
+async def api_models():
+    """
+    Cloud AI providers (Claude, OpenAI) available for the validation workflow, with their models.
+    Only providers whose API key is configured on the server are listed; the Kiste models are listed by the frontend.
+    """
+    return {"providers": cloud_providers()}
+
+
 @router.post("/validation/suggest-rules")
 async def api_suggest_rules(
     user_explanation: Optional[str] = Form(None),
@@ -88,7 +99,9 @@ async def api_suggest_rules(
             print(f"Error fetching workspace instances: {e}")
             
     with _timed(f"Rule suggestion ({num_questions} questions, model={model or 'default'})", start):
-        rules = validation_service.suggest_validation_rules(
+        # Blocking AI call: run it in a worker thread so other requests are not frozen meanwhile
+        rules = await run_in_threadpool(
+            validation_service.suggest_validation_rules,
             user_explanation=user_explanation,
             schema_content=schema_content,
             instance_content=instance_content,
@@ -125,7 +138,7 @@ async def api_generate_shacl(
         except Exception as e:
             print(f"Error fetching workspace schema: {e}")
             
-    shacl_ttl = validation_service.generate_shacl_shapes(rules_list, schema_content, model=model)
+    shacl_ttl = await run_in_threadpool(validation_service.generate_shacl_shapes, rules_list, schema_content, model=model)
     return {"status": "ok", "shacl_ttl": shacl_ttl}
 
 
