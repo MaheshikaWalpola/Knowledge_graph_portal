@@ -57,7 +57,7 @@ def _fetch_workspace_instances_ttl(user_email: str, schema_id: str) -> str:
 @router.get("/validation/models")
 async def api_models():
     """
-    Cloud AI providers (Claude, OpenAI) available for the validation workflow, with their models.
+    Cloud AI providers (Claude, OpenAI) available for the validation and instance generation workflows, with their models.
     Only providers whose API key is configured on the server are listed; the Kiste models are listed by the frontend.
     """
     return {"providers": cloud_providers()}
