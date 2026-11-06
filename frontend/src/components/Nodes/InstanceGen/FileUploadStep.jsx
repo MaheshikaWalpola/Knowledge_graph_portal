@@ -152,6 +152,7 @@ export default function FileUploadStep({
         <ModelSelector
           selectedModel={selectedModel}
           onModelChange={onModelChange}
+          includeCloud
         />
       </Stack>
     </Box>
