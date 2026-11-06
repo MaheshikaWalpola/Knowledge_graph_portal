@@ -55,13 +55,6 @@ const KISTE_MODELS = [
     contextWindow: "32K",
     tag: "Fast",
   },
-  {
-    id: "Phi-3-mini-4k-instruct-mlx",
-    label: "Phi-3 Mini 4K",
-    description: "Microsoft's compact model, limited context",
-    contextWindow: "4K",
-    tag: "Compact",
-  },
 ];
 
 
