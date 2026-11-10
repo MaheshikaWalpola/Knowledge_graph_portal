@@ -6,6 +6,7 @@ import time
 
 from fastapi import APIRouter, Body, Depends, Form, Query, Request, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
+from sse_starlette.sse import EventSourceResponse
 from starlette.concurrency import run_in_threadpool
 
 from core.auth import get_current_user
@@ -254,7 +255,6 @@ async def api_generate_shacl_stream(
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)  # Yield control to flush the event
 
-    from sse_starlette.sse import EventSourceResponse
     return EventSourceResponse(event_generator())
 
 
@@ -314,7 +314,6 @@ async def api_verify_shacl_stream(
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)
 
-    from sse_starlette.sse import EventSourceResponse
     return EventSourceResponse(event_generator())
 
 
@@ -372,7 +371,6 @@ async def api_run_playground_stream(
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)  # Yield control to flush the event
 
-    from sse_starlette.sse import EventSourceResponse
     return EventSourceResponse(event_generator())
 
 
@@ -440,7 +438,6 @@ async def api_run_workspace_stream(
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)
 
-    from sse_starlette.sse import EventSourceResponse
     return EventSourceResponse(event_generator())
 
 
