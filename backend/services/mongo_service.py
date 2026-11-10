@@ -20,3 +20,8 @@ chat_conversations_collection.create_index([("user_email", ASCENDING), ("updated
 schema_history_collection = db["schema_history"]
 schema_history_collection.create_index([("user_email", ASCENDING), ("schema_id", ASCENDING), ("saved_at", DESCENDING)])
 schema_history_collection.create_index([("saved_at", DESCENDING)])
+# AI-generated SHACL shapes: one document per generated (or repaired) shape, see generation_log_service
+shacl_generations_collection = db["shacl_generations"]
+shacl_generations_collection.create_index([("generation_id", ASCENDING)], unique=True)
+shacl_generations_collection.create_index([("user_email", ASCENDING), ("created_at", DESCENDING)])
+shacl_generations_collection.create_index([("experiment_tag", ASCENDING), ("model_id", ASCENDING), ("statement_id", ASCENDING)])

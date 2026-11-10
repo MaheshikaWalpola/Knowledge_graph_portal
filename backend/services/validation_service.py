@@ -11,6 +11,8 @@ from pyshacl import validate
 
 from services.local_llm_service import LocalLLMService
 from services.shacl_verifier import SHACLVerifier, SHAPE_STRUCTURE_GUIDE, compact_schema
+from services import generation_log_service as genlog
+from prompts.shacl_generation import PROMPT_VERSION, SYSTEM_PROMPT, build_user_prompt, render_override
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -330,10 +332,15 @@ class ValidationService:
             return "@prefix sh: <http://www.w3.org/ns/shacl#> .\n# Failed to generate shapes."
 
     async def generate_shacl_shapes_stream(self, rules: List[str], schema_content: Optional[str] = None, verify: bool = False,
-                                           model: Optional[str] = None):
+                                           model: Optional[str] = None, log_context: Optional[Dict[str, Any]] = None):
         """
         Generates SHACL shapes rule by rule concurrently and streams progress.
         Verification/repair is opt-in (verify=True); by default it is run on demand via verify_shacl_shapes_stream.
+
+        log_context (set by the router) makes every generated shape a row in the generation log
+        (services.generation_log_service): {"user_email", "schema_id", "experiment_tag", "run_index",
+        "prompt_override", "statement_ids", "rule_types", "intended_error_classes"}; the three lists are
+        per rule and optional. Without a context nothing is logged.
         """
         import asyncio
         from concurrent.futures import ThreadPoolExecutor
@@ -343,42 +350,69 @@ class ValidationService:
         prompt_schema = compact_schema(schema_content) or schema_text
         completed_shapes = {}
         verification_map = {}
+        generation_ids: Dict[int, Optional[str]] = {}
         known_terms = SHACLVerifier.extract_ontology_terms(schema_text)
+        ctx = log_context or {}
+        prompt_override = (ctx.get("prompt_override") or "").strip() or None
+
+        def per_rule(key: str, index: int):
+            values = ctx.get(key) or []
+            return values[index] if index < len(values) else None
+
+        def log_shape(index: int, rule: str, shape_ttl: str, meta: Dict[str, Any], error: Optional[str]) -> Optional[str]:
+            """Write the generation-log row; a logging problem never breaks the generation itself."""
+            if not ctx.get("user_email"):
+                return None
+            try:
+                row = genlog.log_generation(
+                    user_email=ctx["user_email"],
+                    statement_text=rule,
+                    model_id=model,
+                    shape_ttl=shape_ttl,
+                    model_id_returned=meta.get("model"),
+                    temperature=meta.get("temperature", 0 if genlog.provider_host(model)["provider"] == "kiste" else None),
+                    prompt_version="override" if prompt_override else PROMPT_VERSION,
+                    prompt_override=prompt_override,
+                    schema_id=ctx.get("schema_id"),
+                    experiment_tag=ctx.get("experiment_tag"),
+                    statement_id=per_rule("statement_ids", index),
+                    rule_type=per_rule("rule_types", index),
+                    intended_error_class=per_rule("intended_error_classes", index),
+                    run_index=ctx.get("run_index"),
+                    error=error,
+                )
+                return row["generation_id"]
+            except Exception as log_err:
+                print(f"Generation log write failed for rule '{rule[:50]}': {log_err}")
+                return None
 
         def generate_single_shape(index: int, rule: str) -> dict:
-            clean_rule_str = rule.replace('"', '')
-            prompt = (
-                "You are a Semantic Web and SHACL developer. "
-                "Turn the following plain-English data quality rule into a SHACL shape block in Turtle (.ttl) format "
-                "that conforms to the provided RDF/OWL Ontology Schema.\n\n"
-                f"Rule to implement:\n- {rule}\n\n"
-                "Instructions and Constraints:\n"
-                "1. Output ONLY valid Turtle syntax. Do NOT write any explanations, markdown code fences, or text before/after the Turtle.\n"
-                "2. Define common prefixes (if needed/used in this shape) but focus on producing the NodeShape/PropertyShape details:\n"
-                "   @prefix sh: <http://www.w3.org/ns/shacl#> .\n"
-                "   @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
-                "   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
-                "   @prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n"
-                "   @prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n"
-                f"3. Name the shape URI specifically like `inst:Question_{index+1}_Shape` or similar.\n"
-                f"4. Include `rdfs:label \"{clean_rule_str}\" ;` on the shape so the exact plain English rule/question is attached to the shape.\n"
-                "5. Use only classes and properties that exist in the ontology schema or the standard vocabularies it uses.\n"
-                "6. Add a descriptive sh:message matching the rule description.\n\n"
-                f"{SHAPE_STRUCTURE_GUIDE}\n"
-                f"ONTOLOGY SCHEMA:\n{prompt_schema}"
-            )
+            if prompt_override:
+                user_prompt = render_override(prompt_override, rule, index, prompt_schema)
+            else:
+                user_prompt = build_user_prompt(rule, index, prompt_schema)
             messages = [
-                {"role": "system", "content": "You are a SHACL code generator. You output only valid Turtle (.ttl) code. You structure shapes correctly, attach rdfs:label for each rule, and never place sh:path directly inside a sh:NodeShape."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt}
             ]
+            meta: Dict[str, Any] = {}
             try:
-                response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1, model_override=model)
+                # Temperature 0 for Kiste so repeated runs are comparable; the cloud providers fix it themselves
+                if hasattr(self.llm, "_call_kiste_meta"):
+                    response, meta = self.llm._call_kiste_meta(messages, json_mode=False, temperature=0, model_override=model)
+                else:
+                    response = self.llm._call_kiste(messages, json_mode=False, temperature=0, model_override=model)
                 clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
-                clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
-                return {"index": index, "rule": rule, "status": "success", "shacl": clean_ttl.strip()}
+                clean_ttl = re.sub(r"```$", "", clean_ttl.strip()).strip()
+                result = {"index": index, "rule": rule, "status": "success", "shacl": clean_ttl}
+                generation_id = log_shape(index, rule, clean_ttl, meta, None)
             except Exception as e:
                 print(f"Error generating shape for rule '{rule}': {e}")
-                return {"index": index, "rule": rule, "status": "error", "message": str(e), "shacl": f"# Failed to generate shape for rule: {rule}"}
+                result = {"index": index, "rule": rule, "status": "error", "message": str(e), "shacl": f"# Failed to generate shape for rule: {rule}"}
+                generation_id = log_shape(index, rule, "", meta, str(e))
+            if generation_id:
+                result["generation_id"] = generation_id
+            return result
 
         loop = asyncio.get_running_loop()
         queue = asyncio.Queue()
@@ -407,6 +441,7 @@ class ValidationService:
                     "result_status": "error",
                     "shacl": initial_shacl,
                     "message": f"Failed rule: {rule[:50]}...",
+                    "generation_id": res.get("generation_id"),
                     **v_res
                 })
                 return
@@ -419,6 +454,7 @@ class ValidationService:
                     "result_status": "success",
                     "shacl": initial_shacl,
                     "message": f"Generated rule: {rule[:50]}...",
+                    "generation_id": res.get("generation_id"),
                     "verification": None
                 })
                 return
@@ -467,6 +503,7 @@ class ValidationService:
                 "result_status": "success",
                 "shacl": final_shacl,
                 "message": f"Checked rule: {rule[:50]}...",
+                "generation_id": res.get("generation_id"),
                 **v_res
             })
 
@@ -492,6 +529,7 @@ class ValidationService:
                     idx = event["index"]
                     if event["result_status"] == "success":
                         completed_shapes[idx] = event["shacl"]
+                    generation_ids[idx] = event.get("generation_id")
 
                     shape_key = f"inst:Question_{idx+1}_Shape"
                     item_meta = {
@@ -517,6 +555,7 @@ class ValidationService:
                         "result_status": event["result_status"],
                         "shacl": event["shacl"],
                         "message": event["message"],
+                        "generation_id": event.get("generation_id"),
                         "verification": item_meta["verification"],
                         "attempts": item_meta["attempts"],
                         "unknown_terms": item_meta["unknown_terms"],
@@ -568,13 +607,18 @@ class ValidationService:
         else:
             final_ttl = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n# Failed to generate any shapes."
 
-        yield {"status": "completed", "shacl_ttl": final_ttl.strip(), "verification_map": verification_map}
+        yield {"status": "completed", "shacl_ttl": final_ttl.strip(), "verification_map": verification_map,
+               "generation_ids": [generation_ids.get(i) for i in range(len(rules))]}
 
     async def verify_shacl_shapes_stream(self, rules: List[str], shapes_ttl: str, schema_content: Optional[str] = None,
                                          indices: Optional[List[int]] = None, model: Optional[str] = None,
-                                         instance_content: Optional[str] = None):
+                                         instance_content: Optional[str] = None, user_email: Optional[str] = None,
+                                         generation_ids: Optional[List[Optional[str]]] = None):
         """
         On-demand verification of already generated SHACL shapes.
+        A repaired shape becomes a new "repaired" row in the generation log, linked to its raw row:
+        generation_ids (per rule, from the generation stream) names that row; without it the newest raw row
+        of user_email for the same rule text is used. The raw row is never changed.
         Each rule's shape is located in shapes_ttl (by rdfs:label, falling back to inst:Question_N_Shape),
         checked/repaired concurrently, and written back into the merged graph in question order.
         If indices is given, only those rules are (re)checked, e.g. to retry the ones the AI could not verify.
@@ -675,6 +719,9 @@ class ValidationService:
                 idx = event["index"]
                 verification = event.get("verification", "unverified")
                 new_ttl = event.get("shacl")
+                repaired_id = None
+                if verification == "repaired" and new_ttl and user_email:
+                    repaired_id = self._log_repair(user_email, generation_ids, idx, event["rule"], new_ttl, model)
 
                 # Write a changed/repaired shape back into the merged graph.
                 # Unverified shapes keep their original code so the user's version is not replaced by a failed fix.
@@ -704,6 +751,7 @@ class ValidationService:
                     "reason": event.get("reason", ""),
                     "meaning": event.get("meaning"),
                     "tests": event.get("tests"),
+                    "generation_id": repaired_id,
                 }
                 meta["advice"] = _verification_advice(meta)
                 verification_map[f"inst:Question_{idx+1}_Shape"] = meta
@@ -713,7 +761,7 @@ class ValidationService:
                 remaining -= 1
                 yield {"status": "progress", "index": idx, "rule": event["rule"],
                        **{k: meta[k] for k in ("verification", "attempts", "unknown_terms", "failed_examples", "reason",
-                                               "advice", "meaning", "tests")}}
+                                               "advice", "meaning", "tests", "generation_id")}}
         finally:
             cancelled.set()
             executor.shutdown(wait=False, cancel_futures=True)
@@ -722,6 +770,24 @@ class ValidationService:
         ordered = [subjects[i] for i in range(len(rules))]
         yield {"status": "completed", "shacl_ttl": _serialize_shapes_in_order(g, ordered).strip(),
                "verification_map": verification_map}
+
+    @staticmethod
+    def _log_repair(user_email: str, generation_ids: Optional[List[Optional[str]]], idx: int, rule: str,
+                    repaired_ttl: str, model: Optional[str]) -> Optional[str]:
+        """Second generation-log row for a repaired shape; returns its generation_id (None if nothing was logged)."""
+        try:
+            raw = None
+            if generation_ids and idx < len(generation_ids) and generation_ids[idx]:
+                raw = genlog.get_generation(generation_ids[idx], user_email)
+            if raw is None:
+                raw = genlog.find_latest_raw(user_email, rule)
+            if raw is None:
+                print(f"Repair of rule '{rule[:50]}' not logged: no raw generation row found")
+                return None
+            return genlog.log_repair(raw, repaired_ttl, model)["generation_id"]
+        except Exception as log_err:
+            print(f"Generation log write (repair) failed for rule '{rule[:50]}': {log_err}")
+            return None
 
     def validate_rdf_stream(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None, verification_metadata: Optional[Dict[str, Any]] = None):
         """

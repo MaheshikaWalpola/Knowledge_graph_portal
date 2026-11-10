@@ -1,15 +1,16 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 from contextlib import contextmanager
 import json
 import io
 import time
 
-from fastapi import APIRouter, Depends, Form, Request, UploadFile, File, HTTPException
+from fastapi import APIRouter, Body, Depends, Form, Query, Request, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from core.auth import get_current_user
 from services.llm_providers import cloud_providers
+from services import generation_log_service as genlog
 from services.validation_service import ValidationService
 from services.user_schema_service import get_user_schema
 from services.graphdb_service import (
@@ -61,6 +62,48 @@ async def api_models():
     Only providers whose API key is configured on the server are listed; the Kiste models are listed by the frontend.
     """
     return {"providers": cloud_providers()}
+
+
+# --- Generation log: every AI-generated SHACL shape (services.generation_log_service) ---
+
+@router.get("/validation/generations")
+def api_list_generations(
+    model: Optional[str] = Query(None, description="requested or returned model id"),
+    statement_id: Optional[str] = Query(None),
+    experiment_tag: Optional[str] = Query(None),
+    stage: Optional[str] = Query(None, description="raw or repaired"),
+    search: Optional[str] = Query(None, description="text contained in the rule"),
+    limit: int = Query(50, ge=1, le=500),
+    skip: int = Query(0, ge=0),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """The current user's generated shapes, newest first, with paging and filters."""
+    return genlog.list_generations(user_email=current_user["email"], model=model, statement_id=statement_id,
+                                   experiment_tag=experiment_tag, stage=stage, search=search, limit=limit, skip=skip)
+
+
+@router.get("/validation/generations/{generation_id}")
+def api_get_generation(generation_id: str, current_user: Any = Depends(get_current_user)) -> Dict:
+    row = genlog.get_generation(generation_id, current_user["email"])
+    if not row:
+        raise HTTPException(404, detail="Generation not found")
+    return row
+
+
+@router.patch("/validation/generations/{generation_id}")
+def api_patch_generation(
+    generation_id: str,
+    payload: Dict[str, Any] = Body(..., examples=[{"targets_count": 5, "validation_result": {"violations": 0}}]),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """Writes the data-run outcome (targets_count, validation_result) back into a generation-log row."""
+    try:
+        row = genlog.update_generation(generation_id, payload, current_user["email"])
+    except ValueError as e:
+        raise HTTPException(422, detail=str(e))
+    if not row:
+        raise HTTPException(404, detail="Generation not found")
+    return row
 
 
 @router.post("/validation/suggest-rules")
@@ -142,21 +185,57 @@ async def api_generate_shacl(
     return {"status": "ok", "shacl_ttl": shacl_ttl}
 
 
+def _json_list(value: Optional[str], name: str, expected_len: Optional[int] = None) -> Optional[List[Any]]:
+    """An optional form field holding a JSON array; with expected_len it must have exactly that many items."""
+    if value is None or value == "":
+        return None
+    try:
+        items = json.loads(value)
+        assert isinstance(items, list)
+    except Exception:
+        raise HTTPException(400, detail=f"'{name}' must be a JSON array.")
+    if expected_len is not None and len(items) != expected_len:
+        raise HTTPException(400, detail=f"'{name}' must have one entry per rule ({expected_len}), got {len(items)}.")
+    return items
+
+
 @router.post("/validation/generate-shacl-stream")
 async def api_generate_shacl_stream(
     rules: str = Form(...),
     schema_id: Optional[str] = Form(None),
     model: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
+    # Optional study metadata, stored with every generated shape in the generation log (see generation_log_service)
+    statement_ids: Optional[str] = Form(None),           # JSON array, one id per rule, e.g. ["S-001", ...]
+    rule_types: Optional[str] = Form(None),              # JSON array, one per rule
+    intended_error_classes: Optional[str] = Form(None),  # JSON array, one per rule
+    run_index: Optional[int] = Form(None),               # 1, 2, 3 ... for repeated runs
+    experiment_tag: Optional[str] = Form(None),          # e.g. "R1"
+    prompt_override: Optional[str] = Form(None),         # replaces the user prompt; {rule}, {schema}, {index} are filled in
     current_user: Any = Depends(get_current_user)
 ):
-    """SSE endpoint that streams SHACL shape generation progress rule by rule."""
+    """
+    SSE endpoint that streams SHACL shape generation progress rule by rule.
+    Every shape is written to the generation log; each progress event carries its generation_id and the
+    completed event lists them in rule order (generation_ids).
+    """
     import asyncio
     start = time.perf_counter()
     try:
         rules_list = json.loads(rules)
     except Exception as e:
         raise HTTPException(400, detail="Invalid JSON array format for 'rules'.")
+
+    log_context: Dict[str, Any] = {
+        "user_email": current_user["email"],
+        "schema_id": schema_id,
+        "experiment_tag": experiment_tag or None,
+        "run_index": run_index,
+        "prompt_override": prompt_override or None,
+        "statement_ids": _json_list(statement_ids, "statement_ids", len(rules_list)),
+        "rule_types": _json_list(rule_types, "rule_types", len(rules_list)),
+        "intended_error_classes": _json_list(intended_error_classes, "intended_error_classes", len(rules_list)),
+    }
         
     schema_content = None
     if schema_file:
@@ -170,7 +249,8 @@ async def api_generate_shacl_stream(
             
     async def event_generator():
         with _timed(f"SHACL generation ({len(rules_list)} rules, model={model or 'default'})", start):
-            async for event in validation_service.generate_shacl_shapes_stream(rules_list, schema_content, model=model):
+            async for event in validation_service.generate_shacl_shapes_stream(rules_list, schema_content, model=model,
+                                                                               log_context=log_context):
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)  # Yield control to flush the event
 
@@ -187,9 +267,13 @@ async def api_verify_shacl_stream(
     schema_id: Optional[str] = Form(None),
     schema_file: Optional[UploadFile] = File(None),
     instance_file: Optional[UploadFile] = File(None),  # real data: known terms + example structure for tests
+    generation_ids: Optional[str] = Form(None),  # JSON array, per rule: generation-log ids from the generation stream
     current_user: Any = Depends(get_current_user)
 ):
-    """SSE endpoint: on-demand check/repair of already generated SHACL shapes."""
+    """
+    SSE endpoint: on-demand check/repair of already generated SHACL shapes.
+    A repaired shape is logged as a new row linked to its raw row (generation_ids, or the newest raw row for the rule).
+    """
     import asyncio
     start = time.perf_counter()
     try:
@@ -200,6 +284,7 @@ async def api_verify_shacl_stream(
         indices_list = [int(i) for i in json.loads(indices)] if indices else None
     except Exception:
         raise HTTPException(400, detail="Invalid JSON array format for 'indices'.")
+    generation_id_list = _json_list(generation_ids, "generation_ids")
 
     schema_content = None
     if schema_file:
@@ -223,7 +308,9 @@ async def api_verify_shacl_stream(
         checked = len(indices_list) if indices_list is not None else len(rules_list)
         with _timed(f"SHACL verification ({checked} rules, model={model or 'default'})", start):
             async for event in validation_service.verify_shacl_shapes_stream(rules_list, shapes_ttl, schema_content, indices_list, model=model,
-                                                                       instance_content=instance_content):
+                                                                       instance_content=instance_content,
+                                                                       user_email=current_user["email"],
+                                                                       generation_ids=generation_id_list):
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)
 

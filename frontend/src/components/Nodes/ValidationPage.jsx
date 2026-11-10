@@ -163,6 +163,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [copied, setCopied] = useState(false);
   const [shaclGenerationSteps, setShaclGenerationSteps] = useState([]);
   const [verificationMap, setVerificationMap] = useState({});
+  // Generation-log ids of the current shapes, one per rule; sent to verification so repairs link to their raw row
+  const [generationIds, setGenerationIds] = useState([]);
   const [verifying, setVerifying] = useState(false);
 
   //  Step 3 
@@ -339,6 +341,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     setError(null);
     setSuccess(null);
     setShaclCode("");
+    setGenerationIds([]);
+    const newGenerationIds = [];
     setShaclGenerationSteps(activeRules.map(rule => ({ rule, status: "pending" })));
 
     // Transition to Step 2 immediately so the user can watch it stream
@@ -418,6 +422,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   )
                 );
               } else if (event.status === "progress") {
+                if (event.generation_id) newGenerationIds[event.index] = event.generation_id;
                 // Update rule status with verification metadata
                 setShaclGenerationSteps(prev => 
                   prev.map((step, idx) => 
@@ -487,6 +492,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 if (event.verification_map) {
                   setVerificationMap(event.verification_map);
                 }
+                setGenerationIds(event.generation_ids || newGenerationIds);
                 setSuccess("SHACL shapes generated. Use \"Verify Shapes\" to run an extra correctness check.");
               }
             } catch (e) {
@@ -522,6 +528,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     formData.append("model", selectedModel);
     formData.append("shapes_ttl", shaclCode);
     if (onlyIndices) formData.append("indices", JSON.stringify(onlyIndices));
+    if (generationIds.length) formData.append("generation_ids", JSON.stringify(generationIds));
     // Instance data lets verification accept terms the real data uses and build realistic test data
     appendOntologySource(formData, true);
 
