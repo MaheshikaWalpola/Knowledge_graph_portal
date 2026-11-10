@@ -12,3 +12,10 @@ passlib
 # Optional cloud AI providers for the validation page (needs ANTHROPIC_API_KEY / OPENAI_API_KEY)
 anthropic
 openai
+# Web layer pieces FastAPI needs but does not pull in itself
+sse-starlette==1.8.2      # server-sent events for the validation progress streams
+python-multipart          # form fields and file uploads
+requests                  # GraphDB REST calls
+# Auth tokens
+python-jose
+PyJWT
