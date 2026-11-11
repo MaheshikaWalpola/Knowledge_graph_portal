@@ -7,6 +7,8 @@ overwrite a raw row; they are a second row with stage "repaired" and repair_of =
 
 Document fields (always all present; missing information is null):
   generation_id        uuid, unique
+  round_id             uuid shared by every row of one generate call (one click on "generate"); a repaired
+                       row keeps the round_id of its raw row, so a round is found with {"round_id": ...}
   user_email           who triggered the generation
   schema_id            workspace ontology used as context (null for an uploaded file)
   experiment_tag       e.g. "R1" for study runs, null for ordinary portal use
@@ -48,7 +50,7 @@ STAGE_REPAIRED = "repaired"
 PATCHABLE_FIELDS = ("targets_count", "validation_result")
 
 FIELDS = (
-    "generation_id", "user_email", "schema_id", "experiment_tag", "statement_id", "statement_text",
+    "generation_id", "round_id", "user_email", "schema_id", "experiment_tag", "statement_id", "statement_text",
     "rule_type", "intended_error_class", "model_id", "model_id_returned", "provider", "host", "temperature",
     "seed", "prompt_version", "prompt_override", "run_index", "calls", "shape_ttl", "parse_ok", "shacl_valid",
     "error", "stage", "repair_of", "targets_count", "validation_result", "created_at",
@@ -117,11 +119,13 @@ def log_generation(
     error: Optional[str] = None,
     stage: str = STAGE_RAW,
     repair_of: Optional[str] = None,
+    round_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Store one generated shape. With `error` set (the call failed) the row is kept with parse_ok false."""
     checks = {"parse_ok": False, "shacl_valid": None, "error": error} if error else check_shape(shape_ttl)
     doc = {
         "generation_id": str(uuid4()),
+        "round_id": round_id,
         "user_email": user_email,
         "schema_id": schema_id,
         "experiment_tag": experiment_tag,
@@ -172,6 +176,7 @@ def log_repair(raw: Dict[str, Any], shape_ttl: str, repair_model_id: Optional[st
         run_index=raw.get("run_index"),
         stage=STAGE_REPAIRED,
         repair_of=raw["generation_id"],
+        round_id=raw.get("round_id"),
     )
 
 
@@ -212,6 +217,7 @@ def list_generations(
     experiment_tag: Optional[str] = None,
     stage: Optional[str] = None,
     search: Optional[str] = None,
+    round_id: Optional[str] = None,
     limit: int = 50,
     skip: int = 0,
 ) -> Dict[str, Any]:
@@ -219,6 +225,8 @@ def list_generations(
     query: Dict[str, Any] = {}
     if user_email:
         query["user_email"] = user_email
+    if round_id:
+        query["round_id"] = round_id
     if model:
         query["$or"] = [{"model_id": model}, {"model_id_returned": model}]
     if statement_id:
@@ -233,3 +241,40 @@ def list_generations(
     total = col.count_documents(query)
     rows = [_clean(d) for d in col.find(query).sort("created_at", -1).skip(skip).limit(limit)]
     return {"entries": rows, "total": total, "skip": skip, "limit": limit, "has_more": skip + len(rows) < total}
+
+
+ROUND_SUMMARY_FIELDS = ("round_id", "user_email", "schema_id", "experiment_tag", "run_index", "model_id",
+                        "prompt_version", "stage", "parse_ok", "shacl_valid", "error", "generation_id", "created_at")
+
+
+def list_rounds(user_email: Optional[str] = None, limit: int = 50, skip: int = 0) -> Dict[str, Any]:
+    """
+    One summary per generate call (rows sharing a round_id), newest first: when it ran, which schema and model,
+    how many shapes it produced, how many parsed / were valid SHACL / failed, how many were repaired, and the
+    generation_ids of its raw rows. Rows written before round ids existed (round_id null) are left out.
+    """
+    query: Dict[str, Any] = {"round_id": {"$ne": None}}
+    if user_email:
+        query["user_email"] = user_email
+    rounds: Dict[str, Dict[str, Any]] = {}
+    projection = {f: 1 for f in ROUND_SUMMARY_FIELDS}
+    for d in _col().find(query, projection).sort("created_at", 1):
+        r = rounds.get(d["round_id"])
+        if r is None:
+            r = rounds[d["round_id"]] = {
+                "round_id": d["round_id"], "created_at": d.get("created_at"), "user_email": d.get("user_email"),
+                "schema_id": d.get("schema_id"), "experiment_tag": d.get("experiment_tag"), "run_index": d.get("run_index"),
+                "model_id": d.get("model_id"), "prompt_version": d.get("prompt_version"),
+                "shapes": 0, "parsed": 0, "valid": 0, "failed": 0, "repaired": 0, "generation_ids": [],
+            }
+        if d.get("stage") == STAGE_REPAIRED:
+            r["repaired"] += 1
+            continue
+        r["shapes"] += 1
+        r["parsed"] += 1 if d.get("parse_ok") else 0
+        r["valid"] += 1 if d.get("shacl_valid") else 0
+        r["failed"] += 1 if d.get("error") and not d.get("parse_ok") else 0
+        r["generation_ids"].append(d.get("generation_id"))
+    ordered = sorted(rounds.values(), key=lambda r: r["created_at"] or "", reverse=True)
+    page = ordered[skip:skip + limit]
+    return {"entries": page, "total": len(ordered), "skip": skip, "limit": limit, "has_more": skip + len(page) < len(ordered)}

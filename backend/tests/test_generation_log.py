@@ -71,6 +71,8 @@ class FakeCollection:
     @staticmethod
     def _match_value(value, cond):
         if isinstance(cond, dict):
+            if "$ne" in cond:
+                return value != cond["$ne"]
             if "$regex" in cond:
                 import re
                 return re.search(cond["$regex"], value or "", re.I if "i" in cond.get("$options", "") else 0) is not None
@@ -96,7 +98,7 @@ class FakeCollection:
             hits.sort(key=lambda d: d.get(key) or "", reverse=direction == -1)
         return dict(hits[0]) if hits else None
 
-    def find(self, query):
+    def find(self, query, projection=None):
         return FakeCursor(d for d in self.docs if self._matches(d, query))
 
     def count_documents(self, query):
@@ -242,6 +244,32 @@ class TestGenerationHook(unittest.TestCase):
                          ("S-001", "range", "T3_negative_value", 2, "R1"))
         self.assertEqual((row["parse_ok"], row["shacl_valid"], row["stage"]), (True, True, "raw"))
         self.assertEqual(self.service.llm.calls[0]["temperature"], 0)  # Step 9: temperature 0 for Kiste
+
+    def test_rows_of_one_run_share_a_round_id(self):
+        self.service.llm = FakeLLM()
+        rules = ["Every pressure value must be at least 0", "Every pressure value must be below 100"]
+        completed = [e for e in run_generation(self.service, rules, "Qwen3.6-35B-A3B-MLX-8bit", CONTEXT)
+                     if e["status"] == "completed"][0]
+        second = [e for e in run_generation(self.service, rules[:1], "Qwen3.6-35B-A3B-MLX-8bit", CONTEXT)
+                  if e["status"] == "completed"][0]
+        round_id = completed["round_id"]
+        self.assertTrue(round_id)
+        self.assertNotEqual(round_id, second["round_id"])
+        rows = genlog.list_generations(user_email="me@example.org", round_id=round_id)["entries"]
+        self.assertEqual(sorted(r["generation_id"] for r in rows), sorted(completed["generation_ids"]))
+        self.assertTrue(all(r["round_id"] == round_id for r in rows))
+        # a repair keeps the round of its raw row
+        fixed = genlog.get_generation(ValidationService._log_repair("me@example.org", completed["generation_ids"], 1,
+                                                                    rules[1], VALID_SHAPE, "openai/gpt-5.5"))
+        self.assertEqual(fixed["round_id"], round_id)
+        rounds = genlog.list_rounds(user_email="me@example.org")
+        self.assertEqual(rounds["total"], 2)
+        newest, older = rounds["entries"]
+        self.assertEqual((newest["round_id"], newest["shapes"]), (second["round_id"], 1))
+        self.assertEqual((older["round_id"], older["shapes"], older["parsed"], older["valid"], older["failed"], older["repaired"]),
+                         (round_id, 2, 2, 2, 0, 1))
+        self.assertEqual(older["generation_ids"], completed["generation_ids"])
+        self.assertIsNone(genlog.list_rounds(user_email="someone@else.org")["entries"] or None)
 
     def test_failed_generation_is_logged(self):
         self.service.llm = FakeLLM(error=KisteConnectionError("wrong key"))

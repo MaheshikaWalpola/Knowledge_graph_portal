@@ -331,9 +331,11 @@ class ValidationService:
         log_context (set by the router) makes every generated shape a row in the generation log
         (services.generation_log_service): {"user_email", "schema_id", "experiment_tag", "run_index",
         "prompt_override", "statement_ids", "rule_types", "intended_error_classes"}; the three lists are
-        per rule and optional. Without a context nothing is logged.
+        per rule and optional. Without a context nothing is logged. All rows of one call share a fresh
+        round_id, which the completed event reports.
         """
         import asyncio
+        from uuid import uuid4
         from concurrent.futures import ThreadPoolExecutor
         from rdflib import Graph
 
@@ -345,6 +347,7 @@ class ValidationService:
         known_terms = SHACLVerifier.extract_ontology_terms(schema_text)
         ctx = log_context or {}
         prompt_override = (ctx.get("prompt_override") or "").strip() or None
+        round_id = str(uuid4()) if ctx.get("user_email") else None
 
         def per_rule(key: str, index: int):
             values = ctx.get(key) or []
@@ -371,6 +374,7 @@ class ValidationService:
                     intended_error_class=per_rule("intended_error_classes", index),
                     run_index=ctx.get("run_index"),
                     error=error,
+                    round_id=round_id,
                 )
                 return row["generation_id"]
             except Exception as log_err:
@@ -599,7 +603,7 @@ class ValidationService:
             final_ttl = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n# Failed to generate any shapes."
 
         yield {"status": "completed", "shacl_ttl": final_ttl.strip(), "verification_map": verification_map,
-               "generation_ids": [generation_ids.get(i) for i in range(len(rules))]}
+               "generation_ids": [generation_ids.get(i) for i in range(len(rules))], "round_id": round_id}
 
     async def verify_shacl_shapes_stream(self, rules: List[str], shapes_ttl: str, schema_content: Optional[str] = None,
                                          indices: Optional[List[int]] = None, model: Optional[str] = None,

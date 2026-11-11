@@ -75,13 +75,25 @@ def api_list_generations(
     experiment_tag: Optional[str] = Query(None),
     stage: Optional[str] = Query(None, description="raw or repaired"),
     search: Optional[str] = Query(None, description="text contained in the rule"),
+    round_id: Optional[str] = Query(None, description="all rows of one generate call"),
     limit: int = Query(50, ge=1, le=500),
     skip: int = Query(0, ge=0),
     current_user: Any = Depends(get_current_user),
 ) -> Dict:
     """The current user's generated shapes, newest first, with paging and filters."""
     return genlog.list_generations(user_email=current_user["email"], model=model, statement_id=statement_id,
-                                   experiment_tag=experiment_tag, stage=stage, search=search, limit=limit, skip=skip)
+                                   experiment_tag=experiment_tag, stage=stage, search=search, round_id=round_id,
+                                   limit=limit, skip=skip)
+
+
+@router.get("/validation/generations/rounds")
+def api_list_rounds(
+    limit: int = Query(50, ge=1, le=500),
+    skip: int = Query(0, ge=0),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """One summary per generate call of the current user (shapes, parsed, valid, failed, repaired, generation_ids)."""
+    return genlog.list_rounds(user_email=current_user["email"], limit=limit, skip=skip)
 
 
 @router.get("/validation/generations/{generation_id}")
@@ -223,7 +235,7 @@ async def api_generate_shacl_stream(
     """
     SSE endpoint that streams SHACL shape generation progress rule by rule.
     Every shape is written to the generation log; each progress event carries its generation_id and the
-    completed event lists them in rule order (generation_ids).
+    completed event lists them in rule order (generation_ids) together with the round_id they all share.
     """
     import asyncio
     start = time.perf_counter()

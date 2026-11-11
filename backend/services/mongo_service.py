@@ -25,3 +25,4 @@ shacl_generations_collection = db["shacl_generations"]
 shacl_generations_collection.create_index([("generation_id", ASCENDING)], unique=True)
 shacl_generations_collection.create_index([("user_email", ASCENDING), ("created_at", DESCENDING)])
 shacl_generations_collection.create_index([("experiment_tag", ASCENDING), ("model_id", ASCENDING), ("statement_id", ASCENDING)])
+shacl_generations_collection.create_index([("round_id", ASCENDING), ("created_at", ASCENDING)])
