@@ -123,6 +123,11 @@ export default function PdfToCsvCard({ schemaFile, selectedModel }) {
     downloadBlob(new Blob([bytes], { type: "application/zip" }), "pdf_to_csv.zip");
   };
 
+  const handleDownloadSummary = () => {
+    const bytes = Uint8Array.from(atob(result.summary_pdf_base64), (c) => c.charCodeAt(0));
+    downloadBlob(new Blob([bytes], { type: "application/pdf" }), "summary.pdf");
+  };
+
   const handleDownloadFile = (file) => {
     downloadBlob(new Blob([file.content], { type: "text/csv" }), file.name);
   };
@@ -263,10 +268,21 @@ export default function PdfToCsvCard({ schemaFile, selectedModel }) {
                 ` ${summary.images_not_read} image(s) could not be read - check them manually.`}
             </Alert>
 
+            {result.summary_pdf_error && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                {result.summary_pdf_error}
+              </Alert>
+            )}
+
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 2, flexWrap: "wrap" }}>
               <Button variant="contained" startIcon={<DownloadIcon />} onClick={handleDownloadZip}>
                 Download all (ZIP)
               </Button>
+              {result.summary_pdf_base64 && (
+                <Button variant="outlined" startIcon={<DownloadIcon />} onClick={handleDownloadSummary}>
+                  Download summary (PDF)
+                </Button>
+              )}
               {result.files.map((file) => (
                 <Chip
                   key={file.name}

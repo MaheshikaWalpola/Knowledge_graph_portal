@@ -12,6 +12,7 @@ from services.instance_analysis_service import analyze_schema_and_data, analyze_
 from services.instance_generation_service import build_instances_from_csvs
 from services.schema_instance_generation_service import build_instances_from_schema_csvs, is_schema_structured
 from services.pdf_conversion_service import ConversionResult, build_schema_context, convert_pdf, render_schema
+from services.pdf_summary_service import build_summary_pdf
 
 
 
@@ -221,15 +222,25 @@ async def ctrl_convert_pdfs_to_csv_stream(
                 yield json.dumps({"type": "file_error", "file": name, "index": index, "message": str(e)}) + "\n"
 
         files = result.render()
+        summary_pdf, summary_error = None, None
+        try:
+            summary_pdf = build_summary_pdf(result, [name for name, _ in pdfs],
+                                            schema_name=schema_file.filename, model=model)
+        except Exception as e:  # the CSVs are still usable without the summary
+            summary_error = f"Could not create summary.pdf: {e}"
         zip_buf = BytesIO()
         with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as z:
             for f in files:
                 z.writestr(f["name"], f["content"])
+            if summary_pdf:
+                z.writestr("summary.pdf", summary_pdf)
         yield json.dumps({
             "type": "done",
             "summary": {**result.summary(), "files_total": len(pdfs), "files_failed": failed},
             "files": files,
             "zip_base64": base64.b64encode(zip_buf.getvalue()).decode("ascii"),
+            "summary_pdf_base64": base64.b64encode(summary_pdf).decode("ascii") if summary_pdf else None,
+            "summary_pdf_error": summary_error,
         }) + "\n"
 
     return StreamingResponse(generator(), media_type="application/x-ndjson")

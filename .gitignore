@@ -40,5 +40,5 @@ dist-ssr
 .env
 
 example_datasheets
-samples
 samples.zip
+samples
