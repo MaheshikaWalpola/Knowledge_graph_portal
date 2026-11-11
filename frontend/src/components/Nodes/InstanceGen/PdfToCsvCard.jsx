@@ -16,8 +16,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import DownloadIcon from "@mui/icons-material/Download";
-
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../../../config";
 
 function downloadBlob(blob, filename) {
   const element = document.createElement("a");

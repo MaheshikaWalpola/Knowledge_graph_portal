@@ -168,7 +168,7 @@ cd Knowledge_graph_portal
    pip install -r requirement.txt
    ```
 
-4. Create a `.env` file in the `backend` directory:
+4. Create a `.env` file in the `backend` directory (`backend/.env.example` is a template):
 
    ```env
    # GraphDB Configuration
@@ -234,7 +234,7 @@ cd Knowledge_graph_portal
    npm install
    ```
 
-3. Create a `.env` file in the `frontend` directory:
+3. Create a `.env` file in the `frontend` directory (`frontend/.env.example` is a template):
 
    ```env
    VITE_API_URL=http://localhost:8000
@@ -385,6 +385,11 @@ cd frontend && npm ci && npm run build
 
 ### Checks after deployment
 
+- The backend log at startup prints `Kiste models (N): ...`; a warning there means the
+  Kiste model list could not be read or `backend/models.yaml` names a model the server
+  does not offer. The dropdowns show only models the backend can call.
+- Claude and GPT models appear in the dropdowns only when `ANTHROPIC_API_KEY` /
+  `OPENAI_API_KEY` are set in `backend/.env`.
 - Every page URL keeps the `/knowledgegraphportal/` prefix, and F5 on any page does not give a 404.
 - The browser console shows no requests to `localhost:8000` and no websocket to `localhost:5173`.
 - The link in a verification e-mail starts with `https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal/`.
