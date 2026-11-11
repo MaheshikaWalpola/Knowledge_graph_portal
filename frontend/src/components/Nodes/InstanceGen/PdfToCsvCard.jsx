@@ -6,7 +6,9 @@ import {
   Card,
   CardContent,
   Chip,
+  IconButton,
   LinearProgress,
+  Tooltip,
   Stack,
   Typography,
 } from "@mui/material";
@@ -14,8 +16,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import DownloadIcon from "@mui/icons-material/Download";
-
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../../../config";
 
 function downloadBlob(blob, filename) {
   const element = document.createElement("a");
@@ -138,7 +139,7 @@ export default function PdfToCsvCard({ schemaFile, selectedModel }) {
     : 0;
 
   return (
-    <Card variant="outlined">
+    <Card variant="outlined" sx={{ height: "100%" }}>
       <CardContent>
         <Typography variant="subtitle1" gutterBottom>
           PDF to CSV
@@ -149,14 +150,31 @@ export default function PdfToCsvCard({ schemaFile, selectedModel }) {
         </Typography>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2, flexWrap: "wrap" }}>
-          <Button
-            variant="outlined"
-            startIcon={<CloudUploadIcon />}
-            onClick={() => pdfInputRef.current?.click()}
-            disabled={converting}
-          >
-            Choose PDF Files
-          </Button>
+          {/* Full button until the first file is chosen, then a small icon so the row stays compact */}
+          {pdfFiles.length === 0 ? (
+            <Button
+              variant="outlined"
+              startIcon={<CloudUploadIcon />}
+              onClick={() => pdfInputRef.current?.click()}
+              disabled={converting}
+            >
+              Choose PDF Files
+            </Button>
+          ) : (
+            <Tooltip title="Add more PDF files">
+              <span>
+                <IconButton
+                  color="primary"
+                  size="small"
+                  onClick={() => pdfInputRef.current?.click()}
+                  disabled={converting}
+                  sx={{ border: 1, borderColor: "divider" }}
+                >
+                  <CloudUploadIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
 
           {pdfFiles.length > 0 && (
             <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>

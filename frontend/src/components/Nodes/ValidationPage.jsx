@@ -163,6 +163,9 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [copied, setCopied] = useState(false);
   const [shaclGenerationSteps, setShaclGenerationSteps] = useState([]);
   const [verificationMap, setVerificationMap] = useState({});
+  // Generation-log ids of the current shapes, one per rule; sent to verification so repairs link to their raw row
+  const [generationIds, setGenerationIds] = useState([]);
+  const [roundId, setRoundId] = useState(null);  // the generate call the current shapes came from (backend logs)
   const [verifying, setVerifying] = useState(false);
 
   //  Step 3 
@@ -339,6 +342,9 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     setError(null);
     setSuccess(null);
     setShaclCode("");
+    setGenerationIds([]);
+    setRoundId(null);
+    const newGenerationIds = [];
     setShaclGenerationSteps(activeRules.map(rule => ({ rule, status: "pending" })));
 
     // Transition to Step 2 immediately so the user can watch it stream
@@ -418,6 +424,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   )
                 );
               } else if (event.status === "progress") {
+                if (event.generation_id) newGenerationIds[event.index] = event.generation_id;
                 // Update rule status with verification metadata
                 setShaclGenerationSteps(prev => 
                   prev.map((step, idx) => 
@@ -487,6 +494,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 if (event.verification_map) {
                   setVerificationMap(event.verification_map);
                 }
+                setGenerationIds(event.generation_ids || newGenerationIds);
+                setRoundId(event.round_id || null);
                 setSuccess("SHACL shapes generated. Use \"Verify Shapes\" to run an extra correctness check.");
               }
             } catch (e) {
@@ -522,6 +531,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     formData.append("model", selectedModel);
     formData.append("shapes_ttl", shaclCode);
     if (onlyIndices) formData.append("indices", JSON.stringify(onlyIndices));
+    if (generationIds.length) formData.append("generation_ids", JSON.stringify(generationIds));
+    if (roundId) formData.append("round_id", roundId);
     // Instance data lets verification accept terms the real data uses and build realistic test data
     appendOntologySource(formData, true);
 
@@ -674,6 +685,9 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
     const formData = new URLSearchParams();
     formData.append("shacl_ttl", playgroundShaclText);
+    // For the backend timing log only: which model produced the shapes and which generate call they came from
+    formData.append("model", selectedModel);
+    if (roundId) formData.append("round_id", roundId);
 
     // Pass verification metadata so the backend can split reliable vs unreliable
     if (verificationMap && Object.keys(verificationMap).length > 0) {
@@ -738,7 +752,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
               }
 
               if (event.report) {
-                setPlaygroundReport(event.report);
+                // The AI model chosen in step 1 (generation + verification) goes into the report and its PDF
+                setPlaygroundReport({ ...event.report, model: selectedModel });
                 setValidationSteps(prev => [...prev, { step: "done", message: "Validation complete!", status: "done" }]);
                 setSuccess("Validation complete!");
               } else {

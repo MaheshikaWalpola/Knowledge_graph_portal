@@ -168,7 +168,7 @@ cd Knowledge_graph_portal
    pip install -r requirement.txt
    ```
 
-4. Create a `.env` file in the `backend` directory:
+4. Create a `.env` file in the `backend` directory (`backend/.env.example` is a template):
 
    ```env
    # GraphDB Configuration
@@ -203,6 +203,7 @@ cd Knowledge_graph_portal
    # AI models: Kiste (TU Chemnitz server) is always used; the cloud providers are optional and
    # appear in the model selector of the validation page only when their key is set
    KISTE_API_URL=https://kiste.informatik.tu-chemnitz.de/v1/chat/completions
+   KISTE_BASE_URL=https://kiste.informatik.tu-chemnitz.de   # optional: host for GET /v1/models (derived from KISTE_API_URL if unset)
    KISTE_API_KEY=your_kiste_key
    KISTE_MODEL=Qwen3.6-35B-A3B-MLX-8bit
    ANTHROPIC_API_KEY=your_anthropic_api_key   # optional: adds Claude models (pip install anthropic)
@@ -233,7 +234,7 @@ cd Knowledge_graph_portal
    npm install
    ```
 
-3. Create a `.env` file in the `frontend` directory:
+3. Create a `.env` file in the `frontend` directory (`frontend/.env.example` is a template):
 
    ```env
    VITE_API_URL=http://localhost:8000
@@ -384,6 +385,11 @@ cd frontend && npm ci && npm run build
 
 ### Checks after deployment
 
+- The backend log at startup prints `Kiste models (N): ...`; a warning there means the
+  Kiste model list could not be read or `backend/models.yaml` names a model the server
+  does not offer. The dropdowns show only models the backend can call.
+- Claude and GPT models appear in the dropdowns only when `ANTHROPIC_API_KEY` /
+  `OPENAI_API_KEY` are set in `backend/.env`.
 - Every page URL keeps the `/knowledgegraphportal/` prefix, and F5 on any page does not give a 404.
 - The browser console shows no requests to `localhost:8000` and no websocket to `localhost:5173`.
 - The link in a verification e-mail starts with `https://vsr.informatik.tu-chemnitz.de/knowledgegraphportal/`.

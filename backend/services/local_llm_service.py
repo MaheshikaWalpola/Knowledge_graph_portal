@@ -3,10 +3,11 @@ import urllib.request
 import re
 import os
 import ssl
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 from services.llm_providers import (
     KisteConnectionError, LLMProviderError, split_model, json_text, call_anthropic, call_openai,
+    call_anthropic_meta, call_openai_meta,
 )
 
 # Kiste API Configuration (OpenAI-compatible)
@@ -48,9 +49,36 @@ class LocalLLMService:
             raise LLMProviderError(f"Unknown AI provider '{provider}' in model '{model_override}'.")
         return json_text(text) if json_mode else text
 
+    def _call_kiste_meta(self, messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.7,
+                         model_override: Optional[str] = None, reasoning_effort: Optional[str] = None) -> Tuple[str, Dict[str, Any]]:
+        """
+        Same as _call_kiste, but also returns what the API reported about the call:
+        {"model": <model id from the response>, "provider": kiste|anthropic|openai, "host": kiste|api,
+         "temperature": <value sent, or None for the cloud providers, which fix it themselves>}.
+        Used where the exact model that produced an answer must be recorded (the SHACL generation log).
+        """
+        provider, model = split_model(model_override)
+        if provider == "anthropic":
+            text, meta = call_anthropic_meta(model, messages, json_mode, reasoning_effort, timeout=KISTE_TIMEOUT)
+            meta.update(provider="anthropic", host="api", temperature=None)
+        elif provider == "openai":
+            text, meta = call_openai_meta(model, messages, json_mode, reasoning_effort, timeout=KISTE_TIMEOUT)
+            meta.update(provider="openai", host="api", temperature=None)
+        elif provider == "kiste":
+            text, meta = self._call_kiste_server_meta(messages, json_mode, temperature, model, reasoning_effort)
+            meta.update(provider="kiste", host="kiste", temperature=temperature)
+        else:
+            raise LLMProviderError(f"Unknown AI provider '{provider}' in model '{model_override}'.")
+        return (json_text(text) if json_mode else text), meta
+
     def _call_kiste_server(self, messages: List[Dict[str, str]], json_mode: bool, temperature: float,
                            model: Optional[str], reasoning_effort: Optional[str]) -> str:
-        """Call the Kiste API (OpenAI-compatible endpoint at KISTE_API_URL)."""
+        """Call the Kiste API (OpenAI-compatible endpoint at KISTE_API_URL); the answer text only."""
+        return self._call_kiste_server_meta(messages, json_mode, temperature, model, reasoning_effort)[0]
+
+    def _call_kiste_server_meta(self, messages: List[Dict[str, str]], json_mode: bool, temperature: float,
+                                model: Optional[str], reasoning_effort: Optional[str]) -> Tuple[str, Dict[str, Any]]:
+        """Call the Kiste API; returns (answer text, {"model": model id from the response})."""
         if not KISTE_API_KEY:
             raise KisteConnectionError("We are experiencing connection issues with the AI server. Please try again shortly.")
         
@@ -83,7 +111,8 @@ class LocalLLMService:
             
             with urllib.request.urlopen(req, context=ssl_context, timeout=KISTE_TIMEOUT) as response:
                 result = json.loads(response.read().decode("utf-8"))
-                return result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                text = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                return text, {"model": result.get("model")}
         except Exception as e:
             print(f"Kiste API error (model={effective_model}): {e}")
             raise KisteConnectionError("We are experiencing connection issues with the AI server. Please try again shortly.") from e
