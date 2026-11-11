@@ -1,0 +1,174 @@
+@prefix pm:   <http://example.org/power-mosfet#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# Schema for sample2_mosfet_datasheet.pdf (manufacturer power MOSFET datasheet)
+
+pm: a owl:Ontology ;
+    rdfs:label "Power MOSFET datasheet schema" .
+
+# ---------------- Classes ----------------
+pm:Manufacturer a owl:Class ;
+    rdfs:label "Manufacturer" .
+
+pm:Datasheet a owl:Class ;
+    rdfs:label "Datasheet" ;
+    rdfs:comment "The datasheet document (document number, revision, date)." .
+
+pm:Device a owl:Class ;
+    rdfs:label "Device" ;
+    rdfs:comment "The device type described by the datasheet (e.g. BX-220), with its headline features." .
+
+pm:OrderableVariant a owl:Class ;
+    rdfs:label "Orderable variant" ;
+    rdfs:comment "One row of the ordering information: a part number with package and packing." .
+
+pm:Parameter a owl:Class ;
+    rdfs:label "Parameter" ;
+    rdfs:comment "Abstract parent of rated and characterized parameters." .
+
+pm:MaximumRating a owl:Class ;
+    rdfs:subClassOf pm:Parameter ;
+    rdfs:label "Absolute maximum rating" ;
+    rdfs:comment "One row of the Absolute Maximum Ratings table." .
+
+pm:ElectricalCharacteristic a owl:Class ;
+    rdfs:subClassOf pm:Parameter ;
+    rdfs:label "Electrical characteristic" ;
+    rdfs:comment "One row (one test condition) of the Electrical Characteristics table, with min/typ/max values." .
+
+# ---------------- Manufacturer ----------------
+pm:manufacturerName a owl:DatatypeProperty ;
+    rdfs:domain pm:Manufacturer ; rdfs:range xsd:string .
+
+pm:website a owl:DatatypeProperty ;
+    rdfs:domain pm:Manufacturer ; rdfs:range xsd:anyURI .
+
+# ---------------- Datasheet ----------------
+pm:documentNumber a owl:DatatypeProperty ;
+    rdfs:domain pm:Datasheet ; rdfs:range xsd:string ;
+    rdfs:comment "e.g. DS-BX220" .
+
+pm:revision a owl:DatatypeProperty ;
+    rdfs:domain pm:Datasheet ; rdfs:range xsd:string ;
+    skos:altLabel "Rev." .
+
+pm:releaseDate a owl:DatatypeProperty ;
+    rdfs:domain pm:Datasheet ; rdfs:range xsd:date .
+
+pm:publishedBy a owl:ObjectProperty ;
+    rdfs:domain pm:Datasheet ; rdfs:range pm:Manufacturer .
+
+pm:describesDevice a owl:ObjectProperty ;
+    rdfs:domain pm:Datasheet ; rdfs:range pm:Device .
+
+# ---------------- Device ----------------
+pm:deviceName a owl:DatatypeProperty ;
+    rdfs:domain pm:Device ; rdfs:range xsd:string ;
+    rdfs:comment "Product name, e.g. BX-220." .
+
+pm:deviceType a owl:DatatypeProperty ;
+    rdfs:domain pm:Device ; rdfs:range xsd:string ;
+    rdfs:comment "e.g. N-Channel Enhancement Mode Power MOSFET." .
+
+pm:packageType a owl:DatatypeProperty ;
+    rdfs:domain pm:Device ; rdfs:range xsd:string ;
+    rdfs:comment "Package the device is offered in, e.g. TO-252 (DPAK)." .
+
+pm:qualification a owl:DatatypeProperty ;
+    rdfs:domain pm:Device ; rdfs:range xsd:string ;
+    rdfs:comment "Qualification standard, e.g. AEC-Q101." .
+
+pm:rohsCompliant a owl:DatatypeProperty ;
+    rdfs:domain pm:Device ; rdfs:range xsd:boolean ;
+    skos:altLabel "RoHS compliant" .
+
+pm:application a owl:DatatypeProperty ;
+    rdfs:domain pm:Device ; rdfs:range xsd:string ;
+    rdfs:comment "Typical application (one per value)." ;
+    skos:altLabel "Applications" .
+
+pm:markingCode a owl:DatatypeProperty ;
+    rdfs:domain pm:OrderableVariant ; rdfs:range xsd:string ;
+    skos:altLabel "Marking" .
+
+# Test note (not shown to the AI): In the sample PDF this only appears inside a chart image.
+pm:rdsOnTempco a owl:DatatypeProperty ;
+    rdfs:domain pm:Device ; rdfs:range xsd:decimal ;
+    rdfs:comment "Temperature coefficient of RDS(on) in %/K." .
+
+pm:manufacturedBy a owl:ObjectProperty ;
+    rdfs:domain pm:Device ; rdfs:range pm:Manufacturer .
+
+# ---------------- OrderableVariant ----------------
+pm:partNumber a owl:DatatypeProperty ;
+    rdfs:domain pm:OrderableVariant ; rdfs:range xsd:string ;
+    skos:altLabel "Part Number" .
+
+pm:variantPackage a owl:DatatypeProperty ;
+    rdfs:domain pm:OrderableVariant ; rdfs:range xsd:string ;
+    skos:altLabel "Package" .
+
+pm:packing a owl:DatatypeProperty ;
+    rdfs:domain pm:OrderableVariant ; rdfs:range xsd:string ;
+    skos:altLabel "Packing" .
+
+pm:minimumOrderQuantity a owl:DatatypeProperty ;
+    rdfs:domain pm:OrderableVariant ; rdfs:range xsd:integer ;
+    skos:altLabel "MOQ" .
+
+pm:variantOf a owl:ObjectProperty ;
+    rdfs:domain pm:OrderableVariant ; rdfs:range pm:Device .
+
+# ---------------- Parameter (shared by both tables) ----------------
+pm:parameterName a owl:DatatypeProperty ;
+    rdfs:domain pm:Parameter ; rdfs:range xsd:string ;
+    skos:altLabel "Parameter" .
+
+pm:symbol a owl:DatatypeProperty ;
+    rdfs:domain pm:Parameter ; rdfs:range xsd:string ;
+    skos:altLabel "Symbol" .
+
+pm:unit a owl:DatatypeProperty ;
+    rdfs:domain pm:Parameter ; rdfs:range xsd:string ;
+    skos:altLabel "Unit" .
+
+pm:ofDevice a owl:ObjectProperty ;
+    rdfs:domain pm:Parameter ; rdfs:range pm:Device .
+
+# ---------------- MaximumRating ----------------
+pm:ratedValue a owl:DatatypeProperty ;
+    rdfs:domain pm:MaximumRating ; rdfs:range xsd:string ;
+    rdfs:comment "Rated value as written (can be a range such as -55 to +175, or ±20)." ;
+    skos:altLabel "Value" .
+
+# ---------------- ElectricalCharacteristic ----------------
+pm:category a owl:DatatypeProperty ;
+    rdfs:domain pm:ElectricalCharacteristic ; rdfs:range xsd:string ;
+    rdfs:comment "Table group, e.g. Static Characteristics, Dynamic Characteristics." .
+
+pm:testConditions a owl:DatatypeProperty ;
+    rdfs:domain pm:ElectricalCharacteristic ; rdfs:range xsd:string ;
+    skos:altLabel "Test Conditions" .
+
+pm:minValue a owl:DatatypeProperty ;
+    rdfs:domain pm:ElectricalCharacteristic ; rdfs:range xsd:decimal ;
+    skos:altLabel "Min" .
+
+pm:typValue a owl:DatatypeProperty ;
+    rdfs:domain pm:ElectricalCharacteristic ; rdfs:range xsd:decimal ;
+    skos:altLabel "Typ" .
+
+pm:maxValue a owl:DatatypeProperty ;
+    rdfs:domain pm:ElectricalCharacteristic ; rdfs:range xsd:decimal ;
+    skos:altLabel "Max" .
+
+# ---------------- Keys (owl:hasKey) ----------------
+# What identifies a thing across documents. Classes without a key (rows, results,
+# measurements) always stay separate instances.
+pm:Manufacturer owl:hasKey ( pm:manufacturerName ) .
+pm:Datasheet owl:hasKey ( pm:documentNumber ) .
+pm:Device owl:hasKey ( pm:deviceName ) .
+pm:OrderableVariant owl:hasKey ( pm:partNumber ) .

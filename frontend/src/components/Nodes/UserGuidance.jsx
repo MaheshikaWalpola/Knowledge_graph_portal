@@ -477,6 +477,24 @@ const UserGuidance = () => {
           </div>
 
           <div className="guidance-subsection">
+            <h3 className="guidance-subsection-title">Optional: Convert PDFs to CSV</h3>
+            <p className="guidance-text">
+              If your data is in PDF documents (datasheets, reports, certificates, forms), use the <strong>PDF to CSV</strong> box next to the data files to turn them into CSV files first:
+            </p>
+            <Steps items={[
+              "Upload the Schema file first - the conversion aligns the PDF content with its classes and properties.",
+              "Choose PDF Files - Select one or more PDF files, or a .zip file containing PDFs.",
+              "Click Convert to CSV - The selected AI model reads each PDF and assigns its values to schema classes and properties. This can take a few minutes per file.",
+              "Download the results - You get one CSV per schema class plus a review.csv. Download them all as a ZIP or one by one.",
+              "Check the CSVs using review.csv - It lists every value with its page and two checks: whether the value was found in the PDF, and whether it fits the schema (domain and data type). Values marked CHECK need attention. It also lists data that matched no schema property, images that could not be read, and files that failed.",
+              "Add the checked CSVs as Data files and continue with Analyze Files as usual."
+            ]} />
+            <Callout type="warning">
+              Images in PDFs are not read yet. Information that only appears inside an image (e.g. in a chart, stamp or logo) is missing from the CSVs - review.csv lists every image so you can check it manually.
+            </Callout>
+          </div>
+
+          <div className="guidance-subsection">
             <h3 className="guidance-subsection-title">Step 2: Analyze</h3>
             <p className="guidance-text">
               After selecting your files, click <strong>Analyze Files</strong>. The system reads the column headers of all uploaded CSV files, cross-references them against terms (classes and properties) in your schema, and automatically produces the best prefix and keyword match recommendations.

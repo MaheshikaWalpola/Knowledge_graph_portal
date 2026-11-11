@@ -19,3 +19,5 @@ requests                  # GraphDB REST calls
 # Auth tokens
 python-jose
 PyJWT
+
+pdfplumber

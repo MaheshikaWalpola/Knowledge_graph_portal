@@ -1,0 +1,217 @@
+@prefix wp:   <http://example.org/wafer-probe#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# Schema for sample3_wafer_probe_report.pdf (wafer probe / electrical sort report)
+
+wp: a owl:Ontology ;
+    rdfs:label "Wafer probe test report schema" .
+
+# ---------------- Classes ----------------
+wp:Product a owl:Class ;
+    rdfs:label "Product" ;
+    rdfs:comment "The product being tested, e.g. LX-40-33." .
+
+wp:Lot a owl:Class ;
+    rdfs:label "Lot" .
+
+wp:Wafer a owl:Class ;
+    rdfs:label "Wafer" .
+
+wp:ProbeTest a owl:Class ;
+    rdfs:label "Probe test" ;
+    rdfs:comment "One probe test run of a wafer: program, equipment, operator, temperature and times." .
+
+wp:BinResult a owl:Class ;
+    rdfs:label "Bin result" ;
+    rdfs:comment "One row of the Bin Summary table." .
+
+wp:DieMeasurement a owl:Class ;
+    rdfs:label "Die measurement" ;
+    rdfs:comment "One row of the parametric results table: the measured values of one die." .
+
+wp:TestLimit a owl:Class ;
+    rdfs:label "Test limit" ;
+    rdfs:comment "The pass limit of one measured parameter (from the Limits row)." .
+
+# ---------------- Product ----------------
+wp:productName a owl:DatatypeProperty ;
+    rdfs:domain wp:Product ; rdfs:range xsd:string ;
+    skos:altLabel "Product" .
+
+wp:productFamily a owl:DatatypeProperty ;
+    rdfs:domain wp:Product ; rdfs:range xsd:string ;
+    rdfs:comment "e.g. LX-40 Low-Dropout Regulator" .
+
+# ---------------- Lot ----------------
+wp:lotId a owl:DatatypeProperty ;
+    rdfs:domain wp:Lot ; rdfs:range xsd:string ;
+    skos:altLabel "Lot ID" .
+
+wp:ofProduct a owl:ObjectProperty ;
+    rdfs:domain wp:Lot ; rdfs:range wp:Product .
+
+# ---------------- Wafer ----------------
+wp:hasWaferId a owl:DatatypeProperty ;
+    rdfs:domain wp:Wafer ; rdfs:range xsd:string ;
+    skos:altLabel "Wafer ID" .
+
+wp:diameter a owl:DatatypeProperty ;
+    rdfs:domain wp:Wafer ; rdfs:range xsd:decimal ;
+    rdfs:comment "Wafer diameter in mm." ;
+    skos:altLabel "Diameter" .
+
+wp:notchOrientation a owl:DatatypeProperty ;
+    rdfs:domain wp:Wafer ; rdfs:range xsd:decimal ;
+    rdfs:comment "Notch angle in degrees." ;
+    skos:altLabel "Notch" .
+
+# Test note (not shown to the AI): In the sample PDF the headline yield only appears inside the wafer map image.
+wp:yieldPercent a owl:DatatypeProperty ;
+    rdfs:domain wp:Wafer ; rdfs:range xsd:decimal ;
+    rdfs:comment "Wafer yield in %." .
+
+wp:goodDieCount a owl:DatatypeProperty ;
+    rdfs:domain wp:Wafer ; rdfs:range xsd:integer .
+
+wp:totalDieCount a owl:DatatypeProperty ;
+    rdfs:domain wp:Wafer ; rdfs:range xsd:integer ;
+    skos:altLabel "Total tested" .
+
+wp:disposition a owl:DatatypeProperty ;
+    rdfs:domain wp:Wafer ; rdfs:range xsd:string ;
+    rdfs:comment "Disposition decision, e.g. released to assembly." ;
+    skos:altLabel "Disposition" .
+
+wp:belongsToLot a owl:ObjectProperty ;
+    rdfs:domain wp:Wafer ; rdfs:range wp:Lot .
+
+# ---------------- ProbeTest ----------------
+wp:testProgram a owl:DatatypeProperty ;
+    rdfs:domain wp:ProbeTest ; rdfs:range xsd:string ;
+    skos:altLabel "Test Program" .
+
+wp:probeCard a owl:DatatypeProperty ;
+    rdfs:domain wp:ProbeTest ; rdfs:range xsd:string ;
+    skos:altLabel "Probe Card" .
+
+wp:tester a owl:DatatypeProperty ;
+    rdfs:domain wp:ProbeTest ; rdfs:range xsd:string ;
+    skos:altLabel "Tester" .
+
+wp:operator a owl:DatatypeProperty ;
+    rdfs:domain wp:ProbeTest ; rdfs:range xsd:string ;
+    skos:altLabel "Operator" .
+
+wp:testTemperature a owl:DatatypeProperty ;
+    rdfs:domain wp:ProbeTest ; rdfs:range xsd:decimal ;
+    rdfs:comment "Test temperature in °C." ;
+    skos:altLabel "Test Temp." .
+
+wp:startTime a owl:DatatypeProperty ;
+    rdfs:domain wp:ProbeTest ; rdfs:range xsd:dateTime ;
+    skos:altLabel "Start Time" .
+
+wp:endTime a owl:DatatypeProperty ;
+    rdfs:domain wp:ProbeTest ; rdfs:range xsd:dateTime ;
+    skos:altLabel "End Time" .
+
+wp:softwareVersion a owl:DatatypeProperty ;
+    rdfs:domain wp:ProbeTest ; rdfs:range xsd:string ;
+    rdfs:comment "Version of the test station software that generated the report." .
+
+wp:testedWafer a owl:ObjectProperty ;
+    rdfs:domain wp:ProbeTest ; rdfs:range wp:Wafer .
+
+# ---------------- BinResult ----------------
+wp:binNumber a owl:DatatypeProperty ;
+    rdfs:domain wp:BinResult ; rdfs:range xsd:integer ;
+    skos:altLabel "Bin" .
+
+wp:binDescription a owl:DatatypeProperty ;
+    rdfs:domain wp:BinResult ; rdfs:range xsd:string ;
+    skos:altLabel "Description" .
+
+wp:dieCount a owl:DatatypeProperty ;
+    rdfs:domain wp:BinResult ; rdfs:range xsd:integer ;
+    skos:altLabel "Count" .
+
+wp:binPercent a owl:DatatypeProperty ;
+    rdfs:domain wp:BinResult ; rdfs:range xsd:decimal ;
+    skos:altLabel "%" .
+
+wp:binOfWafer a owl:ObjectProperty ;
+    rdfs:domain wp:BinResult ; rdfs:range wp:Wafer .
+
+# ---------------- DieMeasurement ----------------
+wp:dieX a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:integer ;
+    skos:altLabel "Die X" .
+
+wp:dieY a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:integer ;
+    skos:altLabel "Die Y" .
+
+wp:site a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:integer ;
+    skos:altLabel "Site" .
+
+wp:outputVoltage a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:decimal ;
+    rdfs:comment "Output voltage in V." ;
+    skos:altLabel "VOUT [V]" .
+
+wp:dropoutVoltage a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:decimal ;
+    rdfs:comment "Dropout voltage in mV." ;
+    skos:altLabel "VDROP [mV]" .
+
+wp:quiescentCurrent a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:decimal ;
+    rdfs:comment "Quiescent current in µA." ;
+    skos:altLabel "IQ [µA]" .
+
+wp:lineRegulation a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:decimal ;
+    rdfs:comment "Line regulation in %/V." ;
+    skos:altLabel "Line Reg. [%/V]" .
+
+wp:loadRegulation a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:decimal ;
+    rdfs:comment "Load regulation in %." ;
+    skos:altLabel "Load Reg. [%]" .
+
+wp:psrr a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:decimal ;
+    rdfs:comment "Power supply rejection ratio in dB." ;
+    skos:altLabel "PSRR [dB]" .
+
+wp:assignedBin a owl:DatatypeProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range xsd:integer ;
+    rdfs:comment "Bin the die was sorted into (the Bin column of the parametric results table)." .
+
+wp:dieOfWafer a owl:ObjectProperty ;
+    rdfs:domain wp:DieMeasurement ; rdfs:range wp:Wafer .
+
+# ---------------- TestLimit ----------------
+wp:limitParameter a owl:DatatypeProperty ;
+    rdfs:domain wp:TestLimit ; rdfs:range xsd:string ;
+    rdfs:comment "Name of the limited parameter, e.g. VOUT [V]." .
+
+wp:lowerLimit a owl:DatatypeProperty ;
+    rdfs:domain wp:TestLimit ; rdfs:range xsd:decimal .
+
+wp:upperLimit a owl:DatatypeProperty ;
+    rdfs:domain wp:TestLimit ; rdfs:range xsd:decimal .
+
+wp:limitOfTest a owl:ObjectProperty ;
+    rdfs:domain wp:TestLimit ; rdfs:range wp:ProbeTest .
+
+# ---------------- Keys (owl:hasKey) ----------------
+# What identifies a thing across documents. Classes without a key (rows, results,
+# measurements) always stay separate instances.
+wp:Product owl:hasKey ( wp:productName ) .
+wp:Lot owl:hasKey ( wp:lotId ) .
+wp:Wafer owl:hasKey ( wp:hasWaferId ) .
