@@ -10,7 +10,7 @@ from sse_starlette.sse import EventSourceResponse
 from starlette.concurrency import run_in_threadpool
 
 from core.auth import get_current_user
-from services.llm_providers import cloud_providers
+from services.llm_providers import cloud_providers, KisteConnectionError
 from services.model_catalog import list_models
 from services import generation_log_service as genlog
 from services.validation_service import ValidationService
@@ -183,7 +183,11 @@ async def api_generate_shacl(
         except Exception as e:
             print(f"Error fetching workspace schema: {e}")
             
-    shacl_ttl = await run_in_threadpool(validation_service.generate_shacl_shapes, rules_list, schema_content, model=model)
+    try:
+        shacl_ttl = await run_in_threadpool(validation_service.generate_shacl_shapes, rules_list, schema_content, model=model)
+    except KisteConnectionError as e:
+        # Kiste unreachable, wrong key, or a cloud provider error: tell the user instead of returning stand-in shapes
+        raise HTTPException(502, detail=str(e))
     return {"status": "ok", "shacl_ttl": shacl_ttl}
 
 

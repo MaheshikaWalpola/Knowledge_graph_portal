@@ -284,7 +284,8 @@ class ValidationService:
 
     def generate_shacl_shapes(self, rules: List[str], schema_content: Optional[str] = None, model: Optional[str] = None) -> str:
         """
-        Uses Kiste LLM to turn a list of plain English rules and an ontology schema into SHACL shapes (TTL).
+        One AI call for all rules at once (the non-streaming /validation/generate-shacl endpoint).
+        Raises KisteConnectionError / LLMProviderError when the AI call fails.
         """
         schema_text = schema_content or "No schema provided."
         rules_text = "\n".join(f"- {r}" for r in rules)
@@ -313,23 +314,13 @@ class ValidationService:
             {"role": "user", "content": prompt}
         ]
         
-        try:
-            response = self.llm._call_kiste(messages, json_mode=False, temperature=0.1, model_override=model)
-            # Remove any markdown wrappers if the model didn't follow instructions
-            clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
-            clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
-            print("=== GENERATED SHACL SHAPES ===")
-            print(clean_ttl)
-            print("==============================")
-            return clean_ttl.strip()
-        except Exception as e:
-            print(f"Error generating SHACL shapes: {e}")
-            # Return default shapes from file
-            default_path = r"d:\Masters\KG_Portal\Knowledge_graph_portal\backend\ontology\default_shapes.ttl"
-            if os.path.exists(default_path):
-                with open(default_path, "r", encoding="utf-8") as f:
-                    return f.read()
-            return "@prefix sh: <http://www.w3.org/ns/shacl#> .\n# Failed to generate shapes."
+        # An AI failure (server down, wrong key, rejected request) is raised to the caller, which reports it
+        # to the user. No fallback shapes: the user must see that nothing was generated.
+        response = self.llm._call_kiste(messages, json_mode=False, temperature=0, model_override=model)
+        # Remove any markdown wrappers if the model didn't follow instructions
+        clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
+        clean_ttl = re.sub(r"```$", "", clean_ttl.strip())
+        return clean_ttl.strip()
 
     async def generate_shacl_shapes_stream(self, rules: List[str], schema_content: Optional[str] = None, verify: bool = False,
                                            model: Optional[str] = None, log_context: Optional[Dict[str, Any]] = None):
