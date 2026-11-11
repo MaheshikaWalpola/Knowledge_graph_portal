@@ -21,3 +21,4 @@ python-jose
 PyJWT
 
 pdfplumber
+PyYAML==6.0.3             # backend/models.yaml, the AI model catalog (services/model_catalog.py)
