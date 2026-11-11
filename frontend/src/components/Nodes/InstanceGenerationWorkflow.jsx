@@ -15,9 +15,8 @@ import {
 } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import axios from "axios";
+import { API } from "../../config";
 import "./InstanceGenerationWorkflow.css";
-
-const API = import.meta.env.VITE_API_URL;
 
 import FileUploadStep from "./InstanceGen/FileUploadStep";
 import AnalysisReportStep from "./InstanceGen/AnalysisReportStep";
@@ -61,7 +60,7 @@ export default function InstanceGenerationWorkflow() {
 
   console.log("InstanceGenerationWorkflow rendered", { activeStep, schemaFile, dataFiles: dataFiles.length });
 
-  // ============ FILE UPLOAD HANDLERS ============
+  // FILE UPLOAD HANDLERS 
   const handleSchemaUpload = (file) => {
     setSchemaFile(file);
     setError(null);
@@ -85,7 +84,7 @@ export default function InstanceGenerationWorkflow() {
     setDataFiles((prev) => prev.filter((file) => file.name !== fileName));
   };
 
-  // ============ ANALYSIS STEP ============
+  // ANALYSIS STEP 
   const handleAnalyzeFiles = async () => {
     if (!schemaFile || dataFiles.length === 0) {
       setError("Please upload both schema file and data files");
@@ -220,7 +219,7 @@ export default function InstanceGenerationWorkflow() {
     }
   };
 
-  // ============ SKIP REVIEW & GENERATE ============
+  // SKIP REVIEW & GENERATE 
   const handleSkipReviewAndGenerate = async () => {
     setSkipReviewDialog(true);
   };
@@ -230,13 +229,13 @@ export default function InstanceGenerationWorkflow() {
     await generateInstance(userMappings);
   };
 
-  // ============ PROCEED TO REVIEW ============
+  // PROCEED TO REVIEW 
   const handleProceedToReview = () => {
     setActiveStep(2);
     setSuccess(null);
   };
 
-  // ============ UPDATE MAPPINGS ============
+  // UPDATE MAPPINGS 
   const handleUpdateMapping = (dataHeader, schemaTerm) => {
     setUserMappings((prev) => ({
       ...prev,
@@ -253,13 +252,13 @@ export default function InstanceGenerationWorkflow() {
     });
   };
 
-  // ============ PROCEED TO GENERATION ============
+  // PROCEED TO GENERATION 
   const handleProceedToGeneration = () => {
     setActiveStep(3);
     setSuccess(null);
   };
 
-  // ============ GENERATE INSTANCE ============
+  // GENERATE INSTANCE 
   const generateInstance = async (mappings) => {
     setLoading(true);
     setError(null);
@@ -298,7 +297,7 @@ export default function InstanceGenerationWorkflow() {
     }
   };
 
-  // ============ DOWNLOAD GENERATED FILE ============
+  // DOWNLOAD GENERATED FILE 
   const handleDownloadInstance = () => {
     if (!generatedInstance?.content) return;
 
@@ -313,7 +312,7 @@ export default function InstanceGenerationWorkflow() {
     document.body.removeChild(element);
   };
 
-  // ============ RESET WORKFLOW ============
+  // RESET WORKFLOW 
   const handleReset = () => {
     setActiveStep(0);
     setSchemaFile(null);
@@ -325,7 +324,7 @@ export default function InstanceGenerationWorkflow() {
     setSuccess(null);
   };
 
-  // ============ BACK BUTTON ============
+  // BACK BUTTON 
   const handleBack = () => {
     if (activeStep > 0) {
       setActiveStep(activeStep - 1);
@@ -355,10 +354,10 @@ export default function InstanceGenerationWorkflow() {
           <DialogTitle>How Instance Generation Works</DialogTitle>
           <DialogContent dividers>
             <ol style={{ paddingLeft: '20px', margin: 0, lineHeight: 1.8 }}>
-              <li><strong>Upload files</strong> — Provide your RDF schema (.ttl, .rdf, .owl) and one or more CSV data files.</li>
-              <li><strong>Analyze</strong> — The system reads CSV headers and matches them against terms defined in your schema.</li>
-              <li><strong>Review matches</strong> — You get a report of matched and unmatched headers. You can correct or reassign any mismatches.</li>
-              <li><strong>Generate</strong> — Once you're satisfied, generate an RDF instance file and download it.</li>
+              <li><strong>Upload files</strong> - Provide your RDF schema (.ttl, .rdf, .owl) and one or more CSV data files.</li>
+              <li><strong>Analyze</strong> - The system reads CSV headers and matches them against terms defined in your schema.</li>
+              <li><strong>Review matches</strong> - You get a report of matched and unmatched headers. You can correct or reassign any mismatches.</li>
+              <li><strong>Generate</strong> - Once you're satisfied, generate an RDF instance file and download it.</li>
             </ol>
             <Alert severity="info" sx={{ mt: 2 }}>
               You can skip the manual review step if you're happy with the automatic matches.

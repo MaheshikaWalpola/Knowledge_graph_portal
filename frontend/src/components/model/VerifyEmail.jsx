@@ -2,8 +2,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CircularProgress, Box, Typography } from "@mui/material";
 import axios from "axios";
+import { API } from "../../config";
 
-const API = import.meta.env.VITE_API_URL;
 
 export default function VerifyEmail({ onLoginSuccess }) {
   const location = useLocation();

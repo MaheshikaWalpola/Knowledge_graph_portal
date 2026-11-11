@@ -10,10 +10,10 @@ import {
   strideSample,
 } from "../../utils/labelUtils";
 import SimpleChart from "../Common/SimpleChart";
+import { API } from "../../config";
 
 const local = (iri = "") => getLocalName(iri);
 
-const API = import.meta.env.VITE_API_URL;
 
 function hashToIndex(str, modulo) {
   let h = 2166136261;

@@ -49,10 +49,13 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import VerifiedIcon from "@mui/icons-material/Verified";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import BuildIcon from "@mui/icons-material/Build";
+import ModelSelector from "./InstanceGen/ModelSelector";
+import { API } from "../../config";
 
 import "./ValidationPage.css";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const STEPS = [
   "Define Questions",
@@ -149,6 +152,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [aiContextPrompt, setAiContextPrompt] = useState("");
   const [numQuestions, setNumQuestions] = useState(10);
   const [manualQuestionsText, setManualQuestionsText] = useState("");
+  const [selectedModel, setSelectedModel] = useState("Qwen3.6-35B-A3B-MLX-8bit");
 
   //  Step 1 
   const [questions, setQuestions] = useState([]);
@@ -158,6 +162,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [shaclCode, setShaclCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [shaclGenerationSteps, setShaclGenerationSteps] = useState([]);
+  const [verificationMap, setVerificationMap] = useState({});
+  const [verifying, setVerifying] = useState(false);
 
   //  Step 3 
   const [playgroundSchemaText, setPlaygroundSchemaText] = useState("");
@@ -166,7 +172,9 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [playgroundSchemaFullText, setPlaygroundSchemaFullText] = useState("");
   const [playgroundInstancesFullText, setPlaygroundInstancesFullText] = useState("");
   const [playgroundReport, setPlaygroundReport] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [expandedRules, setExpandedRules] = useState({});
+  const [expandedAdvanced, setExpandedAdvanced] = useState({});
   const [validationSteps, setValidationSteps] = useState([]);
 
   // Group violations by source shape for the expandable rule cards
@@ -249,7 +257,25 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     e.target.value = "";
   };
 
-  //  Step 0 → 1: AI generation 
+  // Ontology + data source for every AI step (questions, SHACL generation, verification):
+  // a GraphDB workspace (validationTarget = its schema_id, also used for validation in step 3) or the uploaded files.
+  const useWorkspace = validationTarget !== "uploaded";
+  const hasUploadedFiles = Boolean(schemaFile || instanceFile || combinedFile);
+  const appendOntologySource = (formData, withInstances) => {
+    if (useWorkspace) {
+      formData.append("schema_id", validationTarget);
+      return;
+    }
+    if (combinedFile) {
+      formData.append("schema_file", combinedFile);
+      if (withInstances) formData.append("instance_file", combinedFile);
+    } else {
+      if (schemaFile) formData.append("schema_file", schemaFile);
+      if (withInstances && instanceFile) formData.append("instance_file", instanceFile);
+    }
+  };
+
+  //  Step 0 → 1: AI generation
   const handleGenerateQuestions = async () => {
     setLoading(true);
     setError(null);
@@ -257,14 +283,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     const formData = new FormData();
     if (aiContextPrompt) formData.append("user_explanation", aiContextPrompt);
     formData.append("num_questions", numQuestions);
-
-    if (combinedFile) {
-      formData.append("schema_file", combinedFile);
-      formData.append("instance_file", combinedFile);
-    } else {
-      if (schemaFile) formData.append("schema_file", schemaFile);
-      if (instanceFile) formData.append("instance_file", instanceFile);
-    }
+    formData.append("model", selectedModel);
+    appendOntologySource(formData, true);
 
     try {
       const res = await axios.post(`${API}/validation/suggest-rules`, formData, getAuthConfig());
@@ -326,8 +346,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
     const formData = new FormData();
     formData.append("rules", JSON.stringify(activeRules));
-    if (combinedFile) formData.append("schema_file", combinedFile);
-    else if (schemaFile) formData.append("schema_file", schemaFile);
+    formData.append("model", selectedModel);
+    appendOntologySource(formData, false);
 
     try {
       const token = localStorage.getItem("token");
@@ -351,15 +371,24 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
       const decoder = new TextDecoder();
       let buffer = "";
 
-      // Start with initial prefix comments
-      setShaclCode(
-        `@prefix sh: <http://www.w3.org/ns/shacl#> .\n` +
-        `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n` +
-        `@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n` +
-        `@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .\n` +
-        `@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .\n\n` +
-        `# Generating SHACL shapes. Please wait...\n`
-      );
+      // Live preview: shapes run in parallel and finish in any order, so keep them by question
+      // index and always show them in question order, with each @prefix line only once at the top.
+      const previewPrefixes = new Set([
+        "@prefix sh: <http://www.w3.org/ns/shacl#> .",
+        "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .",
+        "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .",
+        "@prefix cmpo: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo#> .",
+        "@prefix inst: <https://vsr.informatik.tu-chemnitz.de/ontologies/cmpo/instance/> .",
+      ]);
+      const previewShapes = {};
+      const renderPreview = () => {
+        const done = Object.keys(previewShapes).map(Number).sort((a, b) => a - b);
+        const pending = activeRules.length - done.length;
+        return [...previewPrefixes].join("\n") + "\n\n" +
+          done.map(idx => `# Question ${idx + 1}\n${previewShapes[idx]}`).join("\n\n") +
+          (pending > 0 ? `${done.length ? "\n\n" : ""}# Generating SHACL shapes (${pending} remaining). Please wait...\n` : "\n");
+      };
+      setShaclCode(renderPreview());
 
       while (true) {
         const { done, value } = await reader.read();
@@ -379,26 +408,74 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 setShaclGenerationSteps(prev => 
                   prev.map(step => ({ ...step, status: "generating" }))
                 );
-              } else if (event.status === "progress") {
-                // Update rule status
+              } else if (event.status === "verifying") {
+                // Show checking/fixing status for the rule being verified
                 setShaclGenerationSteps(prev => 
                   prev.map((step, idx) => 
                     idx === event.index 
-                      ? { ...step, status: event.result_status } 
+                      ? { ...step, status: "verifying", verifyStage: event.stage, message: event.message } 
+                      : step
+                  )
+                );
+              } else if (event.status === "progress") {
+                // Update rule status with verification metadata
+                setShaclGenerationSteps(prev => 
+                  prev.map((step, idx) => 
+                    idx === event.index 
+                      ? { 
+                          ...step, 
+                          status: event.result_status,
+                          verification: event.verification || undefined,
+                          attempts: event.attempts || 1,
+                          unknown_terms: event.unknown_terms || [],
+                          failed_examples: event.failed_examples || [],
+                          reason: event.reason || "",
+                          advice: event.advice || "",
+                          meaning: event.meaning || null,
+                          tests: event.tests || null
+                        } 
                       : step
                   )
                 );
 
-                // Append shape snippet if successful
-                if (event.result_status === "success" && event.shacl) {
-                  setShaclCode(prev => {
-                    const separator = prev.endsWith("\n\n") ? "" : prev.endsWith("\n") ? "\n" : "\n\n";
-                    let nextVal = prev;
-                    if (nextVal.includes("# Generating SHACL shapes.")) {
-                      nextVal = nextVal.replace("# Generating SHACL shapes. Please wait...\n", "");
+                // Store verification metadata for this rule
+                if (event.verification) {
+                  setVerificationMap(prev => ({
+                    ...prev,
+                    [`inst:Question_${event.index + 1}_Shape`]: {
+                      rule_text: event.rule,
+                      verification: event.verification,
+                      attempts: event.attempts || 1,
+                      unknown_terms: event.unknown_terms || [],
+                      failed_examples: event.failed_examples || [],
+                      reason: event.reason || "",
+                      advice: event.advice || "",
+                      meaning: event.meaning || null,
+                      tests: event.tests || null
+                    },
+                    [String(event.index)]: {
+                      rule_text: event.rule,
+                      verification: event.verification,
+                      attempts: event.attempts || 1,
+                      unknown_terms: event.unknown_terms || [],
+                      failed_examples: event.failed_examples || [],
+                      reason: event.reason || "",
+                      advice: event.advice || "",
+                      meaning: event.meaning || null,
+                      tests: event.tests || null
                     }
-                    return nextVal + separator + event.shacl + "\n";
+                  }));
+                }
+
+                // Add the finished shape to the live preview in question order
+                if (event.result_status === "success" && event.shacl) {
+                  const body = [];
+                  event.shacl.split("\n").forEach(line => {
+                    if (/^\s*@prefix\b/i.test(line)) previewPrefixes.add(line.trim());
+                    else body.push(line);
                   });
+                  previewShapes[event.index] = body.join("\n").trim();
+                  setShaclCode(renderPreview());
                 }
               } else if (event.status === "completed") {
                 // Complete generation, overwrite with final formatted version
@@ -406,7 +483,11 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   setShaclCode(event.shacl_ttl);
                   setPlaygroundShaclText(event.shacl_ttl);
                 }
-                setSuccess("SHACL shapes generated successfully!");
+                // Store the full verification map from completed event
+                if (event.verification_map) {
+                  setVerificationMap(event.verification_map);
+                }
+                setSuccess("SHACL shapes generated. Use \"Verify Shapes\" to run an extra correctness check.");
               }
             } catch (e) {
               console.error("Failed to parse shape stream chunk", e);
@@ -421,6 +502,116 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
       setLoading(false);
     }
   };
+
+  //  Step 2: Optional further check (verify & repair generated shapes)
+  // onlyIndices: re-check just these rules (e.g. "Retry AI fix" for the ones the AI could not verify)
+  const handleVerifyShacl = async (onlyIndices = null) => {
+    const rules = shaclGenerationSteps.map(step => step.rule);
+    if (rules.length === 0 || !shaclCode.trim()) return;
+    const isTarget = (idx) => !onlyIndices || onlyIndices.includes(idx);
+
+    setVerifying(true);
+    setError(null);
+    setSuccess(null);
+    setShaclGenerationSteps(prev => prev.map((step, idx) =>
+      isTarget(idx) ? { ...step, status: "generating", verification: undefined, advice: "" } : step
+    ));
+
+    const formData = new FormData();
+    formData.append("rules", JSON.stringify(rules));
+    formData.append("model", selectedModel);
+    formData.append("shapes_ttl", shaclCode);
+    if (onlyIndices) formData.append("indices", JSON.stringify(onlyIndices));
+    // Instance data lets verification accept terms the real data uses and build realistic test data
+    appendOntologySource(formData, true);
+
+    try {
+      const token = localStorage.getItem("token");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await fetch(`${API}/validation/verify-shacl-stream`, {
+        method: "POST",
+        headers,
+        body: formData
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `Server error ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith("data:")) continue;
+          try {
+            const event = JSON.parse(line.slice(5).trim());
+            if (event.status === "verifying") {
+              setShaclGenerationSteps(prev => prev.map((step, idx) =>
+                idx === event.index
+                  ? { ...step, status: "verifying", verifyStage: event.stage, message: event.message }
+                  : step
+              ));
+            } else if (event.status === "progress") {
+              setShaclGenerationSteps(prev => prev.map((step, idx) =>
+                idx === event.index
+                  ? {
+                      ...step,
+                      status: "success",
+                      verification: event.verification,
+                      attempts: event.attempts || 1,
+                      unknown_terms: event.unknown_terms || [],
+                      failed_examples: event.failed_examples || [],
+                      reason: event.reason || "",
+                      advice: event.advice || "",
+                      meaning: event.meaning || null,
+                      tests: event.tests || null
+                    }
+                  : step
+              ));
+            } else if (event.status === "completed") {
+              if (event.shacl_ttl) {
+                setShaclCode(event.shacl_ttl);
+                setPlaygroundShaclText(event.shacl_ttl);
+              }
+              if (event.verification_map) {
+                // A retry only returns the re-checked rules, so merge into the existing results
+                setVerificationMap(prev => onlyIndices ? { ...prev, ...event.verification_map } : event.verification_map);
+                const results = Object.entries(event.verification_map).filter(([k]) => /^\d+$/.test(k)).map(([, v]) => v.verification);
+                const failedCnt = results.filter(v => v === "unverified").length;
+                setSuccess(failedCnt === 0
+                  ? "AI verification finished. All checked shapes are verified (fixed shapes were updated in the code)."
+                  : `AI verification finished. ${failedCnt} shape${failedCnt !== 1 ? "s" : ""} could not be verified — see the advice below, edit the shape, or click "Retry AI fix".`);
+              }
+            } else if (event.status === "error") {
+              throw new Error(event.message || "Verification failed.");
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) console.error("Failed to parse verify stream chunk", e);
+            else throw e;
+          }
+        }
+      }
+    } catch (err) {
+      setError(err.message || "Failed to verify SHACL shapes.");
+      setShaclGenerationSteps(prev => prev.map(step =>
+        step.status === "generating" || step.status === "verifying" ? { ...step, status: "success" } : step
+      ));
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const unverifiedStepIndices = shaclGenerationSteps
+    .map((step, idx) => (step.verification === "unverified" ? idx : -1))
+    .filter(idx => idx >= 0);
 
   //  Step 2: Copy 
   const handleCopyShacl = async () => {
@@ -479,9 +670,15 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     setPlaygroundReport(null);
     setValidationSteps([]);
     setExpandedRules({});
+    setExpandedAdvanced({});
 
     const formData = new URLSearchParams();
     formData.append("shacl_ttl", playgroundShaclText);
+
+    // Pass verification metadata so the backend can split reliable vs unreliable
+    if (verificationMap && Object.keys(verificationMap).length > 0) {
+      formData.append("verification_metadata", JSON.stringify(verificationMap));
+    }
 
     let streamUrl;
     if (validationTarget === "uploaded") {
@@ -561,20 +758,41 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   //  Step 3: Download PDF 
   const handleDownloadPDF = async (reportData) => {
     if (!reportData) return;
+    setDownloadingPdf(true);
+    setError(null);
     try {
       const res = await axios.post(`${API}/validation/export-pdf`, { report_data: reportData }, {
         ...getAuthConfig(),
         responseType: "blob"
       });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "validation_report.pdf");
+      link.setAttribute("download", `validation_report_${new Date().toISOString().slice(0, 10)}.pdf`);
       document.body.appendChild(link);
       link.click();
-      link.remove();
-    } catch {
-      setError("Failed to export PDF report.");
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        link.remove();
+      }, 200);
+    } catch (err) {
+      console.error("PDF download error:", err);
+      let errorMsg = "Failed to export PDF report.";
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          if (parsed.detail) errorMsg = `Failed to export PDF: ${parsed.detail}`;
+        } catch { /* use default */ }
+      } else if (err.response?.data?.detail) {
+        errorMsg = `Failed to export PDF: ${err.response.data.detail}`;
+      } else if (err.message) {
+        errorMsg = `Failed to export PDF: ${err.message}`;
+      }
+      setError(errorMsg);
+    } finally {
+      setDownloadingPdf(false);
     }
   };
 
@@ -592,6 +810,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     setQuestions([]);
     setShaclCode("");
     setPlaygroundReport(null);
+    setVerificationMap({});
+    setExpandedAdvanced({});
     setError(null);
     setSuccess(null);
   };
@@ -712,9 +932,35 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   </button>
                 </Box>
 
+                {/*  Ontology source: GraphDB workspace or uploaded files (shared with "Validate Against" in step 3)  */}
+                {user && (
+                  <Card variant="outlined" sx={{ mb: 3 }}>
+                    <CardContent>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>Ontology Source</Typography>
+                      <Typography variant="body2" color="textSecondary" sx={{ mb: 1.5 }}>
+                        Use an ontology and its data from your GraphDB workspace, or upload files. The same source is used to generate and verify SHACL shapes and to run the validation.
+                      </Typography>
+                      <FormControl size="small" sx={{ minWidth: 320 }}>
+                        <Select value={validationTarget} onChange={(e) => setValidationTarget(e.target.value)} onOpen={fetchUserSchemas}>
+                          <MenuItem value="uploaded">Upload files</MenuItem>
+                          {schemas.map((s) => (
+                            <MenuItem key={s.schema_id} value={s.schema_id}>
+                              GraphDB: {s.name} ({s.upload_mode})
+                            </MenuItem>
+                          ))}
+                          {schemas.length === 0 && (
+                            <MenuItem disabled>No GraphDB workspaces for this account (upload one in My Ontologies)</MenuItem>
+                          )}
+                        </Select>
+                      </FormControl>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/*  AI Mode  */}
                 {inputMode === "ai" && (
                   <Stack spacing={3}>
+                    {!useWorkspace && (
                     <Grid container spacing={3}>
                       {/* Option A: Separate Files */}
                       <Grid item xs={12} md={6}>
@@ -787,6 +1033,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                         </Card>
                       </Grid>
                     </Grid>
+                    )}
 
                     {/* Context prompt */}
                     <TextField
@@ -829,6 +1076,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       placeholder={"Every CMP process must have a measurement timestamp\nPressure values must be positive floats\nEvery CMP process must act on at least one Wafer\nSlurry flow rates should not be negative"}
                     />
 
+                    {!useWorkspace && (<>
                     <Alert severity="info">
                       Optionally upload schema/instance files below — they will be used later to generate accurate SHACL shapes from your questions.
                     </Alert>
@@ -847,8 +1095,19 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                         <input ref={instanceInputRef} type="file" accept=".ttl,.rdf,.owl" onChange={handleInstanceFileChange} style={{ display: "none" }} />
                       </CardContent>
                     </Card>
+                    </>)}
                   </Stack>
                 )}
+
+                {/* AI model used for question suggestion, SHACL generation and verification */}
+                <Box sx={{ mt: 3 }}>
+                  <ModelSelector
+                    selectedModel={selectedModel}
+                    onModelChange={setSelectedModel}
+                    description="Choose the AI model used to suggest questions, generate SHACL shapes and verify them"
+                    includeCloud
+                  />
+                </Box>
               </Box>
             )}
 
@@ -910,7 +1169,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   <Card variant="outlined" sx={{ mb: 3, border: "1px solid var(--border-light)", bgcolor: "var(--bg-glass-strong)" }}>
                     <CardContent sx={{ pb: '16px !important' }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
-                        {loading ? "Generating SHACL Shapes..." : "Shape Generation Status"}
+                        {loading ? "Generating Rules..." : verifying ? "Verifying Rules..." : "Rule Generation Status"}
                       </Typography>
                       <Stack spacing={1}>
                         {shaclGenerationSteps.map((step, idx) => (
@@ -921,15 +1180,56 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                             {step.status === "generating" && (
                               <CircularProgress size={18} sx={{ color: "var(--accent-primary)" }} />
                             )}
-                            {step.status === "success" && (
+                            {step.status === "verifying" && (
+                              <BuildIcon sx={{ fontSize: 18, color: "#f59e0b", flexShrink: 0, animation: "spin 1.5s linear infinite" }} />
+                            )}
+                            {step.status === "success" && step.verification === "verified" && (
+                              <VerifiedIcon sx={{ fontSize: 18, color: "var(--accent-success)", flexShrink: 0 }} />
+                            )}
+                            {step.status === "success" && step.verification === "repaired" && (
+                              <VerifiedIcon sx={{ fontSize: 18, color: "#f59e0b", flexShrink: 0 }} />
+                            )}
+                            {step.status === "success" && step.verification === "unverified" && (
+                              <HelpOutlineIcon sx={{ fontSize: 18, color: "var(--text-secondary)", flexShrink: 0 }} />
+                            )}
+                            {step.status === "success" && !step.verification && (
                               <CheckCircleIcon sx={{ fontSize: 18, color: "var(--accent-success)", flexShrink: 0 }} />
                             )}
                             {step.status === "error" && (
                               <CancelIcon sx={{ fontSize: 18, color: "var(--accent-error)", flexShrink: 0 }} />
                             )}
-                            <Typography variant="body2" color={step.status === "pending" ? "textSecondary" : "textPrimary"}>
-                              {step.rule}
-                            </Typography>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography variant="body2" color={step.status === "pending" ? "textSecondary" : "textPrimary"} noWrap>
+                                {step.rule}
+                              </Typography>
+                              {step.status === "verifying" && step.message && (
+                                <Typography variant="caption" sx={{ color: "#f59e0b", fontStyle: "italic" }}>
+                                  {step.message}
+                                </Typography>
+                              )}
+                              {step.status === "success" && step.verification && (
+                                <Typography variant="caption" sx={{ 
+                                  color: step.verification === "verified" ? "var(--accent-success)" 
+                                       : step.verification === "repaired" ? "#f59e0b" 
+                                       : "var(--text-secondary)" 
+                                }}>
+                                  {step.verification === "verified" ? "Verified by AI" 
+                                   : step.verification === "repaired" ? `Fixed by AI after ${step.attempts || 1} attempt(s) — the corrected shape is in the code below` 
+                                   : "AI could not verify this shape"}
+                                </Typography>
+                              )}
+                              {step.status === "success" && step.meaning?.back_translation && (
+                                <Typography variant="caption" display="block" sx={{ color: "var(--text-secondary)", mt: 0.25, whiteSpace: "normal" }}>
+                                  AI reads this shape as: "{step.meaning.back_translation}"
+                                  {step.tests?.total ? ` · Tests passed: ${step.tests.total - (step.tests.failed || 0)} of ${step.tests.total}` : ""}
+                                </Typography>
+                              )}
+                              {step.status === "success" && step.verification === "unverified" && step.advice && (
+                                <Typography variant="caption" display="block" sx={{ color: "#d97706", mt: 0.25, whiteSpace: "normal" }}>
+                                  {step.advice}
+                                </Typography>
+                              )}
+                            </Box>
                           </Box>
                         ))}
                       </Stack>
@@ -939,17 +1239,40 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1 }}>
                   <Typography variant="h6">Generated SHACL Shapes</Typography>
-                  <button 
-                    className={`validation-copy-btn ${copied ? "copied" : ""}`} 
-                    onClick={handleCopyShacl}
-                    disabled={loading}
-                  >
-                    {copied ? <><CheckIcon sx={{ fontSize: 16 }} /> Copied!</> : <><ContentCopyIcon sx={{ fontSize: 16 }} /> Copy to Clipboard</>}
-                  </button>
+                  <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleVerifyShacl()}
+                      disabled={loading || verifying || !shaclCode.trim()}
+                      startIcon={verifying ? <CircularProgress size={16} /> : <VerifiedIcon />}
+                    >
+                      {verifying ? "Verifying..." : "Verify Shapes"}
+                    </Button>
+                    {unverifiedStepIndices.length > 0 && !verifying && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="warning"
+                        onClick={() => handleVerifyShacl(unverifiedStepIndices)}
+                        disabled={loading || !shaclCode.trim()}
+                        startIcon={<BuildIcon />}
+                      >
+                        Retry AI fix ({unverifiedStepIndices.length})
+                      </Button>
+                    )}
+                    <button 
+                      className={`validation-copy-btn ${copied ? "copied" : ""}`} 
+                      onClick={handleCopyShacl}
+                      disabled={loading || verifying}
+                    >
+                      {copied ? <><CheckIcon sx={{ fontSize: 16 }} /> Copied!</> : <><ContentCopyIcon sx={{ fontSize: 16 }} /> Copy to Clipboard</>}
+                    </button>
+                  </Box>
                 </Box>
 
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                  AI has compiled your questions into SHACL shapes (Turtle format). You can edit the code, copy it to an external SHACL playground, or proceed to validate in-app.
+                  AI has compiled your questions into SHACL shapes (Turtle format). You can edit the code, copy it to an external SHACL playground, or proceed to validate in-app. To double-check the shapes, click "Verify Shapes" - each rule is tested and automatically fixed if needed.
                 </Typography>
 
                 <TextField
@@ -958,10 +1281,18 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   fullWidth
                   variant="outlined"
                   value={shaclCode}
-                  onChange={(e) => { setShaclCode(e.target.value); setPlaygroundShaclText(e.target.value); }}
-                  InputProps={{ 
+                  onChange={(e) => {
+                    setShaclCode(e.target.value);
+                    setPlaygroundShaclText(e.target.value);
+                    // Manual edits invalidate any previous verification result
+                    if (Object.keys(verificationMap).length > 0) {
+                      setVerificationMap({});
+                      setShaclGenerationSteps(prev => prev.map(step => ({ ...step, verification: undefined })));
+                    }
+                  }}
+                  InputProps={{
                     className: "validation-code-area",
-                    readOnly: loading 
+                    readOnly: loading || verifying
                   }}
                   sx={{ mb: 2 }}
                 />
@@ -1024,6 +1355,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       <Select
                         value={validationTarget}
                         onChange={(e) => setValidationTarget(e.target.value)}
+                        onOpen={fetchUserSchemas}
                         displayEmpty
                       >
                         <MenuItem value="uploaded" disabled={!schemaFile && !instanceFile && !combinedFile}>
@@ -1036,6 +1368,9 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                             {s.name} ({s.upload_mode})
                           </MenuItem>
                         ))}
+                        {schemas.length === 0 && (
+                          <MenuItem disabled>No GraphDB workspaces for this account (upload one in My Ontologies)</MenuItem>
+                        )}
                       </Select>
                     </FormControl>
                     <Typography variant="caption" color="textSecondary" sx={{ flex: 1 }}>
@@ -1095,8 +1430,194 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   const failedRules = playgroundReport.failed_questions ?? (totalRules - passedRules);
                   const passPct = playgroundReport.pass_percentage ?? (totalRules > 0 ? Math.round((passedRules / totalRules) * 100) : 0);
 
-                  const bannerClass = failedRules === 0 ? "pass" : (passedRules === 0 ? "fail" : "partial");
-                  const bannerTitle = playgroundReport.status_summary || `${passedRules} of ${totalRules} Questions Passed (${passPct}%)`;
+                  const verifiedCnt = playgroundReport.verified_count ?? 0;
+                  const repairedCnt = playgroundReport.repaired_count ?? 0;
+                  const unverifiedCnt = playgroundReport.unverified_count ?? 0;
+                  const suspiciousCnt = playgroundReport.suspicious_count ?? 0;
+                  const notCheckedCnt = playgroundReport.not_checked_count ?? (playgroundReport.rules?.filter(r => !r.verification || r.verification === "not_checked").length || 0);
+                  const aiVerifiedCnt = verifiedCnt + repairedCnt;
+                  const needsReview = (r) => r.verification === "unverified" || r.suspicious;
+
+                  const reliableRules = playgroundReport.reliable_rules || playgroundReport.rules?.filter(r => !needsReview(r)) || [];
+                  const unreliableRules = playgroundReport.unreliable_rules || playgroundReport.rules?.filter(needsReview) || [];
+                  const unreliableCnt = unreliableRules.length;
+
+                  const aiSummary = notCheckedCnt === totalRules
+                    ? "Shapes were not verified by AI (use \"Verify Shapes\" in step 2)."
+                    : `AI verification: ${verifiedCnt} verified, ${repairedCnt} fixed${unverifiedCnt ? `, ${unverifiedCnt} could not be verified` : ""}${notCheckedCnt ? `, ${notCheckedCnt} not checked` : ""}.`;
+                  const AI_STATUS = {
+                    verified: { label: "Verified by AI", color: "var(--accent-success)", bg: "rgba(16, 185, 129, 0.1)", icon: <VerifiedIcon sx={{ fontSize: 14 }} /> },
+                    repaired: { label: "Fixed by AI", color: "var(--accent-success)", bg: "rgba(16, 185, 129, 0.1)", icon: <BuildIcon sx={{ fontSize: 14 }} /> },
+                    unverified: { label: "AI could not verify", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)", icon: <HelpOutlineIcon sx={{ fontSize: 14 }} /> },
+                    not_checked: { label: "Not checked by AI", color: "var(--text-secondary)", bg: "var(--bg-tertiary)", icon: <InfoOutlinedIcon sx={{ fontSize: 14 }} /> },
+                  };
+
+                  const gate = playgroundReport.gate_decision || (playgroundReport.conforms ? 'Pass' : 'Fail');
+                  const bannerClass = gate === 'Pass' ? 'pass' : gate === 'Needs review' ? 'partial' : failedRules === 0 ? 'pass' : (passedRules === 0 ? 'fail' : 'partial');
+                  const bannerTitle = playgroundReport.status_summary || `${passedRules} of ${totalRules} Rules Passed (${passPct}%)`;
+
+                  const renderRuleCard = (rule, i, isReliableSection) => {
+                    const ruleViolations = violationsByShape[rule.shape_iri] || [];
+                    const isFail = rule.status !== "Pass";
+                    const isExpanded = expandedRules[rule.shape_iri];
+                    const isAdvExpanded = expandedAdvanced[rule.shape_iri];
+                    const failedItemCount = rule.failed_items_count !== undefined ? rule.failed_items_count : ruleViolations.length;
+                    const isReliable = !needsReview(rule);
+                    const aiStatus = AI_STATUS[rule.verification] || AI_STATUS.not_checked;
+
+                    return (
+                      <Box key={`${isReliableSection}-${i}`} className={`validation-rule-card ${isFail ? "fail" : "pass"} ${!isReliable && isFail ? "unreliable" : ""}`}>
+                        <Box 
+                          className="validation-rule-header"
+                          onClick={() => isFail && ruleViolations.length > 0 && toggleRuleExpand(rule.shape_iri)}
+                          sx={{ cursor: isFail && ruleViolations.length > 0 ? "pointer" : "default" }}
+                        >
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1, minWidth: 0 }}>
+                            {isFail 
+                              ? <CancelIcon sx={{ fontSize: 20, color: isReliable ? "var(--accent-error)" : "#f59e0b", flexShrink: 0 }} />
+                              : <CheckCircleIcon sx={{ fontSize: 20, color: "var(--accent-success)", flexShrink: 0 }} />
+                            }
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                                {rule.rule_text || rule.label}
+                              </Typography>
+                              <Typography variant="caption" color="textSecondary">
+                                Target: {rule.target_class_short || "All Items"}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            {/* AI verification badge */}
+                            <Chip
+                              icon={aiStatus.icon}
+                              label={rule.verification_label || aiStatus.label}
+                              size="small"
+                              sx={{ bgcolor: aiStatus.bg, color: aiStatus.color, fontWeight: 600, fontSize: 11, height: 24, "& .MuiChip-icon": { color: "inherit" } }}
+                            />
+                            {isFail ? (
+                              <Chip 
+                                label={`${failedItemCount} flagged`}
+                                size="small"
+                                sx={{ bgcolor: isReliable ? "rgba(239, 68, 68, 0.1)" : "rgba(245, 158, 11, 0.1)", color: isReliable ? "var(--accent-error)" : "#f59e0b", fontWeight: 600, fontSize: 12, height: 24 }}
+                              />
+                            ) : (
+                              <Chip label="Pass" size="small" sx={{ bgcolor: "rgba(16, 185, 129, 0.1)", color: "var(--accent-success)", fontWeight: 600, fontSize: 12, height: 24 }} />
+                            )}
+                            {rule.suspicious && (
+                              <Chip label="Suspicious" size="small" sx={{ bgcolor: "rgba(245, 158, 11, 0.15)", color: "#d97706", fontWeight: 600, fontSize: 11, height: 22 }} />
+                            )}
+                            {isFail && ruleViolations.length > 0 && (
+                              isExpanded 
+                                ? <ExpandLessIcon sx={{ fontSize: 20, color: "var(--text-secondary)" }} />
+                                : <ExpandMoreIcon sx={{ fontSize: 20, color: "var(--text-secondary)" }} />
+                            )}
+                          </Box>
+                        </Box>
+
+                        {/* Unreliable notice */}
+                        {!isReliable && isFail && (
+                          <Box sx={{ px: 2, py: 1, bgcolor: "rgba(245, 158, 11, 0.06)", borderTop: "1px solid rgba(245, 158, 11, 0.15)" }}>
+                            <Typography variant="caption" sx={{ color: "#d97706", fontStyle: "italic" }}>
+                              This check flagged {failedItemCount} item{failedItemCount !== 1 ? "s" : ""}. The check itself may be wrong, not your data.
+                            </Typography>
+                          </Box>
+                        )}
+                        {/* What to do when the AI could not verify the shape */}
+                        {rule.verification === "unverified" && rule.advice && (
+                          <Box sx={{ px: 2, py: 1, bgcolor: "rgba(245, 158, 11, 0.06)", borderTop: "1px solid rgba(245, 158, 11, 0.15)" }}>
+                            <Typography variant="caption" sx={{ color: "#d97706" }}>
+                              <b>What to do:</b> {rule.advice}
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {/* Expandable Violations */}
+                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                          <Box className="validation-rule-violations">
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+                              <WarningAmberIcon sx={{ fontSize: 16, color: isReliable ? "var(--accent-error)" : "#f59e0b" }} />
+                              <Typography variant="caption" sx={{ fontWeight: 600, color: isReliable ? "var(--accent-error)" : "#f59e0b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                {ruleViolations.length} Item{ruleViolations.length !== 1 ? "s" : ""} Flagged
+                              </Typography>
+                            </Box>
+                            <TableContainer sx={{ borderRadius: "var(--radius-md)", border: "1px solid var(--border-light)", overflow: "hidden" }}>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow sx={{ bgcolor: "var(--bg-tertiary)" }}>
+                                    <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Affected Item</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Property</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Description</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Value</TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {ruleViolations.slice(0, 50).map((v, vi) => (
+                                    <TableRow key={vi} sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                                      <TableCell sx={{ fontFamily: "var(--font-mono)", fontSize: 11, py: 0.75 }}>{v.focus_node_short}</TableCell>
+                                      <TableCell sx={{ fontFamily: "var(--font-mono)", fontSize: 11, py: 0.75 }}>{v.path_short}</TableCell>
+                                      <TableCell sx={{ fontSize: 12, py: 0.75 }}>{v.message}</TableCell>
+                                      <TableCell sx={{ fontSize: 12, py: 0.75, color: isReliable ? "var(--accent-error)" : "#d97706" }}>{v.value || "—"}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                  {ruleViolations.length > 50 && (
+                                    <TableRow>
+                                      <TableCell colSpan={4} sx={{ fontSize: 12, py: 0.75, fontStyle: "italic", color: "var(--text-secondary)" }}>
+                                        ... and {ruleViolations.length - 50} more items
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+
+                            {/* Advanced details (collapsed) */}
+                            {(rule.unknown_terms?.length > 0 || rule.failed_examples?.length > 0 || rule.attempts > 1 || rule.reason || rule.meaning?.back_translation) && (
+                              <Box sx={{ mt: 1.5 }}>
+                                <Box 
+                                  sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", userSelect: "none" }}
+                                  onClick={(e) => { e.stopPropagation(); setExpandedAdvanced(prev => ({ ...prev, [rule.shape_iri]: !prev[rule.shape_iri] })); }}
+                                >
+                                  <Typography variant="caption" sx={{ fontWeight: 600, color: "var(--text-secondary)" }}>Advanced details</Typography>
+                                  {isAdvExpanded ? <ExpandLessIcon sx={{ fontSize: 16, color: "var(--text-secondary)" }} /> : <ExpandMoreIcon sx={{ fontSize: 16, color: "var(--text-secondary)" }} />}
+                                </Box>
+                                <Collapse in={isAdvExpanded} timeout="auto" unmountOnExit>
+                                  <Box sx={{ mt: 1, p: 1.5, bgcolor: "var(--bg-secondary)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-light)" }}>
+                                    {rule.verification && (
+                                      <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+                                        <b>Check status:</b> {rule.verification === "verified" ? "Checked and reliable" : rule.verification === "repaired" ? "Fixed automatically" : "Could not be fully checked"}
+                                      </Typography>
+                                    )}
+                                    {rule.attempts > 1 && (
+                                      <Typography variant="caption" display="block" sx={{ mb: 0.5 }}><b>Attempts:</b> {rule.attempts}</Typography>
+                                    )}
+                                    {rule.meaning?.back_translation && (
+                                      <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+                                        <b>AI reads this shape as:</b> "{rule.meaning.back_translation}" (meaning check: {rule.meaning.verdict})
+                                      </Typography>
+                                    )}
+                                    {rule.tests?.total > 0 && (
+                                      <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+                                        <b>Tests passed:</b> {rule.tests.total - (rule.tests.failed || 0)} of {rule.tests.total}
+                                      </Typography>
+                                    )}
+                                    {rule.reason && (
+                                      <Typography variant="caption" display="block" sx={{ mb: 0.5 }}><b>Reason:</b> {rule.reason}</Typography>
+                                    )}
+                                    {rule.unknown_terms?.length > 0 && (
+                                      <Typography variant="caption" display="block" sx={{ mb: 0.5 }}><b>Unknown terms:</b> {rule.unknown_terms.join(", ")}</Typography>
+                                    )}
+                                    {rule.failed_examples?.length > 0 && (
+                                      <Typography variant="caption" display="block"><b>Failed test examples:</b> {rule.failed_examples.length}</Typography>
+                                    )}
+                                  </Box>
+                                </Collapse>
+                              </Box>
+                            )}
+                          </Box>
+                        </Collapse>
+                      </Box>
+                    );
+                  };
 
                   return (
                     <Stack spacing={2.5} sx={{ mt: 2 }}>
@@ -1105,8 +1626,10 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       <Box className={`validation-summary-banner ${bannerClass}`}>
                         <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                            {failedRules === 0 ? (
+                            {gate === 'Pass' ? (
                               <CheckCircleIcon sx={{ fontSize: 36 }} />
+                            ) : gate === 'Needs review' ? (
+                              <HelpOutlineIcon sx={{ fontSize: 36 }} />
                             ) : passedRules > 0 ? (
                               <WarningAmberIcon sx={{ fontSize: 36 }} />
                             ) : (
@@ -1117,7 +1640,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                                 {bannerTitle}
                               </Typography>
                               <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
-                                {passedRules} question{passedRules !== 1 ? 's' : ''} passed, {failedRules} question{failedRules !== 1 ? 's' : ''} failed ({playgroundReport.total_violations || 0} total item violation{(playgroundReport.total_violations || 0) !== 1 ? 's' : ''})
+                                {unreliableCnt > 0 ? `${unreliableCnt} of ${totalRules} checks need your review${suspiciousCnt ? ` (${suspiciousCnt} flag almost every item)` : ""}. ` : ""}{aiSummary}
+                                {gate === 'Needs review' && " Only unverified checks flagged issues — your data may be fine."}
                               </Typography>
                             </Box>
                           </Box>
@@ -1128,7 +1652,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                             <Button 
                               variant="outlined" 
                               size="small"
-                              startIcon={<DownloadIcon />} 
+                              disabled={downloadingPdf}
+                              startIcon={downloadingPdf ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />} 
                               onClick={() => handleDownloadPDF(playgroundReport)}
                               sx={{ 
                                 borderColor: 'rgba(255,255,255,0.5)', 
@@ -1137,17 +1662,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                                 '&:hover': { borderColor: 'rgba(255,255,255,0.8)', bgcolor: 'rgba(255,255,255,0.15)' }
                               }}
                             >
-                              PDF Report
+                              {downloadingPdf ? "Generating..." : "PDF Report"}
                             </Button>
                           </Box>
                         </Box>
 
-                        {/* Progress bar showing pass ratio */}
                         {totalRules > 0 && (
                           <Box sx={{ mt: 2 }}>
                             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
                               <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 500 }}>
-                                {passedRules} / {totalRules} questions passed
+                                {passedRules} / {totalRules} rules passed
                               </Typography>
                               <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 600 }}>
                                 {passPct}%
@@ -1170,9 +1694,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                         )}
                       </Box>
 
-                      {/*  Six KPI Summary Cards  */}
+                      {/*  KPI Summary Cards  */}
                       <Grid container spacing={1.5}>
-                        {/* Row 1 */}
                         <Grid item xs={6} sm={4}>
                           <Box className="validation-kpi-card kpi-success">
                             <Box className="validation-kpi-icon" sx={{ bgcolor: 'rgba(16, 185, 129, 0.12)' }}>
@@ -1200,31 +1723,25 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                         </Grid>
                         <Grid item xs={6} sm={4}>
                           {(() => {
-                            const gate = playgroundReport.gate_decision || (playgroundReport.conforms ? 'Pass' : 'Fail');
                             const isPass = gate === 'Pass';
+                            const isReview = gate === 'Needs review';
                             const isConditional = gate === 'Conditional';
-                            const gateColor = isPass ? 'var(--accent-success)' : isConditional ? '#f59e0b' : 'var(--accent-error)';
-                            const gateBg = isPass ? 'rgba(16, 185, 129, 0.12)' : isConditional ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)';
+                            const gateColor = isPass ? 'var(--accent-success)' : (isConditional || isReview) ? '#f59e0b' : 'var(--accent-error)';
+                            const gateBg = isPass ? 'rgba(16, 185, 129, 0.12)' : (isConditional || isReview) ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)';
                             return (
-                              <Box className={`validation-kpi-card ${isPass ? 'kpi-success' : isConditional ? 'kpi-warning' : 'kpi-danger'}`}>
+                              <Box className={`validation-kpi-card ${isPass ? 'kpi-success' : (isConditional || isReview) ? 'kpi-warning' : 'kpi-danger'}`}>
                                 <Box className="validation-kpi-icon" sx={{ bgcolor: gateBg }}>
-                                  {isPass
-                                    ? <CheckCircleIcon sx={{ fontSize: 20, color: gateColor }} />
-                                    : isConditional
-                                      ? <WarningAmberIcon sx={{ fontSize: 20, color: gateColor }} />
-                                      : <CancelIcon sx={{ fontSize: 20, color: gateColor }} />
+                                  {isPass ? <CheckCircleIcon sx={{ fontSize: 20, color: gateColor }} />
+                                    : (isConditional || isReview) ? <HelpOutlineIcon sx={{ fontSize: 20, color: gateColor }} />
+                                    : <CancelIcon sx={{ fontSize: 20, color: gateColor }} />
                                   }
                                 </Box>
-                                <Typography className="validation-kpi-value" sx={{ color: gateColor }}>
-                                  {gate}
-                                </Typography>
+                                <Typography className="validation-kpi-value" sx={{ color: gateColor }}>{gate}</Typography>
                                 <Typography className="validation-kpi-label">Gate Decision</Typography>
                               </Box>
                             );
                           })()}
                         </Grid>
-
-                        {/* Row 2 */}
                         <Grid item xs={6} sm={4}>
                           {(() => {
                             const cnt = playgroundReport.violation_count ?? playgroundReport.total_violations ?? 0;
@@ -1233,29 +1750,22 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                                 <Box className="validation-kpi-icon" sx={{ bgcolor: cnt > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)' }}>
                                   <CancelIcon sx={{ fontSize: 20, color: cnt > 0 ? 'var(--accent-error)' : 'var(--accent-success)' }} />
                                 </Box>
-                                <Typography className="validation-kpi-value" sx={{ color: cnt > 0 ? 'var(--accent-error)' : 'var(--accent-success)' }}>
-                                  {cnt}
-                                </Typography>
-                                <Typography className="validation-kpi-label">Violation Count</Typography>
+                                <Typography className="validation-kpi-value" sx={{ color: cnt > 0 ? 'var(--accent-error)' : 'var(--accent-success)' }}>{cnt}</Typography>
+                                <Typography className="validation-kpi-label">Flagged Problems</Typography>
                               </Box>
                             );
                           })()}
                         </Grid>
                         <Grid item xs={6} sm={4}>
-                          {(() => {
-                            const cnt = playgroundReport.warning_count ?? 0;
-                            return (
-                              <Box className={`validation-kpi-card ${cnt > 0 ? 'kpi-warning' : 'kpi-success'}`}>
-                                <Box className="validation-kpi-icon" sx={{ bgcolor: cnt > 0 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)' }}>
-                                  <WarningAmberIcon sx={{ fontSize: 20, color: cnt > 0 ? '#f59e0b' : 'var(--accent-success)' }} />
-                                </Box>
-                                <Typography className="validation-kpi-value" sx={{ color: cnt > 0 ? '#f59e0b' : 'var(--accent-success)' }}>
-                                  {cnt}
-                                </Typography>
-                                <Typography className="validation-kpi-label">Warning Count</Typography>
-                              </Box>
-                            );
-                          })()}
+                          <Box className={`validation-kpi-card ${aiVerifiedCnt === totalRules ? 'kpi-success' : 'kpi-warning'}`}>
+                            <Box className="validation-kpi-icon" sx={{ bgcolor: aiVerifiedCnt === totalRules ? 'rgba(16, 185, 129, 0.12)' : 'rgba(245, 158, 11, 0.12)' }}>
+                              <VerifiedIcon sx={{ fontSize: 20, color: aiVerifiedCnt === totalRules ? 'var(--accent-success)' : '#f59e0b' }} />
+                            </Box>
+                            <Typography className="validation-kpi-value" sx={{ color: aiVerifiedCnt === totalRules ? 'var(--accent-success)' : '#f59e0b' }}>
+                              {aiVerifiedCnt} / {totalRules}
+                            </Typography>
+                            <Typography className="validation-kpi-label">Verified by AI</Typography>
+                          </Box>
                         </Grid>
                         <Grid item xs={6} sm={4}>
                           {(() => {
@@ -1265,120 +1775,44 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                                 <Box className="validation-kpi-icon" sx={{ bgcolor: cnt > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)' }}>
                                   <InfoOutlinedIcon sx={{ fontSize: 20, color: cnt > 0 ? 'var(--accent-error)' : 'var(--accent-success)' }} />
                                 </Box>
-                                <Typography className="validation-kpi-value" sx={{ color: cnt > 0 ? 'var(--accent-error)' : 'var(--accent-success)' }}>
-                                  {cnt}
-                                </Typography>
-                                <Typography className="validation-kpi-label">Affected Focus-Nodes</Typography>
+                                <Typography className="validation-kpi-value" sx={{ color: cnt > 0 ? 'var(--accent-error)' : 'var(--accent-success)' }}>{cnt}</Typography>
+                                <Typography className="validation-kpi-label">Affected Items</Typography>
                               </Box>
                             );
                           })()}
                         </Grid>
                       </Grid>
 
-                      {/*  Rules List with Expandable Violations  */}
+                      {/*  Reliable Rules Section  */}
                       <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>Questions & Rules Evaluated ({totalRules})</Typography>
-                        <Stack spacing={1}>
-                          {playgroundReport.rules?.map((rule, i) => {
-                            const ruleViolations = violationsByShape[rule.shape_iri] || [];
-                            const isFail = rule.status !== "Pass";
-                            const isExpanded = expandedRules[rule.shape_iri];
-                            const failedItemCount = rule.failed_items_count !== undefined ? rule.failed_items_count : ruleViolations.length;
-
-                            return (
-                              <Box key={i} className={`validation-rule-card ${isFail ? "fail" : "pass"}`}>
-                                {/* Rule Header Row */}
-                                <Box 
-                                  className="validation-rule-header"
-                                  onClick={() => isFail && ruleViolations.length > 0 && toggleRuleExpand(rule.shape_iri)}
-                                  sx={{ cursor: isFail && ruleViolations.length > 0 ? "pointer" : "default" }}
-                                >
-                                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1, minWidth: 0 }}>
-                                    {isFail 
-                                      ? <CancelIcon sx={{ fontSize: 20, color: "var(--accent-error)", flexShrink: 0 }} />
-                                      : <CheckCircleIcon sx={{ fontSize: 20, color: "var(--accent-success)", flexShrink: 0 }} />
-                                    }
-                                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                                      <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
-                                        {rule.label}
-                                      </Typography>
-                                      <Typography variant="caption" color="textSecondary">
-                                        Target Class: {rule.target_class_short || "All Nodes"}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
-                                    {isFail ? (
-                                      <Chip 
-                                        label={`${failedItemCount} item${failedItemCount !== 1 ? "s" : ""} failed`}
-                                        size="small"
-                                        sx={{ 
-                                          bgcolor: "rgba(239, 68, 68, 0.1)", 
-                                          color: "var(--accent-error)", 
-                                          fontWeight: 600,
-                                          fontSize: 12,
-                                          height: 24
-                                        }}
-                                      />
-                                    ) : (
-                                      <Chip 
-                                        label="0 items failed (Pass)" 
-                                        size="small"
-                                        sx={{ 
-                                          bgcolor: "rgba(16, 185, 129, 0.1)", 
-                                          color: "var(--accent-success)", 
-                                          fontWeight: 600,
-                                          fontSize: 12,
-                                          height: 24
-                                        }}
-                                      />
-                                    )}
-                                    {isFail && ruleViolations.length > 0 && (
-                                      isExpanded 
-                                        ? <ExpandLessIcon sx={{ fontSize: 20, color: "var(--text-secondary)" }} />
-                                        : <ExpandMoreIcon sx={{ fontSize: 20, color: "var(--text-secondary)" }} />
-                                    )}
-                                  </Box>
-                                </Box>
-
-                                {/* Expandable Violations */}
-                                <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                                  <Box className="validation-rule-violations">
-                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-                                      <WarningAmberIcon sx={{ fontSize: 16, color: "var(--accent-error)" }} />
-                                      <Typography variant="caption" sx={{ fontWeight: 600, color: "var(--accent-error)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                        {ruleViolations.length} Violation{ruleViolations.length !== 1 ? "s" : ""} across {failedItemCount} Failed Item{failedItemCount !== 1 ? "s" : ""}
-                                      </Typography>
-                                    </Box>
-                                    <TableContainer sx={{ borderRadius: "var(--radius-md)", border: "1px solid var(--border-light)", overflow: "hidden" }}>
-                                      <Table size="small">
-                                        <TableHead>
-                                          <TableRow sx={{ bgcolor: "var(--bg-tertiary)" }}>
-                                            <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Focus Node (Item)</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Property</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Constraint Message</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, fontSize: 12, py: 1 }}>Value</TableCell>
-                                          </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                          {ruleViolations.map((v, vi) => (
-                                            <TableRow key={vi} sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                                              <TableCell sx={{ fontFamily: "var(--font-mono)", fontSize: 11, py: 0.75 }}>{v.focus_node_short}</TableCell>
-                                              <TableCell sx={{ fontFamily: "var(--font-mono)", fontSize: 11, py: 0.75 }}>{v.path_short}</TableCell>
-                                              <TableCell sx={{ fontSize: 12, py: 0.75 }}>{v.message}</TableCell>
-                                              <TableCell sx={{ fontSize: 12, py: 0.75, color: "var(--accent-error)" }}>{v.value || "—"}</TableCell>
-                                            </TableRow>
-                                          ))}
-                                        </TableBody>
-                                      </Table>
-                                    </TableContainer>
-                                  </Box>
-                                </Collapse>
-                              </Box>
-                            );
-                          })}
-                        </Stack>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
+                          <VerifiedIcon sx={{ fontSize: 20, color: "var(--accent-success)" }} />
+                          {notCheckedCnt > 0 ? "Checks" : "Reliable Checks"} ({reliableRules.length})
+                        </Typography>
+                        {reliableRules.length > 0 ? (
+                          <Stack spacing={1}>
+                            {reliableRules.map((rule, i) => renderRuleCard(rule, i, true))}
+                          </Stack>
+                        ) : (
+                          <Typography variant="body2" color="textSecondary" sx={{ fontStyle: "italic" }}>No checks in this section.</Typography>
+                        )}
                       </Box>
+
+                      {/*  Unreliable Rules Section  */}
+                      {unreliableRules.length > 0 && (
+                        <Box>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
+                            <HelpOutlineIcon sx={{ fontSize: 20, color: "#f59e0b" }} />
+                            Checks That Need Your Review ({unreliableRules.length})
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary" sx={{ mb: 1.5, fontStyle: "italic" }}>
+                            The AI could not verify these checks, or they flag almost every item. They do not cause a hard failure. The check itself may be wrong, not your data.
+                          </Typography>
+                          <Stack spacing={1}>
+                            {unreliableRules.map((rule, i) => renderRuleCard(rule, i, false))}
+                          </Stack>
+                        </Box>
+                      )}
                     </Stack>
                   );
                 })()}
@@ -1404,7 +1838,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 <Button
                   variant="contained"
                   onClick={handleGenerateQuestions}
-                  disabled={loading || (!schemaFile && !instanceFile && !combinedFile)}
+                  disabled={loading || (!useWorkspace && !hasUploadedFiles)}
                 >
                   {loading ? <CircularProgress size={24} /> : "Generate Questions"}
                 </Button>
@@ -1450,6 +1884,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
             {activeStep === 3 && (
               <Box sx={{ display: "flex", gap: 1 }}>
                 <Button variant="outlined" onClick={handleReset}>Start Over</Button>
+                {playgroundReport && (
+                  <Button 
+                    variant="outlined" 
+                    disabled={downloadingPdf}
+                    startIcon={downloadingPdf ? <CircularProgress size={18} /> : <DownloadIcon />} 
+                    onClick={() => handleDownloadPDF(playgroundReport)}
+                  >
+                    {downloadingPdf ? "Generating PDF..." : "Download PDF Report"}
+                  </Button>
+                )}
                 <Button variant="contained" onClick={handlePlaygroundValidate} disabled={loading} startIcon={loading ? <CircularProgress size={20} /> : <PlayArrowIcon />}>
                   Run Validation
                 </Button>

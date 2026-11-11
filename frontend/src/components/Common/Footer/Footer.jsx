@@ -1,5 +1,6 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import { Link } from "react-router-dom";
 import "./Footer.css";
 
 function Copyright() {
@@ -29,6 +30,16 @@ export default function Footer() {
       <Typography variant="body1" sx={{ mb: 0.5 }}>
         Knowledge Graph Portal
       </Typography>
+
+      <Box sx={{ display: "flex", gap: 2, my: 1, flexWrap: "wrap", justifyContent: "center" }}>
+        <Link to="/guidance" className="footer-link">
+          User Guidance
+        </Link>
+        <span className="footer-link-divider">•</span>
+        <Link to="/termsandconditions" className="footer-link">
+          Terms & Conditions
+        </Link>
+      </Box>
 
       <Copyright />
     </Box>

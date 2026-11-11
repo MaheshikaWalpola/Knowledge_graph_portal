@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -8,17 +8,17 @@ import {
   Select,
   MenuItem,
   Chip,
-  Tooltip,
 } from "@mui/material";
+import { API } from "../../../config";
 
-// Kiste models with metadata for display
+// Kiste models (TU Chemnitz server) with metadata for display
 const KISTE_MODELS = [
   {
     id: "Qwen3.6-35B-A3B-MLX-8bit",
     label: "Qwen 3.6 35B",
     description: "Best for general-purpose matching tasks",
     contextWindow: "262K",
-    tag: "Recommended",
+    tag: null,
   },
   {
     id: "DeepSeek-V4-Flash-0731-MXFP4-MLX",
@@ -55,17 +55,68 @@ const KISTE_MODELS = [
     contextWindow: "32K",
     tag: "Fast",
   },
-  {
-    id: "Phi-3-mini-4k-instruct-mlx",
-    label: "Phi-3 Mini 4K",
-    description: "Microsoft's compact model, limited context",
-    contextWindow: "4K",
-    tag: "Compact",
-  },
 ];
 
-export default function ModelSelector({ selectedModel, onModelChange }) {
-  const currentModel = KISTE_MODELS.find((m) => m.id === selectedModel) || KISTE_MODELS[0];
+
+export default function ModelSelector({
+  selectedModel,
+  onModelChange,
+  description = "Choose the AI model for intelligent header-to-schema matching",
+  // Also offer the cloud providers (Claude, OpenAI) whose API keys are configured on the server
+  includeCloud = false,
+}) {
+  const [cloudModels, setCloudModels] = useState([]);
+
+  useEffect(() => {
+    if (!includeCloud) return;
+    let cancelled = false;
+    fetch(`${API}/validation/models`)
+      .then((res) => (res.ok ? res.json() : { providers: [] }))
+      .then((data) => { if (!cancelled) setCloudModels((data.providers || []).flatMap((p) => p.models)); })
+      .catch(() => { if (!cancelled) setCloudModels([]); });
+    return () => { cancelled = true; };
+  }, [includeCloud]);
+
+  // One flat list: the Kiste models first, then the cloud models the server offers
+  const allModels = [...KISTE_MODELS, ...cloudModels];
+
+  const renderModel = (model) => (
+    <MenuItem key={model.id} value={model.id}>
+      <Box sx={{ display: "flex", flexDirection: "column", width: "100%" }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {model.label}
+          </Typography>
+          {model.tag && (
+            <Chip
+              label={model.tag}
+              size="small"
+              variant="outlined"
+              sx={{ height: 18, fontSize: "0.65rem", ml: "auto" }}
+            />
+          )}
+        </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.25, ml: 3 }}>
+          <Typography variant="caption" color="textSecondary">
+            {model.description}
+          </Typography>
+          {model.contextWindow && (
+            <Typography
+              variant="caption"
+              sx={{
+                ml: "auto",
+                color: "var(--text-secondary, #94a3b8)",
+                fontFamily: "monospace",
+                fontSize: "0.65rem",
+              }}
+            >
+              ctx: {model.contextWindow}
+            </Typography>
+          )}
+        </Box>
+      </Box>
+    </MenuItem>
+  );
 
   return (
     <Card variant="outlined" sx={{ position: "relative", overflow: "visible" }}>
@@ -74,7 +125,7 @@ export default function ModelSelector({ selectedModel, onModelChange }) {
           AI Model
         </Typography>
         <Typography variant="body2" color="textSecondary" gutterBottom>
-          Choose the AI model for intelligent header-to-schema matching
+          {description}
         </Typography>
 
         <FormControl fullWidth size="small" sx={{ mt: 1.5 }}>
@@ -83,7 +134,7 @@ export default function ModelSelector({ selectedModel, onModelChange }) {
             onChange={(e) => onModelChange(e.target.value)}
             displayEmpty
             renderValue={(value) => {
-              const model = KISTE_MODELS.find((m) => m.id === value);
+              const model = allModels.find((m) => m.id === value);
               if (!model) return "Select a model";
               return (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -92,8 +143,7 @@ export default function ModelSelector({ selectedModel, onModelChange }) {
                     <Chip
                       label={model.tag}
                       size="small"
-                      color={model.tag === "Recommended" ? "primary" : "default"}
-                      variant={model.tag === "Recommended" ? "filled" : "outlined"}
+                      variant="outlined"
                       sx={{ height: 20, fontSize: "0.7rem", ml: "auto" }}
                     />
                   )}
@@ -107,42 +157,7 @@ export default function ModelSelector({ selectedModel, onModelChange }) {
               },
             }}
           >
-            {KISTE_MODELS.map((model) => (
-              <MenuItem key={model.id} value={model.id}>
-                <Box sx={{ display: "flex", flexDirection: "column", width: "100%" }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {model.label}
-                    </Typography>
-                    {model.tag && (
-                      <Chip
-                        label={model.tag}
-                        size="small"
-                        color={model.tag === "Recommended" ? "primary" : "default"}
-                        variant={model.tag === "Recommended" ? "filled" : "outlined"}
-                        sx={{ height: 18, fontSize: "0.65rem", ml: "auto" }}
-                      />
-                    )}
-                  </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.25, ml: 3 }}>
-                    <Typography variant="caption" color="textSecondary">
-                      {model.description}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        ml: "auto",
-                        color: "var(--text-secondary, #94a3b8)",
-                        fontFamily: "monospace",
-                        fontSize: "0.65rem",
-                      }}
-                    >
-                      ctx: {model.contextWindow}
-                    </Typography>
-                  </Box>
-                </Box>
-              </MenuItem>
-            ))}
+            {allModels.map(renderModel)}
           </Select>
         </FormControl>
       </CardContent>

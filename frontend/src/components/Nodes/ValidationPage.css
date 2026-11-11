@@ -490,8 +490,17 @@
   border-left: 3px solid var(--accent-error, #ef4444);
 }
 
+.validation-rule-card.unreliable {
+  border-left: 3px solid #f59e0b !important;
+}
+
 .validation-rule-card.pass {
   border-left: 3px solid var(--accent-success, #10b981);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .validation-rule-header {

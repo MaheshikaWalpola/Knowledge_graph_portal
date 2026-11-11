@@ -38,6 +38,10 @@ dist-ssr
 *.sln
 *.sw?
 .env
+# Local/production env files stay on each machine; only the documented examples are committed
+.env.*
+!.env.example
+
 
 example_datasheets
 samples.zip

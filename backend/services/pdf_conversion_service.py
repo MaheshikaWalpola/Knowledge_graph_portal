@@ -47,8 +47,7 @@ MODEL_CONTEXT = {
 }
 DEFAULT_CONTEXT = 32_768
 CHARS_PER_TOKEN = 3  # conservative; numbers and German text tokenize poorly
-MAX_OUTPUT_TOKENS = 32_768
-LLM_TIMEOUT = 900
+MAX_OUTPUT_TOKENS = 32_768  # output room reserved when sizing chunks; the timeout comes from KISTE_TIMEOUT
 
 REVIEW_COLUMNS = [
     "type", "source_file", "page", "class", "csv_file", "csv_line",
@@ -259,13 +258,12 @@ def _parse_json_reply(reply: str) -> Dict[str, Any]:
 
 
 def _map_chunk(llm: LocalLLMService, schema_text: str, chunk: str, part: str,
-               model: Optional[str], max_tokens: int) -> Dict[str, Any]:
+               model: Optional[str]) -> Dict[str, Any]:
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": f"SCHEMA\n{schema_text}\n\nDOCUMENT{part}\n{chunk}"},
     ]
-    reply = llm._call_kiste(messages, json_mode=True, temperature=0.1, model_override=model,
-                            timeout=LLM_TIMEOUT, max_tokens=max_tokens)
+    reply = llm._call_kiste(messages, json_mode=True, temperature=0.1, model_override=model)
     try:
         return _parse_json_reply(reply)
     except (json.JSONDecodeError, ValueError):
@@ -273,8 +271,7 @@ def _map_chunk(llm: LocalLLMService, schema_text: str, chunk: str, part: str,
         messages += [{"role": "assistant", "content": reply},
                      {"role": "user", "content": "That was not a valid JSON object in the required format. "
                                                  "Reply again with only the JSON object."}]
-        reply = llm._call_kiste(messages, json_mode=True, temperature=0.0, model_override=model,
-                                timeout=LLM_TIMEOUT, max_tokens=max_tokens)
+        reply = llm._call_kiste(messages, json_mode=True, temperature=0.0, model_override=model)
         try:
             return _parse_json_reply(reply)
         except (json.JSONDecodeError, ValueError):
@@ -294,7 +291,7 @@ def map_document(doc: PdfDocument, schema_text: str, model: Optional[str]) -> Tu
     merged = {"records": [], "unmapped": [], "notes": []}
     for i, chunk in enumerate(chunks, start=1):
         part = f" (part {i} of {len(chunks)}; other parts are processed separately)" if len(chunks) > 1 else ""
-        result = _map_chunk(llm, schema_text, chunk, part, model, max_tokens)
+        result = _map_chunk(llm, schema_text, chunk, part, model)
         merged["records"] += [{**r, "_chunk": i} for r in result.get("records") or [] if isinstance(r, dict)]
         merged["unmapped"] += [u for u in result.get("unmapped") or [] if isinstance(u, (list, dict))]
         if result.get("notes"):
