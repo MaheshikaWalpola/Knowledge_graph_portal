@@ -203,6 +203,7 @@ cd Knowledge_graph_portal
    # AI models: Kiste (TU Chemnitz server) is always used; the cloud providers are optional and
    # appear in the model selector of the validation page only when their key is set
    KISTE_API_URL=https://kiste.informatik.tu-chemnitz.de/v1/chat/completions
+   KISTE_BASE_URL=https://kiste.informatik.tu-chemnitz.de   # optional: host for GET /v1/models (derived from KISTE_API_URL if unset)
    KISTE_API_KEY=your_kiste_key
    KISTE_MODEL=Qwen3.6-35B-A3B-MLX-8bit
    ANTHROPIC_API_KEY=your_anthropic_api_key   # optional: adds Claude models (pip install anthropic)

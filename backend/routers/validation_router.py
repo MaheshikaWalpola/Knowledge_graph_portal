@@ -11,6 +11,7 @@ from starlette.concurrency import run_in_threadpool
 
 from core.auth import get_current_user
 from services.llm_providers import cloud_providers
+from services.model_catalog import list_models
 from services import generation_log_service as genlog
 from services.validation_service import ValidationService
 from services.user_schema_service import get_user_schema
@@ -59,10 +60,10 @@ def _fetch_workspace_instances_ttl(user_email: str, schema_id: str) -> str:
 @router.get("/validation/models")
 async def api_models():
     """
-    Cloud AI providers (Claude, OpenAI) available for the validation and instance generation workflows, with their models.
-    Only providers whose API key is configured on the server are listed; the Kiste models are listed by the frontend.
+    The AI models the dropdowns offer: backend/models.yaml merged with the live Kiste model list and the cloud providers
+    whose API key is set (services.model_catalog). "providers" is the older cloud-only view, kept for compatibility.
     """
-    return {"providers": cloud_providers()}
+    return {"models": list_models(), "providers": cloud_providers()}
 
 
 # --- Generation log: every AI-generated SHACL shape (services.generation_log_service) ---
