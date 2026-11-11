@@ -4,11 +4,15 @@ from typing import Dict, List, Any
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from io import BytesIO
+import base64
 import zipfile
 import json
 
 from services.instance_analysis_service import analyze_schema_and_data, analyze_schema_and_data_stream
 from services.instance_generation_service import build_instances_from_csvs
+from services.schema_instance_generation_service import build_instances_from_schema_csvs, is_schema_structured
+from services.pdf_conversion_service import ConversionResult, build_schema_context, convert_pdf, render_schema
+from services.pdf_summary_service import build_summary_pdf
 
 
 
@@ -110,15 +114,23 @@ async def ctrl_generate_instance(
         except json.JSONDecodeError:
             raise ValueError("Invalid mappings JSON format")
 
-        # Generate instances
-        result = build_instances_from_csvs(
-            files=csv_contents,
-            filenames=csv_filenames,
-            user_key=user_email,
-            schema_id=schema_id,
-            mappings=header_mappings,
-            schema_bytes=schema_content,
-        )
+        # Generate instances. CSVs that follow the schema (one file per class, schema
+        # properties as headers, e.g. from the PDF conversion) use the schema-driven generator.
+        if is_schema_structured(schema_content, csv_filenames, csv_contents):
+            result = build_instances_from_schema_csvs(
+                files=csv_contents,
+                filenames=csv_filenames,
+                schema_bytes=schema_content,
+            )
+        else:
+            result = build_instances_from_csvs(
+                files=csv_contents,
+                filenames=csv_filenames,
+                user_key=user_email,
+                schema_id=schema_id,
+                mappings=header_mappings,
+                schema_bytes=schema_content,
+            )
 
         # Prepare response
         return {
@@ -171,3 +183,93 @@ async def _process_data_files(data_files: List[UploadFile]) -> tuple[List[bytes]
         raise ValueError("No valid CSV files were uploaded or found in the ZIP archive")
 
     return csv_contents, csv_filenames
+
+
+async def ctrl_convert_pdfs_to_csv_stream(
+    schema_file: UploadFile,
+    pdf_files: List[UploadFile],
+    model: str = None,
+) -> StreamingResponse:
+    """
+    Convert PDFs (or ZIPs of PDFs) into schema-aligned CSVs with the AI.
+    Streams NDJSON progress events; the final "done" event carries the CSV files.
+    """
+    try:
+        schema_content = await schema_file.read()
+        if not schema_content:
+            raise ValueError("Schema file is empty")
+        schema_ctx = build_schema_context(schema_content)
+        pdfs = await _collect_pdfs(pdf_files)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read upload files: {str(e)}")
+
+    def generator():
+        schema_text = render_schema(schema_ctx)
+        result = ConversionResult(schema_ctx)
+        failed = 0
+        yield json.dumps({"type": "init", "files": [name for name, _ in pdfs]}) + "\n"
+
+        for index, (name, content) in enumerate(pdfs, start=1):
+            yield json.dumps({"type": "file_start", "file": name, "index": index, "total": len(pdfs)}) + "\n"
+            try:
+                stats = convert_pdf(content, name, schema_text, model, result)
+                yield json.dumps({"type": "file_done", "file": name, "index": index, **stats}) + "\n"
+            except Exception as e:
+                failed += 1
+                result.add_error(name, str(e))
+                yield json.dumps({"type": "file_error", "file": name, "index": index, "message": str(e)}) + "\n"
+
+        files = result.render()
+        summary_pdf, summary_error = None, None
+        try:
+            summary_pdf = build_summary_pdf(result, [name for name, _ in pdfs],
+                                            schema_name=schema_file.filename, model=model)
+        except Exception as e:  # the CSVs are still usable without the summary
+            summary_error = f"Could not create summary.pdf: {e}"
+        zip_buf = BytesIO()
+        with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in files:
+                z.writestr(f["name"], f["content"])
+            if summary_pdf:
+                z.writestr("summary.pdf", summary_pdf)
+        yield json.dumps({
+            "type": "done",
+            "summary": {**result.summary(), "files_total": len(pdfs), "files_failed": failed},
+            "files": files,
+            "zip_base64": base64.b64encode(zip_buf.getvalue()).decode("ascii"),
+            "summary_pdf_base64": base64.b64encode(summary_pdf).decode("ascii") if summary_pdf else None,
+            "summary_pdf_error": summary_error,
+        }) + "\n"
+
+    return StreamingResponse(generator(), media_type="application/x-ndjson")
+
+
+def _is_pdf_entry(filepath: str) -> bool:
+    """PDF inside a ZIP, ignoring macOS metadata folders/files."""
+    return (filepath.lower().endswith(".pdf") and "__MACOSX" not in filepath
+            and not filepath.split("/")[-1].startswith("._"))
+
+
+async def _collect_pdfs(pdf_files: List[UploadFile]) -> List[tuple[str, bytes]]:
+    """Read uploaded PDFs and PDFs inside uploaded ZIPs as (name, bytes)."""
+    pdfs = []
+    for upload in pdf_files:
+        content = await upload.read()
+        if not content:
+            continue
+        fname = upload.filename or "document.pdf"
+        if fname.lower().endswith(".zip"):
+            try:
+                with zipfile.ZipFile(BytesIO(content)) as z:
+                    # Keep the path inside the ZIP so equal file names in different folders stay distinct
+                    pdfs += [(path, z.read(path)) for path in z.namelist() if _is_pdf_entry(path)]
+            except zipfile.BadZipFile as e:
+                raise ValueError(f"Failed to extract ZIP file {fname}: {str(e)}")
+        elif fname.lower().endswith(".pdf"):
+            pdfs.append((fname, content))
+
+    if not pdfs:
+        raise ValueError("No PDF files were uploaded or found in the ZIP archive")
+    return pdfs

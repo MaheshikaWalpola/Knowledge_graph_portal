@@ -1,0 +1,2064 @@
+@prefix inst: <http://example.org/power-mosfet/instance/> .
+@prefix pm: <http://example.org/power-mosfet#> .
+@prefix sosa: <http://www.w3.org/ns/sosa/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+inst:datasheet_DS-BX220 a pm:Datasheet ;
+    pm:documentNumber "DS-BX220"^^xsd:string ;
+    pm:publishedBy inst:manufacturer_Nordwind_Microdevices_AG ;
+    pm:releaseDate "2025-01-20"^^xsd:date ;
+    pm:revision "1.3"^^xsd:string .
+
+inst:datasheet_DS-BX221 a pm:Datasheet ;
+    pm:documentNumber "DS-BX221"^^xsd:string ;
+    pm:releaseDate "2024-11-05"^^xsd:date ;
+    pm:revision "1.1"^^xsd:string .
+
+inst:datasheet_DS-BX230 a pm:Datasheet ;
+    pm:documentNumber "DS-BX230"^^xsd:string ;
+    pm:releaseDate "2025-02-14"^^xsd:date ;
+    pm:revision "2.0"^^xsd:string .
+
+inst:datasheet_DS-BX240 a pm:Datasheet ;
+    pm:documentNumber "DS-BX240"^^xsd:string ;
+    pm:publishedBy inst:manufacturer_Nordwind_Microdevices_AG ;
+    pm:releaseDate "2025-03-03"^^xsd:date ;
+    pm:revision "1.0"^^xsd:string .
+
+inst:datasheet_DS-BX250 a pm:Datasheet ;
+    pm:documentNumber "DS-BX250"^^xsd:string ;
+    pm:releaseDate "2024-09-18"^^xsd:date ;
+    pm:revision "1.2"^^xsd:string .
+
+inst:device_BX-220_obs_rdsOnTempco a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:device_BX-220 ;
+    sosa:hasSimpleResult "1.8"^^xsd:float ;
+    sosa:observedProperty pm:rdsOnTempco .
+
+inst:device_BX-221 a pm:Device ;
+    pm:application "[\"DC/DC converters\", \"Motor drives\", \"Load switching\"]"^^xsd:string ;
+    pm:deviceName "BX-221"^^xsd:string ;
+    pm:deviceType "N-Channel Enhancement Mode Power MOSFET"^^xsd:string ;
+    pm:packageType "TO-252 (DPAK)"^^xsd:string ;
+    pm:qualification "AEC-Q101"^^xsd:string ;
+    pm:rohsCompliant true .
+
+inst:device_BX-230_obs_rdsOnTempco a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:device_BX-230 ;
+    sosa:hasSimpleResult "1.4"^^xsd:float ;
+    sosa:observedProperty pm:rdsOnTempco .
+
+inst:device_BX-240_obs_rdsOnTempco a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:device_BX-240 ;
+    sosa:hasSimpleResult "0.7"^^xsd:float ;
+    sosa:observedProperty pm:rdsOnTempco .
+
+inst:device_BX-250_obs_rdsOnTempco a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:device_BX-250 ;
+    sosa:hasSimpleResult "0.5"^^xsd:float ;
+    sosa:observedProperty pm:rdsOnTempco .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r12_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r12 ;
+    sosa:hasSimpleResult "80.0"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r13_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r13 ;
+    sosa:hasSimpleResult "1.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r14_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r14 ;
+    sosa:hasSimpleResult "100.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r15_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r15 ;
+    sosa:hasSimpleResult "2.7"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r15_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r15 ;
+    sosa:hasSimpleResult "1.4"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r15_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r15 ;
+    sosa:hasSimpleResult "2.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r16_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r16 ;
+    sosa:hasSimpleResult "27.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r16_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r16 ;
+    sosa:hasSimpleResult "21.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r17_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r17 ;
+    sosa:hasSimpleResult "37.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r17_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r17 ;
+    sosa:hasSimpleResult "29.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r18_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r18 ;
+    sosa:hasSimpleResult "24.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r19_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r19 ;
+    sosa:hasSimpleResult "1320.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r20_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r20 ;
+    sosa:hasSimpleResult "142.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r21_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r21 ;
+    sosa:hasSimpleResult "41.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r22_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r22 ;
+    sosa:hasSimpleResult "25.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r22_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r22 ;
+    sosa:hasSimpleResult "17.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r23_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r23 ;
+    sosa:hasSimpleResult "4.6"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r24_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r24 ;
+    sosa:hasSimpleResult "5.3"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r25_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r25 ;
+    sosa:hasSimpleResult "8.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r26_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r26 ;
+    sosa:hasSimpleResult "14.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r27_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r27 ;
+    sosa:hasSimpleResult "27.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r28_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r28 ;
+    sosa:hasSimpleResult "8.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r29_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r29 ;
+    sosa:hasSimpleResult "1.2"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r29_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r29 ;
+    sosa:hasSimpleResult "0.86"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r30_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r30 ;
+    sosa:hasSimpleResult "31.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r31_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r31 ;
+    sosa:hasSimpleResult "26.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r12_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r12 ;
+    sosa:hasSimpleResult "40.0"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r13_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r13 ;
+    sosa:hasSimpleResult "1.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r14_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r14 ;
+    sosa:hasSimpleResult "100.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r15_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r15 ;
+    sosa:hasSimpleResult "2.3"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r15_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r15 ;
+    sosa:hasSimpleResult "1.1"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r15_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r15 ;
+    sosa:hasSimpleResult "1.7"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r16_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r16 ;
+    sosa:hasSimpleResult "14.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r16_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r16 ;
+    sosa:hasSimpleResult "11.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r17_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r17 ;
+    sosa:hasSimpleResult "19.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r17_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r17 ;
+    sosa:hasSimpleResult "15.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r18_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r18 ;
+    sosa:hasSimpleResult "41.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r19_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r19 ;
+    sosa:hasSimpleResult "1870.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r20_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r20 ;
+    sosa:hasSimpleResult "236.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r21_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r21 ;
+    sosa:hasSimpleResult "66.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r22_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r22 ;
+    sosa:hasSimpleResult "33.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r22_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r22 ;
+    sosa:hasSimpleResult "22.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r23_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r23 ;
+    sosa:hasSimpleResult "5.8"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r24_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r24 ;
+    sosa:hasSimpleResult "6.4"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r25_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r25 ;
+    sosa:hasSimpleResult "7.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r26_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r26 ;
+    sosa:hasSimpleResult "11.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r27_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r27 ;
+    sosa:hasSimpleResult "31.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r28_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r28 ;
+    sosa:hasSimpleResult "6.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r29_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r29 ;
+    sosa:hasSimpleResult "1.1"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r29_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r29 ;
+    sosa:hasSimpleResult "0.82"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r30_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r30 ;
+    sosa:hasSimpleResult "35.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r31_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r31 ;
+    sosa:hasSimpleResult "34.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r12_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r12 ;
+    sosa:hasSimpleResult "30.0"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r13_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r13 ;
+    sosa:hasSimpleResult "1.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r14_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r14 ;
+    sosa:hasSimpleResult "100.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r15_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r15 ;
+    sosa:hasSimpleResult "2.2"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r15_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r15 ;
+    sosa:hasSimpleResult "1.0"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r15_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r15 ;
+    sosa:hasSimpleResult "1.6"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r16_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r16 ;
+    sosa:hasSimpleResult "13.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r16_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r16 ;
+    sosa:hasSimpleResult "10.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r17_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r17 ;
+    sosa:hasSimpleResult "17.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r17_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r17 ;
+    sosa:hasSimpleResult "13.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r18_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r18 ;
+    sosa:hasSimpleResult "47.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r19_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r19 ;
+    sosa:hasSimpleResult "2140.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r20_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r20 ;
+    sosa:hasSimpleResult "278.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r21_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r21 ;
+    sosa:hasSimpleResult "79.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r22_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r22 ;
+    sosa:hasSimpleResult "39.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r22_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r22 ;
+    sosa:hasSimpleResult "26.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r23_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r23 ;
+    sosa:hasSimpleResult "6.7"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r24_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r24 ;
+    sosa:hasSimpleResult "7.9"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r25_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r25 ;
+    sosa:hasSimpleResult "6.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r26_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r26 ;
+    sosa:hasSimpleResult "10.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r27_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r27 ;
+    sosa:hasSimpleResult "35.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r28_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r28 ;
+    sosa:hasSimpleResult "5.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r29_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r29 ;
+    sosa:hasSimpleResult "1.1"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r29_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r29 ;
+    sosa:hasSimpleResult "0.81"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r30_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r30 ;
+    sosa:hasSimpleResult "38.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r31_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r31 ;
+    sosa:hasSimpleResult "41.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r12_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r12 ;
+    sosa:hasSimpleResult "60.0"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r13_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r13 ;
+    sosa:hasSimpleResult "1.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r14_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r14 ;
+    sosa:hasSimpleResult "100.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r15_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r15 ;
+    sosa:hasSimpleResult "2.6"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r15_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r15 ;
+    sosa:hasSimpleResult "1.3"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r15_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r15 ;
+    sosa:hasSimpleResult "1.9"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r16_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r16 ;
+    sosa:hasSimpleResult "22.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r16_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r16 ;
+    sosa:hasSimpleResult "17.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r17_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r17 ;
+    sosa:hasSimpleResult "30.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r17_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r17 ;
+    sosa:hasSimpleResult "23.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r18_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r18 ;
+    sosa:hasSimpleResult "31.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r19_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r19 ;
+    sosa:hasSimpleResult "1410.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r20_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r20 ;
+    sosa:hasSimpleResult "171.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r21_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r21 ;
+    sosa:hasSimpleResult "52.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r22_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r22 ;
+    sosa:hasSimpleResult "23.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r22_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r22 ;
+    sosa:hasSimpleResult "15.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r23_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r23 ;
+    sosa:hasSimpleResult "4.2"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r24_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r24 ;
+    sosa:hasSimpleResult "4.8"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r25_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r25 ;
+    sosa:hasSimpleResult "9.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r26_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r26 ;
+    sosa:hasSimpleResult "13.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r27_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r27 ;
+    sosa:hasSimpleResult "25.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r28_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r28 ;
+    sosa:hasSimpleResult "7.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r29_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r29 ;
+    sosa:hasSimpleResult "1.2"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r29_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r29 ;
+    sosa:hasSimpleResult "0.84"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r30_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r30 ;
+    sosa:hasSimpleResult "29.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r31_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r31 ;
+    sosa:hasSimpleResult "24.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r12_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r12 ;
+    sosa:hasSimpleResult "60.0"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r13_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r13 ;
+    sosa:hasSimpleResult "1.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r14_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r14 ;
+    sosa:hasSimpleResult "100.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r15_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r15 ;
+    sosa:hasSimpleResult "2.5"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r15_obs_minValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r15 ;
+    sosa:hasSimpleResult "1.2"^^xsd:float ;
+    sosa:observedProperty pm:minValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r15_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r15 ;
+    sosa:hasSimpleResult "1.8"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r16_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r16 ;
+    sosa:hasSimpleResult "18.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r16_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r16 ;
+    sosa:hasSimpleResult "14.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r17_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r17 ;
+    sosa:hasSimpleResult "25.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r17_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r17 ;
+    sosa:hasSimpleResult "19.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r18_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r18 ;
+    sosa:hasSimpleResult "28.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r19_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r19 ;
+    sosa:hasSimpleResult "1150.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r20_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r20 ;
+    sosa:hasSimpleResult "165.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r21_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r21 ;
+    sosa:hasSimpleResult "48.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r22_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r22 ;
+    sosa:hasSimpleResult "21.0"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r22_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r22 ;
+    sosa:hasSimpleResult "14.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r23_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r23 ;
+    sosa:hasSimpleResult "3.9"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r24_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r24 ;
+    sosa:hasSimpleResult "4.1"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r25_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r25 ;
+    sosa:hasSimpleResult "9.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r26_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r26 ;
+    sosa:hasSimpleResult "12.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r27_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r27 ;
+    sosa:hasSimpleResult "24.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r28_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r28 ;
+    sosa:hasSimpleResult "7.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r29_obs_maxValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r29 ;
+    sosa:hasSimpleResult "1.2"^^xsd:float ;
+    sosa:observedProperty pm:maxValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r29_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r29 ;
+    sosa:hasSimpleResult "0.85"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r30_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r30 ;
+    sosa:hasSimpleResult "28.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r31_obs_typValue a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r31 ;
+    sosa:hasSimpleResult "22.0"^^xsd:float ;
+    sosa:observedProperty pm:typValue .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-221-r10 a pm:MaximumRating ;
+    pm:parameterName "Power Dissipation, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "52"^^xsd:string ;
+    pm:symbol "PD"^^xsd:string ;
+    pm:unit "W"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-221-r11 a pm:MaximumRating ;
+    pm:parameterName "Operating Junction and Storage Temperature"^^xsd:string ;
+    pm:ratedValue "-55 to +175"^^xsd:string ;
+    pm:symbol "TJ, TSTG"^^xsd:string ;
+    pm:unit "°C"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-221-r4 a pm:MaximumRating ;
+    pm:parameterName "Drain-Source Voltage"^^xsd:string ;
+    pm:ratedValue "80"^^xsd:string ;
+    pm:symbol "VDS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-221-r5 a pm:MaximumRating ;
+    pm:parameterName "Gate-Source Voltage"^^xsd:string ;
+    pm:ratedValue "±20"^^xsd:string ;
+    pm:symbol "VGS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-221-r6 a pm:MaximumRating ;
+    pm:parameterName "Continuous Drain Current, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "18"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-221-r7 a pm:MaximumRating ;
+    pm:parameterName "Continuous Drain Current, TC = 100 °C"^^xsd:string ;
+    pm:ratedValue "12.7"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-221-r8 a pm:MaximumRating ;
+    pm:parameterName "Pulsed Drain Current (1)"^^xsd:string ;
+    pm:ratedValue "72"^^xsd:string ;
+    pm:symbol "IDM"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-221-r9 a pm:MaximumRating ;
+    pm:parameterName "Single Pulse Avalanche Energy (2)"^^xsd:string ;
+    pm:ratedValue "61"^^xsd:string ;
+    pm:symbol "EAS"^^xsd:string ;
+    pm:unit "mJ"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-230-r10 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Power Dissipation, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "44"^^xsd:string ;
+    pm:symbol "PD"^^xsd:string ;
+    pm:unit "W"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-230-r11 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Operating Junction and Storage Temperature"^^xsd:string ;
+    pm:ratedValue "-55 to +175"^^xsd:string ;
+    pm:symbol "TJ, TSTG"^^xsd:string ;
+    pm:unit "°C"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-230-r4 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Drain-Source Voltage"^^xsd:string ;
+    pm:ratedValue "40"^^xsd:string ;
+    pm:symbol "VDS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-230-r5 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Gate-Source Voltage"^^xsd:string ;
+    pm:ratedValue "±20"^^xsd:string ;
+    pm:symbol "VGS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-230-r6 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Continuous Drain Current, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "35"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-230-r7 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Continuous Drain Current, TC = 100 °C"^^xsd:string ;
+    pm:ratedValue "24.8"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-230-r8 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Pulsed Drain Current (1)"^^xsd:string ;
+    pm:ratedValue "96"^^xsd:string ;
+    pm:symbol "IDM"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-230-r9 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Single Pulse Avalanche Energy (2)"^^xsd:string ;
+    pm:ratedValue "47"^^xsd:string ;
+    pm:symbol "EAS"^^xsd:string ;
+    pm:unit "mJ"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-240-r10 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Power Dissipation, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "41"^^xsd:string ;
+    pm:symbol "PD"^^xsd:string ;
+    pm:unit "W"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-240-r11 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Operating Junction and Storage Temperature"^^xsd:string ;
+    pm:ratedValue "-55 to +175"^^xsd:string ;
+    pm:symbol "TJ, TSTG"^^xsd:string ;
+    pm:unit "°C"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-240-r4 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Drain-Source Voltage"^^xsd:string ;
+    pm:ratedValue "30"^^xsd:string ;
+    pm:symbol "VDS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-240-r5 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Gate-Source Voltage"^^xsd:string ;
+    pm:ratedValue "±20"^^xsd:string ;
+    pm:symbol "VGS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-240-r6 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Continuous Drain Current, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "42"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-240-r7 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Continuous Drain Current, TC = 100 °C"^^xsd:string ;
+    pm:ratedValue "29.6"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-240-r8 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Pulsed Drain Current (1)"^^xsd:string ;
+    pm:ratedValue "98"^^xsd:string ;
+    pm:symbol "IDM"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-240-r9 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Single Pulse Avalanche Energy (2)"^^xsd:string ;
+    pm:ratedValue "39"^^xsd:string ;
+    pm:symbol "EAS"^^xsd:string ;
+    pm:unit "mJ"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-250-r10 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Power Dissipation, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "50"^^xsd:string ;
+    pm:symbol "PD"^^xsd:string ;
+    pm:unit "W"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-250-r11 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Operating Junction and Storage Temperature"^^xsd:string ;
+    pm:ratedValue "-55 to +175"^^xsd:string ;
+    pm:symbol "TJ, TSTG"^^xsd:string ;
+    pm:unit "°C"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-250-r4 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Drain-Source Voltage"^^xsd:string ;
+    pm:ratedValue "60"^^xsd:string ;
+    pm:symbol "VDS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-250-r5 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Gate-Source Voltage"^^xsd:string ;
+    pm:ratedValue "±20"^^xsd:string ;
+    pm:symbol "VGS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-250-r6 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Continuous Drain Current, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "26"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-250-r7 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Continuous Drain Current, TC = 100 °C"^^xsd:string ;
+    pm:ratedValue "18.4"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-250-r8 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Pulsed Drain Current (1)"^^xsd:string ;
+    pm:ratedValue "84"^^xsd:string ;
+    pm:symbol "IDM"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-BX-250-r9 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Single Pulse Avalanche Energy (2)"^^xsd:string ;
+    pm:ratedValue "58"^^xsd:string ;
+    pm:symbol "EAS"^^xsd:string ;
+    pm:unit "mJ"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-r10 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Power Dissipation, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "48"^^xsd:string ;
+    pm:symbol "PD"^^xsd:string ;
+    pm:unit "W"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-r11 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Operating Junction and Storage Temperature"^^xsd:string ;
+    pm:ratedValue "-55 to +175"^^xsd:string ;
+    pm:symbol "TJ, TSTG"^^xsd:string ;
+    pm:unit "°C"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-r4 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Drain-Source Voltage"^^xsd:string ;
+    pm:ratedValue "60"^^xsd:string ;
+    pm:symbol "VDS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-r5 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Gate-Source Voltage"^^xsd:string ;
+    pm:ratedValue "±20"^^xsd:string ;
+    pm:symbol "VGS"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-r6 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Continuous Drain Current, TC = 25 °C"^^xsd:string ;
+    pm:ratedValue "22"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-r7 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Continuous Drain Current, TC = 100 °C"^^xsd:string ;
+    pm:ratedValue "15.5"^^xsd:string ;
+    pm:symbol "ID"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-r8 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Pulsed Drain Current (1)"^^xsd:string ;
+    pm:ratedValue "88"^^xsd:string ;
+    pm:symbol "IDM"^^xsd:string ;
+    pm:unit "A"^^xsd:string .
+
+inst:maximumrating_pdfs-sample2-mosfet-datasheet-r9 a pm:MaximumRating ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Single Pulse Avalanche Energy (2)"^^xsd:string ;
+    pm:ratedValue "54"^^xsd:string ;
+    pm:symbol "EAS"^^xsd:string ;
+    pm:unit "mJ"^^xsd:string .
+
+inst:orderablevariant_BX-220-DPK-B_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-220-DPK-B ;
+    sosa:hasSimpleResult "750.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:orderablevariant_BX-220-DPK-T_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-220-DPK-T ;
+    sosa:hasSimpleResult "2500.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:orderablevariant_BX-221-DPK-B_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-221-DPK-B ;
+    sosa:hasSimpleResult "750.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:orderablevariant_BX-221-DPK-T_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-221-DPK-T ;
+    sosa:hasSimpleResult "2500.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:orderablevariant_BX-230-DPK-B_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-230-DPK-B ;
+    sosa:hasSimpleResult "750.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:orderablevariant_BX-230-DPK-T_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-230-DPK-T ;
+    sosa:hasSimpleResult "2500.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:orderablevariant_BX-240-DPK-B_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-240-DPK-B ;
+    sosa:hasSimpleResult "750.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:orderablevariant_BX-240-DPK-T_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-240-DPK-T ;
+    sosa:hasSimpleResult "2500.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:orderablevariant_BX-250-DPK-B_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-250-DPK-B ;
+    sosa:hasSimpleResult "750.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:orderablevariant_BX-250-DPK-T_obs_minimumOrderQuantity a sosa:Observation ;
+    sosa:hasFeatureOfInterest inst:orderablevariant_BX-250-DPK-T ;
+    sosa:hasSimpleResult "2500.0"^^xsd:float ;
+    sosa:observedProperty pm:minimumOrderQuantity .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r12 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:minValue 80.0 ;
+    pm:parameterName "Drain-Source Breakdown Voltage"^^xsd:string ;
+    pm:symbol "V(BR)DSS"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, ID = 250 µA"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r13 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 1.0 ;
+    pm:parameterName "Zero Gate Voltage Drain Current"^^xsd:string ;
+    pm:symbol "IDSS"^^xsd:string ;
+    pm:testConditions "VDS = 80 V, VGS = 0 V"^^xsd:string ;
+    pm:unit "µA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r14 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 100.0 ;
+    pm:parameterName "Gate-Body Leakage Current"^^xsd:string ;
+    pm:symbol "IGSS"^^xsd:string ;
+    pm:testConditions "VGS = ±20 V, VDS = 0 V"^^xsd:string ;
+    pm:unit "nA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r18 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:parameterName "Forward Transconductance"^^xsd:string ;
+    pm:symbol "gFS"^^xsd:string ;
+    pm:testConditions "VDS = 5 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 24.0 ;
+    pm:unit "S"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r19 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:parameterName "Input Capacitance"^^xsd:string ;
+    pm:symbol "Ciss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 1320.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r20 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:parameterName "Output Capacitance"^^xsd:string ;
+    pm:symbol "Coss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 142.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r21 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:parameterName "Reverse Transfer Capacitance"^^xsd:string ;
+    pm:symbol "Crss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 41.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r23 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:parameterName "Gate-Source Charge"^^xsd:string ;
+    pm:symbol "Qgs"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 4.6 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r24 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:parameterName "Gate-Drain Charge"^^xsd:string ;
+    pm:symbol "Qgd"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 5.3 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r25 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:parameterName "Turn-On Delay Time"^^xsd:string ;
+    pm:symbol "td(on)"^^xsd:string ;
+    pm:testConditions "VDD = 30 V, ID = 11 A, VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 8.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r26 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:parameterName "Rise Time"^^xsd:string ;
+    pm:symbol "tr"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 14.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r27 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:parameterName "Turn-Off Delay Time"^^xsd:string ;
+    pm:symbol "td(off)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 27.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r28 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:parameterName "Fall Time"^^xsd:string ;
+    pm:symbol "tf"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 8.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r30 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:parameterName "Reverse Recovery Time"^^xsd:string ;
+    pm:symbol "trr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 31.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r31 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:parameterName "Reverse Recovery Charge"^^xsd:string ;
+    pm:symbol "Qrr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 26.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r12 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:minValue 40.0 ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Drain-Source Breakdown Voltage"^^xsd:string ;
+    pm:symbol "V(BR)DSS"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, ID = 250 µA"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r13 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 1.0 ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Zero Gate Voltage Drain Current"^^xsd:string ;
+    pm:symbol "IDSS"^^xsd:string ;
+    pm:testConditions "VDS = 40 V, VGS = 0 V"^^xsd:string ;
+    pm:unit "µA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r14 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 100.0 ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Gate-Body Leakage Current"^^xsd:string ;
+    pm:symbol "IGSS"^^xsd:string ;
+    pm:testConditions "VGS = ±20 V, VDS = 0 V"^^xsd:string ;
+    pm:unit "nA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r18 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Forward Transconductance"^^xsd:string ;
+    pm:symbol "gFS"^^xsd:string ;
+    pm:testConditions "VDS = 5 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 41.0 ;
+    pm:unit "S"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r19 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Input Capacitance"^^xsd:string ;
+    pm:symbol "Ciss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 1870.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r20 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Output Capacitance"^^xsd:string ;
+    pm:symbol "Coss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 236.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r21 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Reverse Transfer Capacitance"^^xsd:string ;
+    pm:symbol "Crss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 66.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r23 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Gate-Source Charge"^^xsd:string ;
+    pm:symbol "Qgs"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 5.8 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r24 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Gate-Drain Charge"^^xsd:string ;
+    pm:symbol "Qgd"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 6.4 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r25 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Turn-On Delay Time"^^xsd:string ;
+    pm:symbol "td(on)"^^xsd:string ;
+    pm:testConditions "VDD = 30 V, ID = 11 A, VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 7.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r26 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Rise Time"^^xsd:string ;
+    pm:symbol "tr"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 11.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r27 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Turn-Off Delay Time"^^xsd:string ;
+    pm:symbol "td(off)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 31.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r28 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Fall Time"^^xsd:string ;
+    pm:symbol "tf"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 6.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r30 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Reverse Recovery Time"^^xsd:string ;
+    pm:symbol "trr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 35.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r31 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Reverse Recovery Charge"^^xsd:string ;
+    pm:symbol "Qrr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 34.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r12 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:minValue 30.0 ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Drain-Source Breakdown Voltage"^^xsd:string ;
+    pm:symbol "V(BR)DSS"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, ID = 250 µA"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r13 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 1.0 ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Zero Gate Voltage Drain Current"^^xsd:string ;
+    pm:symbol "IDSS"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V"^^xsd:string ;
+    pm:unit "µA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r14 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 100.0 ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Gate-Body Leakage Current"^^xsd:string ;
+    pm:symbol "IGSS"^^xsd:string ;
+    pm:testConditions "VGS = ±20 V, VDS = 0 V"^^xsd:string ;
+    pm:unit "nA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r18 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Forward Transconductance"^^xsd:string ;
+    pm:symbol "gFS"^^xsd:string ;
+    pm:testConditions "VDS = 5 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 47.0 ;
+    pm:unit "S"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r19 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Input Capacitance"^^xsd:string ;
+    pm:symbol "Ciss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 2140.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r20 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Output Capacitance"^^xsd:string ;
+    pm:symbol "Coss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 278.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r21 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Reverse Transfer Capacitance"^^xsd:string ;
+    pm:symbol "Crss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 79.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r23 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Gate-Source Charge"^^xsd:string ;
+    pm:symbol "Qgs"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 6.7 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r24 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Gate-Drain Charge"^^xsd:string ;
+    pm:symbol "Qgd"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 7.9 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r25 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Turn-On Delay Time"^^xsd:string ;
+    pm:symbol "td(on)"^^xsd:string ;
+    pm:testConditions "VDD = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 6.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r26 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Rise Time"^^xsd:string ;
+    pm:symbol "tr"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 10.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r27 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Turn-Off Delay Time"^^xsd:string ;
+    pm:symbol "td(off)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 35.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r28 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Fall Time"^^xsd:string ;
+    pm:symbol "tf"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 5.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r30 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Reverse Recovery Time"^^xsd:string ;
+    pm:symbol "trr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 38.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r31 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Reverse Recovery Charge"^^xsd:string ;
+    pm:symbol "Qrr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 41.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r12 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:minValue 60.0 ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Drain-Source Breakdown Voltage"^^xsd:string ;
+    pm:symbol "V(BR)DSS"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, ID = 250 µA"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r13 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 1.0 ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Zero Gate Voltage Drain Current"^^xsd:string ;
+    pm:symbol "IDSS"^^xsd:string ;
+    pm:testConditions "VDS = 60 V, VGS = 0 V"^^xsd:string ;
+    pm:unit "µA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r14 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 100.0 ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Gate-Body Leakage Current"^^xsd:string ;
+    pm:symbol "IGSS"^^xsd:string ;
+    pm:testConditions "VGS = ±20 V, VDS = 0 V"^^xsd:string ;
+    pm:unit "nA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r18 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Forward Transconductance"^^xsd:string ;
+    pm:symbol "gFS"^^xsd:string ;
+    pm:testConditions "VDS = 5 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 31.0 ;
+    pm:unit "S"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r19 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Input Capacitance"^^xsd:string ;
+    pm:symbol "Ciss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 1410.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r20 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Output Capacitance"^^xsd:string ;
+    pm:symbol "Coss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 171.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r21 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Reverse Transfer Capacitance"^^xsd:string ;
+    pm:symbol "Crss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 52.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r23 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Gate-Source Charge"^^xsd:string ;
+    pm:symbol "Qgs"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 4.2 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r24 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Gate-Drain Charge"^^xsd:string ;
+    pm:symbol "Qgd"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 4.8 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r25 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Turn-On Delay Time"^^xsd:string ;
+    pm:symbol "td(on)"^^xsd:string ;
+    pm:testConditions "VDD = 30 V, ID = 11 A, VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 9.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r26 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Rise Time"^^xsd:string ;
+    pm:symbol "tr"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 13.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r27 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Turn-Off Delay Time"^^xsd:string ;
+    pm:symbol "td(off)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 25.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r28 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Fall Time"^^xsd:string ;
+    pm:symbol "tf"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 7.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r30 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Reverse Recovery Time"^^xsd:string ;
+    pm:symbol "trr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 29.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r31 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Reverse Recovery Charge"^^xsd:string ;
+    pm:symbol "Qrr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 24.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r12 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:minValue 60.0 ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Drain-Source Breakdown Voltage"^^xsd:string ;
+    pm:symbol "V(BR)DSS"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, ID = 250 µA"^^xsd:string ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r13 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 1.0 ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Zero Gate Voltage Drain Current"^^xsd:string ;
+    pm:symbol "IDSS"^^xsd:string ;
+    pm:testConditions "VDS = 60 V, VGS = 0 V"^^xsd:string ;
+    pm:unit "µA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r14 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 100.0 ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Gate-Body Leakage Current"^^xsd:string ;
+    pm:symbol "IGSS"^^xsd:string ;
+    pm:testConditions "VGS = ±20 V, VDS = 0 V"^^xsd:string ;
+    pm:unit "nA"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r18 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Forward Transconductance"^^xsd:string ;
+    pm:symbol "gFS"^^xsd:string ;
+    pm:testConditions "VDS = 5 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 28.0 ;
+    pm:unit "S"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r19 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Input Capacitance"^^xsd:string ;
+    pm:symbol "Ciss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 1150.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r20 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Output Capacitance"^^xsd:string ;
+    pm:symbol "Coss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 165.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r21 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Reverse Transfer Capacitance"^^xsd:string ;
+    pm:symbol "Crss"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, VGS = 0 V, f = 1 MHz"^^xsd:string ;
+    pm:typValue 48.0 ;
+    pm:unit "pF"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r23 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Gate-Source Charge"^^xsd:string ;
+    pm:symbol "Qgs"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 3.9 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r24 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Gate-Drain Charge"^^xsd:string ;
+    pm:symbol "Qgd"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 4.1 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r25 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Turn-On Delay Time"^^xsd:string ;
+    pm:symbol "td(on)"^^xsd:string ;
+    pm:testConditions "VDD = 30 V, ID = 11 A, VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 9.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r26 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Rise Time"^^xsd:string ;
+    pm:symbol "tr"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 12.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r27 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Turn-Off Delay Time"^^xsd:string ;
+    pm:symbol "td(off)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 24.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r28 a pm:ElectricalCharacteristic ;
+    pm:category "Switching Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Fall Time"^^xsd:string ;
+    pm:symbol "tf"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, RG = 3.3 Ohm"^^xsd:string ;
+    pm:typValue 7.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r30 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Reverse Recovery Time"^^xsd:string ;
+    pm:symbol "trr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 28.0 ;
+    pm:unit "ns"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r31 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Reverse Recovery Charge"^^xsd:string ;
+    pm:symbol "Qrr"^^xsd:string ;
+    pm:testConditions "IF = 11 A, di/dt = 100 A/µs"^^xsd:string ;
+    pm:typValue 22.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:orderablevariant_BX-220-DPK-B a pm:OrderableVariant ;
+    pm:markingCode "B22"^^xsd:string ;
+    pm:minimumOrderQuantity 750 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tube, 75 pcs"^^xsd:string ;
+    pm:partNumber "BX-220-DPK-B"^^xsd:string ;
+    pm:variantOf inst:device_BX-220 .
+
+inst:orderablevariant_BX-220-DPK-T a pm:OrderableVariant ;
+    pm:markingCode "B22"^^xsd:string ;
+    pm:minimumOrderQuantity 2500 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tape & Reel, 2500 pcs"^^xsd:string ;
+    pm:partNumber "BX-220-DPK-T"^^xsd:string ;
+    pm:variantOf inst:device_BX-220 .
+
+inst:orderablevariant_BX-221-DPK-B a pm:OrderableVariant ;
+    pm:markingCode "B21"^^xsd:string ;
+    pm:minimumOrderQuantity 750 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tube, 75 pcs"^^xsd:string ;
+    pm:partNumber "BX-221-DPK-B"^^xsd:string .
+
+inst:orderablevariant_BX-221-DPK-T a pm:OrderableVariant ;
+    pm:markingCode "B21"^^xsd:string ;
+    pm:minimumOrderQuantity 2500 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tape & Reel, 2500 pcs"^^xsd:string ;
+    pm:partNumber "BX-221-DPK-T"^^xsd:string .
+
+inst:orderablevariant_BX-230-DPK-B a pm:OrderableVariant ;
+    pm:markingCode "B30"^^xsd:string ;
+    pm:minimumOrderQuantity 750 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tube, 75 pcs"^^xsd:string ;
+    pm:partNumber "BX-230-DPK-B"^^xsd:string ;
+    pm:variantOf inst:device_BX-230 .
+
+inst:orderablevariant_BX-230-DPK-T a pm:OrderableVariant ;
+    pm:markingCode "B30"^^xsd:string ;
+    pm:minimumOrderQuantity 2500 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tape & Reel, 2500 pcs"^^xsd:string ;
+    pm:partNumber "BX-230-DPK-T"^^xsd:string ;
+    pm:variantOf inst:device_BX-230 .
+
+inst:orderablevariant_BX-240-DPK-B a pm:OrderableVariant ;
+    pm:markingCode "B40"^^xsd:string ;
+    pm:minimumOrderQuantity 750 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tube, 75 pcs"^^xsd:string ;
+    pm:partNumber "BX-240-DPK-B"^^xsd:string ;
+    pm:variantOf inst:device_BX-240 .
+
+inst:orderablevariant_BX-240-DPK-T a pm:OrderableVariant ;
+    pm:markingCode "B40"^^xsd:string ;
+    pm:minimumOrderQuantity 2500 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tape & Reel, 2500 pcs"^^xsd:string ;
+    pm:partNumber "BX-240-DPK-T"^^xsd:string ;
+    pm:variantOf inst:device_BX-240 .
+
+inst:orderablevariant_BX-250-DPK-B a pm:OrderableVariant ;
+    pm:markingCode "B50"^^xsd:string ;
+    pm:minimumOrderQuantity 750 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tube, 75 pcs"^^xsd:string ;
+    pm:partNumber "BX-250-DPK-B"^^xsd:string ;
+    pm:variantOf inst:device_BX-250 .
+
+inst:orderablevariant_BX-250-DPK-T a pm:OrderableVariant ;
+    pm:markingCode "B50"^^xsd:string ;
+    pm:minimumOrderQuantity 2500 ;
+    pm:packageType "TO-252"^^xsd:string ;
+    pm:packing "Tape & Reel, 2500 pcs"^^xsd:string ;
+    pm:partNumber "BX-250-DPK-T"^^xsd:string ;
+    pm:variantOf inst:device_BX-250 .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r16 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 27.0 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 21.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r17 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 37.0 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 4.5 V, ID = 8 A"^^xsd:string ;
+    pm:typValue 29.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r22 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:maxValue 25.0 ;
+    pm:parameterName "Total Gate Charge"^^xsd:string ;
+    pm:symbol "Qg"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 17.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r29 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:maxValue 1.2 ;
+    pm:parameterName "Diode Forward Voltage"^^xsd:string ;
+    pm:symbol "VSD"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, IS = 11 A"^^xsd:string ;
+    pm:typValue 0.86 ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r16 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 14.0 ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 11.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r17 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 19.0 ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 4.5 V, ID = 8 A"^^xsd:string ;
+    pm:typValue 15.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r22 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:maxValue 33.0 ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Total Gate Charge"^^xsd:string ;
+    pm:symbol "Qg"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 22.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r29 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:maxValue 1.1 ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Diode Forward Voltage"^^xsd:string ;
+    pm:symbol "VSD"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, IS = 11 A"^^xsd:string ;
+    pm:typValue 0.82 ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r16 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 13.0 ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 10.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r17 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 17.0 ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 4.5 V, ID = 8 A"^^xsd:string ;
+    pm:typValue 13.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r22 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:maxValue 39.0 ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Total Gate Charge"^^xsd:string ;
+    pm:symbol "Qg"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 26.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r29 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:maxValue 1.1 ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Diode Forward Voltage"^^xsd:string ;
+    pm:symbol "VSD"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, IS = 11 A"^^xsd:string ;
+    pm:typValue 0.81 ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r16 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 22.0 ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 17.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r17 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 30.0 ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 4.5 V, ID = 8 A"^^xsd:string ;
+    pm:typValue 23.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r22 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:maxValue 23.0 ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Total Gate Charge"^^xsd:string ;
+    pm:symbol "Qg"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 15.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r29 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:maxValue 1.2 ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Diode Forward Voltage"^^xsd:string ;
+    pm:symbol "VSD"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, IS = 11 A"^^xsd:string ;
+    pm:typValue 0.84 ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r16 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 18.0 ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 10 V, ID = 11 A"^^xsd:string ;
+    pm:typValue 14.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r17 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 25.0 ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Static Drain-Source On-Resistance"^^xsd:string ;
+    pm:symbol "RDS(on)"^^xsd:string ;
+    pm:testConditions "VGS = 4.5 V, ID = 8 A"^^xsd:string ;
+    pm:typValue 19.0 ;
+    pm:unit "mOhm"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r22 a pm:ElectricalCharacteristic ;
+    pm:category "Dynamic Characteristics"^^xsd:string ;
+    pm:maxValue 21.0 ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Total Gate Charge"^^xsd:string ;
+    pm:symbol "Qg"^^xsd:string ;
+    pm:testConditions "VDS = 30 V, ID = 11 A, VGS = 10 V"^^xsd:string ;
+    pm:typValue 14.0 ;
+    pm:unit "nC"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r29 a pm:ElectricalCharacteristic ;
+    pm:category "Drain-Source Diode Characteristics"^^xsd:string ;
+    pm:maxValue 1.2 ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Diode Forward Voltage"^^xsd:string ;
+    pm:symbol "VSD"^^xsd:string ;
+    pm:testConditions "VGS = 0 V, IS = 11 A"^^xsd:string ;
+    pm:typValue 0.85 ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-221-r15 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 2.7 ;
+    pm:minValue 1.4 ;
+    pm:parameterName "Gate Threshold Voltage"^^xsd:string ;
+    pm:symbol "VGS(th)"^^xsd:string ;
+    pm:testConditions "VDS = VGS, ID = 250 µA"^^xsd:string ;
+    pm:typValue 2.0 ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-230-r15 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 2.3 ;
+    pm:minValue 1.1 ;
+    pm:ofDevice inst:device_BX-230 ;
+    pm:parameterName "Gate Threshold Voltage"^^xsd:string ;
+    pm:symbol "VGS(th)"^^xsd:string ;
+    pm:testConditions "VDS = VGS, ID = 250 µA"^^xsd:string ;
+    pm:typValue 1.7 ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-240-r15 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 2.2 ;
+    pm:minValue 1.0 ;
+    pm:ofDevice inst:device_BX-240 ;
+    pm:parameterName "Gate Threshold Voltage"^^xsd:string ;
+    pm:symbol "VGS(th)"^^xsd:string ;
+    pm:testConditions "VDS = VGS, ID = 250 µA"^^xsd:string ;
+    pm:typValue 1.6 ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-BX-250-r15 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 2.6 ;
+    pm:minValue 1.3 ;
+    pm:ofDevice inst:device_BX-250 ;
+    pm:parameterName "Gate Threshold Voltage"^^xsd:string ;
+    pm:symbol "VGS(th)"^^xsd:string ;
+    pm:testConditions "VDS = VGS, ID = 250 µA"^^xsd:string ;
+    pm:typValue 1.9 ;
+    pm:unit "V"^^xsd:string .
+
+inst:electricalcharacteristic_pdfs-sample2-mosfet-datasheet-r15 a pm:ElectricalCharacteristic ;
+    pm:category "Static Characteristics"^^xsd:string ;
+    pm:maxValue 2.5 ;
+    pm:minValue 1.2 ;
+    pm:ofDevice inst:device_BX-220 ;
+    pm:parameterName "Gate Threshold Voltage"^^xsd:string ;
+    pm:symbol "VGS(th)"^^xsd:string ;
+    pm:testConditions "VDS = VGS, ID = 250 µA"^^xsd:string ;
+    pm:typValue 1.8 ;
+    pm:unit "V"^^xsd:string .
+
+inst:manufacturer_Nordwind_Microdevices_AG a pm:Manufacturer ;
+    pm:manufacturerName "Nordwind Microdevices AG"^^xsd:string ;
+    pm:website "www.example.com" .
+
+inst:device_BX-240 a pm:Device ;
+    pm:application "[\"DC/DC converters\", \"Motor drives\", \"Load switching\"]"^^xsd:string ;
+    pm:deviceName "BX-240"^^xsd:string ;
+    pm:deviceType "N-Channel Enhancement Mode Power MOSFET"^^xsd:string ;
+    pm:manufacturedBy inst:manufacturer_Nordwind_Microdevices_AG ;
+    pm:packageType "TO-252 (DPAK)"^^xsd:string ;
+    pm:qualification "AEC-Q101"^^xsd:string ;
+    pm:rdsOnTempco 0.7 ;
+    pm:rohsCompliant true .
+
+inst:device_BX-250 a pm:Device ;
+    pm:application "[\"DC/DC converters\", \"Motor drives\", \"Load switching\"]"^^xsd:string ;
+    pm:deviceName "BX-250"^^xsd:string ;
+    pm:deviceType "N-Channel Enhancement Mode Power MOSFET"^^xsd:string ;
+    pm:packageType "TO-252 (DPAK)"^^xsd:string ;
+    pm:qualification "AEC-Q101"^^xsd:string ;
+    pm:rdsOnTempco 0.5 ;
+    pm:rohsCompliant true .
+
+inst:device_BX-220 a pm:Device ;
+    pm:application "[\"DC/DC converters\", \"Motor drives\", \"Load switching\"]"^^xsd:string ;
+    pm:describesDevice inst:device_BX-220 ;
+    pm:deviceName "BX-220"^^xsd:string ;
+    pm:deviceType "N-Channel Enhancement Mode Power MOSFET"^^xsd:string ;
+    pm:manufacturedBy inst:manufacturer_Nordwind_Microdevices_AG ;
+    pm:packageType "TO-252 (DPAK)"^^xsd:string ;
+    pm:qualification "AEC-Q101"^^xsd:string ;
+    pm:rdsOnTempco 1.8 ;
+    pm:rohsCompliant true .
+
+inst:device_BX-230 a pm:Device ;
+    pm:describesDevice inst:device_BX-230 ;
+    pm:deviceName "BX-230"^^xsd:string ;
+    pm:deviceType "N-Channel Enhancement Mode Power MOSFET"^^xsd:string ;
+    pm:manufacturedBy inst:manufacturer_Nordwind_Microdevices_AG ;
+    pm:packageType "TO-252 (DPAK)"^^xsd:string ;
+    pm:qualification "AEC-Q101"^^xsd:string ;
+    pm:rdsOnTempco 1.4 ;
+    pm:rohsCompliant true .
+

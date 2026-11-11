@@ -11,6 +11,7 @@ import {
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ModelSelector from "./ModelSelector";
+import PdfToCsvCard from "./PdfToCsvCard";
 
 export default function FileUploadStep({
   onSchemaUpload,
@@ -95,58 +96,69 @@ export default function FileUploadStep({
           </CardContent>
         </Card>
 
-        {/* DATA FILES UPLOAD */}
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="subtitle1" gutterBottom>
-              CSV Data Files
-            </Typography>
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              One or more CSV files whose headers will be matched against schema terms
-            </Typography>
+        {/* DATA FILES UPLOAD + PDF TO CSV CONVERSION */}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+            gap: 3,
+            alignItems: "start",
+          }}
+        >
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="subtitle1" gutterBottom>
+                CSV Data Files
+              </Typography>
+              <Typography variant="body2" color="textSecondary" gutterBottom>
+                One or more CSV files whose headers will be matched against schema terms
+              </Typography>
 
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 2,
-                mt: 2,
-              }}
-            >
-              <Button
-                variant="outlined"
-                startIcon={<CloudUploadIcon />}
-                onClick={() => dataInputRef.current?.click()}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  mt: 2,
+                }}
               >
-                Choose CSV Files
-              </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<CloudUploadIcon />}
+                  onClick={() => dataInputRef.current?.click()}
+                >
+                  Choose CSV Files
+                </Button>
 
-              {dataFiles.length > 0 && (
-                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                  {dataFiles.map((file) => (
-                    <Chip
-                      key={file.name}
-                      icon={<CheckCircleIcon />}
-                      label={file.name}
-                      color="success"
-                      variant="outlined"
-                      onDelete={() => onDataFileRemove(file.name)}
-                    />
-                  ))}
-                </Box>
-              )}
-            </Box>
+                {dataFiles.length > 0 && (
+                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                    {dataFiles.map((file) => (
+                      <Chip
+                        key={file.name}
+                        icon={<CheckCircleIcon />}
+                        label={file.name}
+                        color="success"
+                        variant="outlined"
+                        onDelete={() => onDataFileRemove(file.name)}
+                      />
+                    ))}
+                  </Box>
+                )}
+              </Box>
 
-            <input
-              ref={dataInputRef}
-              type="file"
-              accept=".csv,.zip"
-              onChange={handleDataFilesChange}
-              multiple
-              style={{ display: "none" }}
-            />
-          </CardContent>
-        </Card>
+              <input
+                ref={dataInputRef}
+                type="file"
+                accept=".csv,.zip"
+                onChange={handleDataFilesChange}
+                multiple
+                style={{ display: "none" }}
+              />
+            </CardContent>
+          </Card>
+
+          <PdfToCsvCard schemaFile={schemaFile} selectedModel={selectedModel} />
+        </Box>
 
         {/* AI MODEL SELECTION */}
         <ModelSelector
