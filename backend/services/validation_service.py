@@ -335,6 +335,7 @@ class ValidationService:
         round_id, which the completed event reports.
         """
         import asyncio
+        import time as _time
         from uuid import uuid4
         from concurrent.futures import ThreadPoolExecutor
         from rdflib import Graph
@@ -353,7 +354,8 @@ class ValidationService:
             values = ctx.get(key) or []
             return values[index] if index < len(values) else None
 
-        def log_shape(index: int, rule: str, shape_ttl: str, meta: Dict[str, Any], error: Optional[str]) -> Optional[str]:
+        def log_shape(index: int, rule: str, shape_ttl: str, meta: Dict[str, Any], error: Optional[str],
+                      duration_ms: Optional[int] = None) -> Optional[str]:
             """Write the generation-log row; a logging problem never breaks the generation itself."""
             if not ctx.get("user_email"):
                 return None
@@ -375,6 +377,7 @@ class ValidationService:
                     run_index=ctx.get("run_index"),
                     error=error,
                     round_id=round_id,
+                    duration_ms=duration_ms,
                 )
                 return row["generation_id"]
             except Exception as log_err:
@@ -391,6 +394,7 @@ class ValidationService:
                 {"role": "user", "content": user_prompt}
             ]
             meta: Dict[str, Any] = {}
+            t0 = _time.perf_counter()
             try:
                 # Temperature 0 for Kiste so repeated runs are comparable; the cloud providers fix it themselves
                 if hasattr(self.llm, "_call_kiste_meta"):
@@ -400,11 +404,11 @@ class ValidationService:
                 clean_ttl = re.sub(r"^```[a-zA-Z]*\n", "", response)
                 clean_ttl = re.sub(r"```$", "", clean_ttl.strip()).strip()
                 result = {"index": index, "rule": rule, "status": "success", "shacl": clean_ttl}
-                generation_id = log_shape(index, rule, clean_ttl, meta, None)
+                generation_id = log_shape(index, rule, clean_ttl, meta, None, int((_time.perf_counter() - t0) * 1000))
             except Exception as e:
                 print(f"Error generating shape for rule '{rule}': {e}")
                 result = {"index": index, "rule": rule, "status": "error", "message": str(e), "shacl": f"# Failed to generate shape for rule: {rule}"}
-                generation_id = log_shape(index, rule, "", meta, str(e))
+                generation_id = log_shape(index, rule, "", meta, str(e), int((_time.perf_counter() - t0) * 1000))
             if generation_id:
                 result["generation_id"] = generation_id
             return result

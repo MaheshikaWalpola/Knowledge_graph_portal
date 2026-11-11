@@ -29,6 +29,7 @@ Document fields (always all present; missing information is null):
   parse_ok             rdflib parsed the Turtle
   shacl_valid          pySHACL with the SHACL-SHACL meta-shapes accepted it (null when it did not parse)
   error                error text when the call or the parsing failed, else null
+  duration_ms          wall-clock time of the model call for this shape (null for repaired rows)
   stage                raw | repaired
   repair_of            generation_id of the raw row (repaired rows only)
   targets_count        filled in later by the data run (PATCH), else null
@@ -53,7 +54,7 @@ FIELDS = (
     "generation_id", "round_id", "user_email", "schema_id", "experiment_tag", "statement_id", "statement_text",
     "rule_type", "intended_error_class", "model_id", "model_id_returned", "provider", "host", "temperature",
     "seed", "prompt_version", "prompt_override", "run_index", "calls", "shape_ttl", "parse_ok", "shacl_valid",
-    "error", "stage", "repair_of", "targets_count", "validation_result", "created_at",
+    "error", "stage", "repair_of", "targets_count", "validation_result", "duration_ms", "created_at",
 )
 
 
@@ -120,6 +121,7 @@ def log_generation(
     stage: str = STAGE_RAW,
     repair_of: Optional[str] = None,
     round_id: Optional[str] = None,
+    duration_ms: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Store one generated shape. With `error` set (the call failed) the row is kept with parse_ok false."""
     checks = {"parse_ok": False, "shacl_valid": None, "error": error} if error else check_shape(shape_ttl)
@@ -148,6 +150,7 @@ def log_generation(
         "repair_of": repair_of,
         "targets_count": None,
         "validation_result": None,
+        "duration_ms": int(duration_ms) if duration_ms is not None else None,
         "created_at": _now(),
     }
     _col().insert_one(doc)
@@ -250,8 +253,9 @@ ROUND_SUMMARY_FIELDS = ("round_id", "user_email", "schema_id", "experiment_tag",
 def list_rounds(user_email: Optional[str] = None, limit: int = 50, skip: int = 0) -> Dict[str, Any]:
     """
     One summary per generate call (rows sharing a round_id), newest first: when it ran, which schema and model,
-    how many shapes it produced, how many parsed / were valid SHACL / failed, how many were repaired, and the
-    generation_ids of its raw rows. Rows written before round ids existed (round_id null) are left out.
+    how many shapes it produced, how many parsed / were valid SHACL / failed, how many were repaired, the
+    generation_ids of its raw rows, and timings_ms per step from the timing log (services.run_log_service).
+    Rows written before round ids existed (round_id null) are left out.
     """
     query: Dict[str, Any] = {"round_id": {"$ne": None}}
     if user_email:
@@ -277,4 +281,12 @@ def list_rounds(user_email: Optional[str] = None, limit: int = 50, skip: int = 0
         r["generation_ids"].append(d.get("generation_id"))
     ordered = sorted(rounds.values(), key=lambda r: r["created_at"] or "", reverse=True)
     page = ordered[skip:skip + limit]
+    try:
+        from services import run_log_service as runlog
+        timings = runlog.timings_by_round([r["round_id"] for r in page])
+    except Exception as e:
+        print(f"Timing log read failed: {e}")
+        timings = {}
+    for r in page:
+        r["timings_ms"] = timings.get(r["round_id"], {})
     return {"entries": page, "total": len(ordered), "skip": skip, "limit": limit, "has_more": skip + len(page) < len(ordered)}

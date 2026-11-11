@@ -73,6 +73,8 @@ class FakeCollection:
         if isinstance(cond, dict):
             if "$ne" in cond:
                 return value != cond["$ne"]
+            if "$in" in cond:
+                return value in cond["$in"]
             if "$regex" in cond:
                 import re
                 return re.search(cond["$regex"], value or "", re.I if "i" in cond.get("$options", "") else 0) is not None

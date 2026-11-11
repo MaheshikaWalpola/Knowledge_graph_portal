@@ -26,3 +26,9 @@ shacl_generations_collection.create_index([("generation_id", ASCENDING)], unique
 shacl_generations_collection.create_index([("user_email", ASCENDING), ("created_at", DESCENDING)])
 shacl_generations_collection.create_index([("experiment_tag", ASCENDING), ("model_id", ASCENDING), ("statement_id", ASCENDING)])
 shacl_generations_collection.create_index([("round_id", ASCENDING), ("created_at", ASCENDING)])
+
+# Timing log: one document per run of a validation-page step (services/run_log_service.py)
+validation_runs_collection = db["validation_runs"]
+validation_runs_collection.create_index([("run_id", ASCENDING)], unique=True)
+validation_runs_collection.create_index([("user_email", ASCENDING), ("started_at", DESCENDING)])
+validation_runs_collection.create_index([("round_id", ASCENDING), ("step", ASCENDING)])

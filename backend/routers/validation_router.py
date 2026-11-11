@@ -1,5 +1,7 @@
 from typing import Any, Dict, List, Optional
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
+import asyncio
 import json
 import io
 import time
@@ -13,6 +15,7 @@ from core.auth import get_current_user
 from services.llm_providers import cloud_providers, KisteConnectionError
 from services.model_catalog import list_models
 from services import generation_log_service as genlog
+from services import run_log_service as runlog
 from services.validation_service import ValidationService
 from services.user_schema_service import get_user_schema
 from services.graphdb_service import (
@@ -26,17 +29,43 @@ validation_service = ValidationService()
 
 
 @contextmanager
-def _timed(label: str, start: Optional[float] = None):
-    """Print how long a validation process took, including runs that fail or are aborted by the client."""
+def _timed(label: str, start: Optional[float] = None, run: Optional[Dict[str, Any]] = None):
+    """
+    Print how long a validation process took, including runs that fail or are aborted by the client.
+    With `run` ({"step", "user_email"} plus whatever is known: model_id, schema_id, target, count, round_id)
+    the time is also stored in the timing log (services.run_log_service). The body may fill in more run
+    fields while it streams (round_id, count, detail); they are read when the run ends.
+    """
     t0 = start if start is not None else time.perf_counter()
-    status = "completed"
+    status, error = "completed", None
     try:
         yield
-    except BaseException:
-        status = "aborted"
+    except BaseException as e:
+        status = "aborted" if isinstance(e, (GeneratorExit, asyncio.CancelledError)) else "error"
+        error = f"{type(e).__name__}: {e}"[:500]
         raise
     finally:
-        print(f"[Timing] {label} {status} in {time.perf_counter() - t0:.2f}s")
+        elapsed = time.perf_counter() - t0
+        print(f"[Timing] {label} {status} in {elapsed:.2f}s")
+        if run and run.get("user_email") and run.get("step"):
+            try:
+                runlog.log_run(**run, status=status, error=error, duration_ms=int(elapsed * 1000),
+                               started_at=datetime.now(timezone.utc) - timedelta(seconds=elapsed))
+            except Exception as log_err:
+                print(f"Timing log write failed ({label}): {log_err}")
+
+
+def _round_of(generation_ids: Optional[List[Optional[str]]], user_email: str) -> Optional[str]:
+    """The round_id of the first logged shape among generation_ids (None when nothing is known)."""
+    for gid in generation_ids or []:
+        if gid:
+            try:
+                row = genlog.get_generation(gid, user_email)
+            except Exception:
+                row = None
+            if row:
+                return row.get("round_id")
+    return None
 
 def _fetch_workspace_schema_ttl(user_email: str, schema_id: str) -> str:
     """Helper to fetch workspace schema turtle content from GraphDB."""
@@ -94,6 +123,21 @@ def api_list_rounds(
 ) -> Dict:
     """One summary per generate call of the current user (shapes, parsed, valid, failed, repaired, generation_ids)."""
     return genlog.list_rounds(user_email=current_user["email"], limit=limit, skip=skip)
+
+
+@router.get("/validation/runs")
+def api_list_runs(
+    round_id: Optional[str] = Query(None),
+    step: Optional[str] = Query(None, description="question_generation, shacl_generation, shacl_verification or validation"),
+    model: Optional[str] = Query(None, description="requested model id"),
+    status: Optional[str] = Query(None, description="completed, error or aborted"),
+    limit: int = Query(50, ge=1, le=500),
+    skip: int = Query(0, ge=0),
+    current_user: Any = Depends(get_current_user),
+) -> Dict:
+    """The timing log: how long each step took (services.run_log_service), newest first."""
+    return runlog.list_runs(user_email=current_user["email"], round_id=round_id, step=step, model=model, status=status,
+                            limit=limit, skip=skip)
 
 
 @router.get("/validation/generations/{generation_id}")
@@ -155,7 +199,9 @@ async def api_suggest_rules(
         except Exception as e:
             print(f"Error fetching workspace instances: {e}")
             
-    with _timed(f"Rule suggestion ({num_questions} questions, model={model or 'default'})", start):
+    run = {"step": "question_generation", "user_email": current_user["email"], "model_id": model, "schema_id": schema_id,
+           "target": "workspace" if schema_id else "uploaded", "count": num_questions}
+    with _timed(f"Rule suggestion ({num_questions} questions, model={model or 'default'})", start, run):
         # Blocking AI call: run it in a worker thread so other requests are not frozen meanwhile
         rules = await run_in_threadpool(
             validation_service.suggest_validation_rules,
@@ -165,6 +211,7 @@ async def api_suggest_rules(
             num_questions=num_questions,
             model=model
         )
+        run["detail"] = {"asked": num_questions, "returned": len(rules) if isinstance(rules, list) else None}
     return {"status": "ok", "rules": rules}
 
 
@@ -265,10 +312,17 @@ async def api_generate_shacl_stream(
         except Exception as e:
             print(f"Error fetching workspace schema: {e}")
             
+    run = {"step": "shacl_generation", "user_email": current_user["email"], "model_id": model, "schema_id": schema_id,
+           "target": "workspace" if schema_id else "uploaded", "count": len(rules_list)}
+
     async def event_generator():
-        with _timed(f"SHACL generation ({len(rules_list)} rules, model={model or 'default'})", start):
+        with _timed(f"SHACL generation ({len(rules_list)} rules, model={model or 'default'})", start, run):
             async for event in validation_service.generate_shacl_shapes_stream(rules_list, schema_content, model=model,
                                                                                log_context=log_context):
+                if event.get("status") == "completed":
+                    run["round_id"] = event.get("round_id")
+                    logged = [g for g in (event.get("generation_ids") or []) if g]
+                    run["detail"] = {"rules": len(rules_list), "shapes_logged": len(logged)}
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)  # Yield control to flush the event
 
@@ -285,11 +339,13 @@ async def api_verify_shacl_stream(
     schema_file: Optional[UploadFile] = File(None),
     instance_file: Optional[UploadFile] = File(None),  # real data: known terms + example structure for tests
     generation_ids: Optional[str] = Form(None),  # JSON array, per rule: generation-log ids from the generation stream
+    round_id: Optional[str] = Form(None),  # the generate call these shapes came from (timing log); derived from generation_ids when omitted
     current_user: Any = Depends(get_current_user)
 ):
     """
     SSE endpoint: on-demand check/repair of already generated SHACL shapes.
     A repaired shape is logged as a new row linked to its raw row (generation_ids, or the newest raw row for the rule).
+    The time the whole verification took is stored in the timing log under the round.
     """
     import asyncio
     start = time.perf_counter()
@@ -321,17 +377,36 @@ async def api_verify_shacl_stream(
         except Exception as e:
             print(f"Error fetching workspace instances: {e}")
 
+    checked = len(indices_list) if indices_list is not None else len(rules_list)
+    run = {"step": "shacl_verification", "user_email": current_user["email"], "model_id": model, "schema_id": schema_id,
+           "target": "workspace" if schema_id else "uploaded", "count": checked,
+           "round_id": round_id or _round_of(generation_id_list, current_user["email"])}
+    outcomes: Dict[str, int] = {}
+
     async def event_generator():
-        checked = len(indices_list) if indices_list is not None else len(rules_list)
-        with _timed(f"SHACL verification ({checked} rules, model={model or 'default'})", start):
+        with _timed(f"SHACL verification ({checked} rules, model={model or 'default'})", start, run):
             async for event in validation_service.verify_shacl_shapes_stream(rules_list, shapes_ttl, schema_content, indices_list, model=model,
                                                                        instance_content=instance_content,
                                                                        user_email=current_user["email"],
                                                                        generation_ids=generation_id_list):
+                if event.get("status") == "progress":
+                    key = event.get("verification") or "unknown"
+                    outcomes[key] = outcomes.get(key, 0) + 1
+                    run["detail"] = dict(outcomes)
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)
 
     return EventSourceResponse(event_generator())
+
+
+def _note_validation_result(run: Dict[str, Any], event: Dict[str, Any]) -> None:
+    """Copy the totals of the final validation report into the timing-log entry."""
+    report = event.get("report") if isinstance(event, dict) else None
+    if not isinstance(report, dict):
+        return
+    run["count"] = report.get("total_questions")
+    run["detail"] = {k: report.get(k) for k in ("total_questions", "passed_questions", "failed_questions",
+                                                 "total_triples", "violation_count", "gate_decision")}
 
 
 def _parse_verification_meta(raw: Optional[str]) -> Optional[dict]:
@@ -370,21 +445,26 @@ async def api_run_playground_stream(
     instances_ttl: str = Form(...),
     shacl_ttl: str = Form(...),
     verification_metadata: Optional[str] = Form(None),
+    round_id: Optional[str] = Form(None),  # the generate call the shapes came from (timing log only)
+    model: Optional[str] = Form(None),     # the model selected on the page (timing log only; validation itself is pySHACL)
     current_user: Any = Depends(get_current_user)
 ):
     """SSE endpoint that streams step-by-step SHACL validation progress for the playground."""
     import asyncio
     start = time.perf_counter()
     v_meta = _parse_verification_meta(verification_metadata)
+    run = {"step": "validation", "user_email": current_user["email"], "model_id": model, "schema_id": None,
+           "target": "uploaded", "round_id": round_id}
 
     async def event_generator():
-        with _timed("Playground validation", start):
+        with _timed("Playground validation", start, run):
             for event in validation_service.validate_rdf_stream(
                 data_ttl=instances_ttl,
                 shapes_ttl=shacl_ttl,
                 schema_ttl=schema_ttl,
                 verification_metadata=v_meta
             ):
+                _note_validation_result(run, event)
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)  # Yield control to flush the event
 
@@ -427,6 +507,8 @@ async def api_run_workspace_stream(
     schema_id: str = Form(...),
     shacl_ttl: str = Form(...),
     verification_metadata: Optional[str] = Form(None),
+    round_id: Optional[str] = Form(None),  # the generate call the shapes came from (timing log only)
+    model: Optional[str] = Form(None),     # the model selected on the page (timing log only; validation itself is pySHACL)
     current_user: Any = Depends(get_current_user)
 ):
     """SSE endpoint that streams workspace graph retrieval and SHACL validation progress."""
@@ -434,6 +516,8 @@ async def api_run_workspace_stream(
     start = time.perf_counter()
     user_email = current_user["email"]
     v_meta = _parse_verification_meta(verification_metadata)
+    run = {"step": "validation", "user_email": user_email, "model_id": model, "schema_id": schema_id,
+           "target": "workspace", "round_id": round_id}
 
     # Fetch graphs first (fast operation)
     try:
@@ -443,7 +527,7 @@ async def api_run_workspace_stream(
         raise HTTPException(500, detail=f"Failed to retrieve workspace graphs: {e}")
 
     async def event_generator():
-        with _timed(f"Workspace validation ({schema_id})", start):
+        with _timed(f"Workspace validation ({schema_id})", start, run):
             yield {"data": json.dumps({"step": "fetched_graphs", "message": "Workspace graphs retrieved from GraphDB"})}
             await asyncio.sleep(0)
             for event in validation_service.validate_rdf_stream(
@@ -452,6 +536,7 @@ async def api_run_workspace_stream(
                 schema_ttl=schema_ttl_content,
                 verification_metadata=v_meta
             ):
+                _note_validation_result(run, event)
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)
 
