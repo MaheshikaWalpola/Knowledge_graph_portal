@@ -1421,6 +1421,7 @@ class ValidationService:
         violation_cnt = report_data.get("violation_count", len(violations))
         warning_cnt = report_data.get("warning_count", 0)
         affected_fn = report_data.get("affected_focus_nodes", len(set(v.get("focus_node", "") for v in violations if v.get("focus_node"))))
+        model_used = report_data.get("model") or "Not recorded"
 
         pass_rate = round((passed_q / total_q * 100), 1) if total_q > 0 else 100.0
         now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M UTC")
@@ -1466,6 +1467,7 @@ class ValidationService:
             [Paragraph("<b>Flagged Warnings:</b>", style_body), Paragraph(f"<font color='{warn_color.hexval()}'><b>{warning_cnt:,}</b></font>", style_body)],
             [Paragraph("<b>Affected Items:</b>", style_body), Paragraph(f"<font color='{fn_color.hexval()}'><b>{affected_fn:,}</b></font>", style_body)],
             [Paragraph("<b>AI Verification:</b>", style_body), Paragraph(self._safe_xml(ai_summary), style_body)],
+            [Paragraph("<b>AI Model:</b>", style_body), Paragraph(self._safe_xml(str(model_used)), style_body)],
         ]
 
         summary_list_table = Table(summary_rows, colWidths=[150, 384])

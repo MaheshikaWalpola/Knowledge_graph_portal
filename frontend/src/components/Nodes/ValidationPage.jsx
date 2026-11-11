@@ -745,7 +745,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
               }
 
               if (event.report) {
-                setPlaygroundReport(event.report);
+                // The AI model chosen in step 1 (generation + verification) goes into the report and its PDF
+                setPlaygroundReport({ ...event.report, model: selectedModel });
                 setValidationSteps(prev => [...prev, { step: "done", message: "Validation complete!", status: "done" }]);
                 setSuccess("Validation complete!");
               } else {
