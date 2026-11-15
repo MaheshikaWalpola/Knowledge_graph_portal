@@ -235,41 +235,33 @@ const CanvasInner = forwardRef(({
         );
       }
       if (matchingNode) {
-        // Select the match, unselect the rest, and bring the match to the front: React Flow stacks nodes
-        // by the zIndex of its own wrapper element (a CSS z-index on the inner .onto-node has no effect),
-        // and among equal zIndex the node drawn last wins, so the match also moves to the end of the list.
-        setNodes(nds => {
-          const others = nds
-            .filter(n => n.id !== matchingNode.id)
-            .map(n => ({
+        // Set matching node as selected and others as unselected
+        setNodes(nds => nds.map(n => {
+          if (n.id === matchingNode.id) {
+            return {
               ...n,
-              selected: false,
-              zIndex: undefined,
-              className: `${n.className || ""}`.replace("highlight-flash", "").trim()
-            }));
-          const found = nds.find(n => n.id === matchingNode.id) || matchingNode;
-          return [...others, {
-            ...found,
-            selected: true,
-            zIndex: 1000,
-            className: `${found.className || ""}`.includes("highlight-flash")
-              ? found.className
-              : `${found.className || ""} highlight-flash`.trim()
-          }];
-        });
+              selected: true,
+              className: `${n.className || ""}`.includes("highlight-flash")
+                ? n.className
+                : `${n.className || ""} highlight-flash`.trim()
+            };
+          }
+          return {
+            ...n,
+            selected: false,
+            className: `${n.className || ""}`.replace("highlight-flash", "").trim()
+          };
+        }));
 
         // Trigger selection change callback upstream
         onSelectionChangeHandler({ nodes: [matchingNode], edges: [] });
 
-        // Remove the flash after 2 seconds; the node stays in front while it is selected and because it
-        // is now last in the draw order, so the forced zIndex can go too (otherwise it would sit above a
-        // node the user selects later)
+        // Remove highlight-flash class after 2 seconds
         setTimeout(() => {
           setNodes(nds => nds.map(n => {
             if (n.id === matchingNode.id) {
               return {
                 ...n,
-                zIndex: undefined,
                 className: `${n.className || ""}`.replace("highlight-flash", "").trim()
               };
             }
