@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional, Set, Tuple, Callable
 from rdflib import Graph, Namespace, RDF, RDFS, OWL, XSD, URIRef, BNode
 from rdflib.compare import isomorphic
 import pyshacl
+from pyshacl.helper.sparql_query_helper import SPARQLQueryHelper
 
 from core.config import settings
 from services.local_llm_service import LocalLLMService, KisteConnectionError
@@ -44,6 +45,32 @@ SOSA_SSN_TERMS = {_SOSA + t for t in (
     "implementedBy", "hasSubSystem", "deployedSystem", "deployedOnPlatform", "inDeployment",
     "hasDeployment", "detects", "isProxyFor", "wasOriginatedBy",
 )}
+
+# Clauses pySHACL refuses inside sh:sparql (it raises ValidationFailure for the whole run). The same
+# regexes pySHACL uses, so this check and the validator always agree.
+_UNSUPPORTED_SPARQL = (
+    ("VALUES", SPARQLQueryHelper.has_values_regex),
+    ("MINUS", SPARQLQueryHelper.has_minus_regex),
+    ("SERVICE", SPARQLQueryHelper.has_service_regex),
+)
+
+
+def unsupported_sparql_clauses(select_text: str) -> List[str]:
+    """The clauses in a sh:select query that SHACL-SPARQL does not allow: a subset of VALUES, MINUS, SERVICE."""
+    return [name for name, rx in _UNSUPPORTED_SPARQL if rx.search(select_text or "")]
+
+
+def unsupported_sparql_problems(shape_graph: Graph) -> List[str]:
+    """One problem sentence per sh:sparql constraint in the graph that uses an unsupported clause."""
+    problems = []
+    for select in shape_graph.objects(None, SH.select):
+        bad = unsupported_sparql_clauses(str(select))
+        if bad:
+            problems.append(
+                "Its SPARQL query uses " + " and ".join(bad) + ", which is not allowed inside sh:sparql and "
+                "cannot be evaluated. Use FILTER (?x IN (<iri1>, <iri2>)) instead of VALUES, FILTER NOT EXISTS "
+                "instead of MINUS, and no SERVICE.")
+    return problems
 
 
 SHAPE_STRUCTURE_GUIDE = (
@@ -83,6 +110,11 @@ SHAPE_STRUCTURE_GUIDE = (
     "       ] .\n"
     "   Replace cmpo:Pressure with the parameter class the rule is about (find it in the ontology), and adapt the "
     "FILTER so it matches exactly the values that BREAK the rule.\n"
+    "C. INSIDE sh:select NEVER use VALUES, MINUS or SERVICE: SHACL-SPARQL forbids them and the whole validation "
+    "fails. For a rule about several classes, either write one shape per class or bind the class with a FILTER:\n"
+    "       ?param <http://www.w3.org/2000/01/rdf-schema#subClassOf>* ?cls .\n"
+    "       FILTER (?cls IN (<...#Pressure>, <...#Velocity>))\n"
+    "   Use FILTER NOT EXISTS { ... } where you would have used MINUS.\n"
 )
 
 
@@ -390,6 +422,8 @@ class SHACLVerifier:
         targets = (SH.targetClass, SH.targetNode, SH.targetSubjectsOf, SH.targetObjectsOf)
         if not any(next(g.triples((None, t, None)), None) for t in targets):
             problems.append("The shape has no target (e.g. sh:targetClass), so it never checks anything.")
+
+        problems.extend(unsupported_sparql_problems(g))
 
         unknown = self.check_grounding(shape_ttl, known_terms)
         if unknown:

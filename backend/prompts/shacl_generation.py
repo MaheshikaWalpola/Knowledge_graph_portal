@@ -7,7 +7,7 @@ text below changes.
 """
 from services.shacl_verifier import SHAPE_STRUCTURE_GUIDE
 
-PROMPT_VERSION = "p3"
+PROMPT_VERSION = "p4"
 
 SYSTEM_PROMPT = (
     "You are a SHACL code generator. You output only valid Turtle (.ttl) code. "

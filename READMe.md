@@ -208,6 +208,10 @@ cd Knowledge_graph_portal
    KISTE_MODEL=Qwen3.6-35B-A3B-MLX-8bit
    ANTHROPIC_API_KEY=your_anthropic_api_key   # optional: adds Claude models (pip install anthropic)
    OPENAI_API_KEY=your_openai_api_key         # optional: adds OpenAI models (pip install openai)
+
+   # Validation: longest a single query-based rule (sh:sparql) may run; the rule is reported as
+   # "Not evaluated" when it exceeds this, so one slow rule cannot hold a run for hours
+   VALIDATION_QUERY_TIMEOUT_SEC=600
    ```
 
 5. Start the FastAPI development server:

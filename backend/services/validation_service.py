@@ -10,7 +10,7 @@ from rdflib import Graph, Namespace, RDF, URIRef
 from pyshacl import validate
 
 from services.local_llm_service import LocalLLMService
-from services.shacl_verifier import SHACLVerifier, SHAPE_STRUCTURE_GUIDE, compact_schema
+from services.shacl_verifier import SHACLVerifier, SHAPE_STRUCTURE_GUIDE, compact_schema, unsupported_sparql_clauses
 from services import generation_log_service as genlog
 from prompts.shacl_generation import PROMPT_VERSION, SYSTEM_PROMPT, build_user_prompt, render_override
 from reportlab.lib.pagesizes import letter
@@ -111,6 +111,36 @@ def _serialize_shapes_in_order(graph: Graph, ordered_subjects: List[Any]) -> str
         blocks.append(body(rest))
 
     return "\n".join(prefix_lines) + "\n\n" + "\n\n".join(b for b in blocks if b) + "\n"
+
+
+def _query_timeout_sec() -> float:
+    """Longest a single sh:sparql query may run during validation (VALIDATION_QUERY_TIMEOUT_SEC, default 600 s).
+    One slow query must not hold a whole run for hours; the rule is reported as not evaluated instead."""
+    try:
+        return max(1.0, float(os.getenv("VALIDATION_QUERY_TIMEOUT_SEC", "600")))
+    except ValueError:
+        return 600.0
+
+
+def _call_with_timeout(fn, seconds: float):
+    """Runs fn() in a daemon thread. Returns (value, timed_out). rdflib cannot be interrupted, so on timeout the
+    thread is abandoned and keeps running in the background until the query finishes on its own."""
+    box = {}
+
+    def run():
+        try:
+            box["value"] = fn()
+        except BaseException as e:  # noqa: BLE001 - re-raised in the caller's thread
+            box["error"] = e
+
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    t.join(seconds)
+    if t.is_alive():
+        return None, True
+    if "error" in box:
+        raise box["error"]
+    return box.get("value"), False
 
 
 def _max_parallel_ai_calls() -> int:
@@ -905,6 +935,9 @@ class ValidationService:
         bulk_violated_shapes = set()
         bulk_shape_failed_nodes = {}
         sparql_bnodes = set()
+        # shape IRI -> why its query-based rule could not be evaluated (unsupported clause or timeout)
+        not_evaluated = {}
+        query_timeout = _query_timeout_sec()
 
         for shape_node in shape_nodes_set:
             sparql_constraints = list(g_shapes.objects(shape_node, SH.sparql))
@@ -919,15 +952,32 @@ class ValidationService:
 
                 sparql_bnodes.add(sparql_bnode)
                 full_query = prefix_header + "\n" + select_q
+                shape_str = str(shape_node)
+                label = str(g_shapes.value(shape_node, RDFS.label) or shape_str)
+                short_label = label[:60] + "..." if len(label) > 60 else label
+
+                # pySHACL refuses these clauses for the whole run (ValidationFailure), and rdflib evaluates
+                # VALUES joins so slowly that a run can take hours. Skip the rule and say so in the report.
+                bad = unsupported_sparql_clauses(select_q)
+                if bad:
+                    not_evaluated[shape_str] = (
+                        "Its SPARQL query uses " + " and ".join(bad) + ", which is not allowed inside sh:sparql. "
+                        "Run Verify Shapes to repair it (use FILTER (?x IN (...)) instead of VALUES).")
+                    yield {"step": "sparql_bulk", "message": f"Query: \"{short_label}\" — skipped, uses {' and '.join(bad)}"}
+                    continue
 
                 try:
                     import time as _t
                     t0 = _t.time()
-                    results = list(g_combined.query(full_query))
+                    results, timed_out = _call_with_timeout(lambda: list(g_combined.query(full_query)), query_timeout)
                     t1 = round(_t.time() - t0, 2)
-                    shape_str = str(shape_node)
-                    label = str(g_shapes.value(shape_node, RDFS.label) or shape_str)
-                    short_label = label[:60] + "..." if len(label) > 60 else label
+                    if timed_out:
+                        not_evaluated[shape_str] = (
+                            f"Its SPARQL query did not finish within {int(query_timeout)} s on this data. "
+                            "Simplify the rule (bind the class with a constant or a FILTER instead of a VALUES list) "
+                            "or raise VALIDATION_QUERY_TIMEOUT_SEC.")
+                        yield {"step": "sparql_bulk", "message": f"Query: \"{short_label}\" — timed out after {int(query_timeout)}s, skipped"}
+                        continue
 
                     if results:
                         bulk_violated_shapes.add(shape_str)
@@ -955,11 +1005,13 @@ class ValidationService:
 
                     yield {"step": "sparql_bulk", "message": f"Query: \"{short_label}\" — {len(results)} items flagged ({t1}s)"}
                 except Exception as e:
-                    print(f"[WARNING] Bulk query failed for {shape_node}: {e}")
+                    import traceback
+                    print(f"[WARNING] Bulk query failed for {shape_node}: {e}\n{traceback.format_exc()}")
                     yield {"step": "sparql_bulk", "message": f"Query fallback needed: {str(e)[:80]}"}
                     sparql_bnodes.discard(sparql_bnode)
 
-        yield {"step": "sparql_done", "message": f"Bulk check complete: {len(bulk_violations)} items flagged across {len(bulk_violated_shapes)} rules"}
+        skipped_note = f", {len(not_evaluated)} rule(s) not evaluated" if not_evaluated else ""
+        yield {"step": "sparql_done", "message": f"Bulk check complete: {len(bulk_violations)} items flagged across {len(bulk_violated_shapes)} rules{skipped_note}"}
 
         # Build stripped shapes graph (remove sh:sparql so fast property check handles remainder)
         g_shapes_stripped = Graph()
@@ -986,6 +1038,10 @@ class ValidationService:
             elapsed = round(time.time() - start_time, 1)
         except Exception as e:
             yield {"step": "error", "message": f"Validation engine error: {str(e)[:200]}", "error": True}
+            return
+        if not isinstance(results_graph, Graph):
+            # pySHACL returns its ValidationFailure object instead of a graph when it refuses the shapes
+            yield {"step": "error", "message": f"Validation engine rejected the rules: {str(results_graph)[:200]}", "error": True}
             return
 
         if bulk_violations:
@@ -1065,6 +1121,7 @@ class ValidationService:
             failed_nodes = shape_failed_nodes.get(shape_str, set())
             failed_items_count = len(failed_nodes)
             passed = (failed_items_count == 0) and (shape_str not in violated_shapes)
+            skipped_reason = not_evaluated.get(shape_str)
 
             # Focus nodes count for suspicion calculation
             total_focus_nodes = 0
@@ -1106,6 +1163,8 @@ class ValidationService:
             failed_examples = meta.get("failed_examples", []) if meta else []
             reason = meta.get("reason", "") if meta else ""
             advice = (meta.get("advice") if meta else "") or _verification_advice({**(meta or {}), "verification": verification_status})
+            if skipped_reason:
+                advice = skipped_reason
             q_match = re.search(r"Question_(\d+)_Shape", shape_str)
 
             # Ensure label displays plain-English sentence instead of Question_X_Shape
@@ -1118,7 +1177,7 @@ class ValidationService:
                 "rule_text": display_label,
                 "target_class": str(target_cls) if target_cls else "",
                 "target_class_short": self._shorten_iri(target_cls) if target_cls else "",
-                "status": "Pass" if passed else "Fail",
+                "status": "Not evaluated" if skipped_reason else ("Pass" if passed else "Fail"),
                 "failed_items_count": failed_items_count,
                 "total_focus_nodes": total_focus_nodes,
                 "suspicious": suspicious,
@@ -1139,7 +1198,8 @@ class ValidationService:
 
         total_questions = len(all_shapes)
         passed_questions = sum(1 for r in all_shapes if r["status"] == "Pass")
-        failed_questions = total_questions - passed_questions
+        not_evaluated_questions = sum(1 for r in all_shapes if r["status"] == "Not evaluated")
+        failed_questions = total_questions - passed_questions - not_evaluated_questions
         pass_percentage = round((passed_questions / total_questions * 100), 1) if total_questions > 0 else 0.0
 
         if total_questions == 0:
@@ -1150,6 +1210,8 @@ class ValidationService:
             status_summary = f"0 of {total_questions} Rules Passed (0%)"
         else:
             status_summary = f"{passed_questions} of {total_questions} Rules Passed ({pass_percentage}%)"
+        if not_evaluated_questions:
+            status_summary += f", {not_evaluated_questions} not evaluated"
 
         violation_count = sum(1 for v in violations if v.get("severity", "Violation") == "Violation")
         warning_count = sum(1 for v in violations if v.get("severity", "Violation") == "Warning")
@@ -1158,7 +1220,7 @@ class ValidationService:
         # Separate into reliable vs needs-review. Only shapes the AI tried and failed to verify, or that
         # look suspicious, need review; shapes nobody asked to verify are listed normally as "Not checked by AI".
         def needs_review(r):
-            return r.get("verification") == "unverified" or r.get("suspicious")
+            return r.get("verification") == "unverified" or r.get("suspicious") or r.get("status") == "Not evaluated"
 
         reliable_rules = [r for r in all_shapes if not needs_review(r)]
         unreliable_rules = [r for r in all_shapes if needs_review(r)]
@@ -1181,6 +1243,7 @@ class ValidationService:
         unverified_count = sum(1 for r in all_shapes if r.get("verification") == "unverified")
         suspicious_count = sum(1 for r in all_shapes if r.get("suspicious"))
         not_checked_count = sum(1 for r in all_shapes if r.get("verification") == "not_checked")
+        not_evaluated_count = not_evaluated_questions
         total_rules = len(all_shapes)
 
         # Gate decision:
@@ -1188,7 +1251,9 @@ class ValidationService:
         failed_rules = [r for r in all_shapes if r["status"] != "Pass" or r["failed_items_count"] > 0]
         failed_reliable = [r for r in failed_rules if not needs_review(r)]
 
-        if conforms or len(failed_rules) == 0:
+        if not_evaluated_questions and (conforms or len(failed_rules) == 0):
+            gate_decision = "Needs review"  # the data may be fine, but a rule was never checked
+        elif conforms or len(failed_rules) == 0:
             gate_decision = "Pass"
         elif len(failed_reliable) == 0 and len(failed_rules) > 0:
             gate_decision = "Needs review"
@@ -1224,6 +1289,7 @@ class ValidationService:
                 "unverified_count": unverified_count,
                 "suspicious_count": suspicious_count,
                 "not_checked_count": not_checked_count,
+                "not_evaluated_count": not_evaluated_count,
                 "total_rules": total_rules,
                 "rules": all_shapes,
                 "reliable_rules": reliable_rules,
@@ -1537,15 +1603,18 @@ class ValidationService:
             violations_by_shape[src].append(v)
 
         # Split failed rules into reliable problems vs checks needing review
+        def pdf_needs_review(r):
+            return r.get("verification") == "unverified" or r.get("suspicious") or str(r.get("status", "")).strip().lower() == "not evaluated"
+
         reliable_failed_rules = [
             r for r in rules
             if (str(r.get("status", "")).strip().lower() != "pass" or r.get("failed_items_count", 0) > 0)
-            and not (r.get("verification") == "unverified" or r.get("suspicious"))
+            and not pdf_needs_review(r)
         ]
         unreliable_failed_rules = [
             r for r in rules
             if (str(r.get("status", "")).strip().lower() != "pass" or r.get("failed_items_count", 0) > 0)
-            and (r.get("verification") == "unverified" or r.get("suspicious"))
+            and pdf_needs_review(r)
         ]
 
         # 4. Reliable Problems Section
@@ -1655,7 +1724,9 @@ class ValidationService:
                 card_elements = []
 
                 header_text = f"<b>#{idx}. {rule_label}</b>"
-                badge_msg = ("AI could not verify this check. Please review." if rule.get("verification") == "unverified"
+                is_not_evaluated = str(rule.get("status", "")).strip().lower() == "not evaluated"
+                badge_msg = ("This check could not be evaluated. Please review." if is_not_evaluated
+                             else "AI could not verify this check. Please review." if rule.get("verification") == "unverified"
                              else "This check flags almost every item. Please review.")
                 badge_text = f"<font color='{c_warning.hexval()}'><b>{badge_msg}</b></font>"
 
@@ -1668,10 +1739,13 @@ class ValidationService:
                 ]))
                 card_elements.append(hdr_table)
 
-                review_note = f"This check flagged {failed_count} items. The check itself may be wrong, not your data."
+                review_note = ("This check was skipped, so nothing is known about your data for this rule."
+                               if is_not_evaluated else
+                               f"This check flagged {failed_count} items. The check itself may be wrong, not your data.")
+                flagged_text = "not evaluated" if is_not_evaluated else f"{failed_count} items"
                 details_data = [
                     [Paragraph("<b>Target Class:</b>", style_body), Paragraph(target_cls, style_body), Paragraph("<b>Property:</b>", style_body), Paragraph(path, style_mono)],
-                    [Paragraph("<b>Review Note:</b>", style_body), Paragraph(f"<i>{review_note}</i>", style_body), Paragraph("<b>Flagged:</b>", style_body), Paragraph(f"{failed_count} items", style_body)]
+                    [Paragraph("<b>Review Note:</b>", style_body), Paragraph(f"<i>{review_note}</i>", style_body), Paragraph("<b>Flagged:</b>", style_body), Paragraph(flagged_text, style_body)]
                 ]
                 advice = rule.get("advice") or ""
                 meaning_text = self._meaning_summary(rule)
