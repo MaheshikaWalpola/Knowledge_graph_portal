@@ -34,6 +34,7 @@ import {
   LinearProgress
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ProgressButton from "../Common/ProgressButton";
 import CancelIcon from "@mui/icons-material/Cancel";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -86,6 +87,31 @@ inst:Wafer_2981014422 a cmpo:Wafer ;
     cmpo:hasDiameter inst:WaferDiameter_300mm ;
     cmpo:hasMaterial inst:WaferMaterial_Copper .
 `;
+
+// How far the validation run is after each backend stage event (percent). The long steps are
+// materialising the data, the bulk SPARQL checks (one event per rule, so they advance a little each)
+// and the pySHACL check, which sends nothing until it is done.
+const VALIDATION_STAGE_PERCENT = {
+  fetched_graphs: 5,
+  parsing_shapes: 8,
+  shapes_parsed: 12,
+  parsing_data: 15,
+  data_parsed: 30,
+  parsing_schema: 32,
+  schema_merged: 35,
+  materializing: 38,
+  materialized: 45,
+  sparql_done: 65,
+  validating: 70,
+  validation_done: 92,
+  collecting: 96
+};
+
+function validationStagePercent(step, current) {
+  if (step === "sparql_bulk") return Math.min(current + 2, 64);
+  const next = VALIDATION_STAGE_PERCENT[step];
+  return next === undefined ? current : Math.max(current, next);
+}
 
 export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [user, setUser] = useState(null);
@@ -167,6 +193,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [generationIds, setGenerationIds] = useState([]);
   const [roundId, setRoundId] = useState(null);  // the generate call the current shapes came from (backend logs)
   const [verifying, setVerifying] = useState(false);
+  // Verification progress for the button: rules finished / rules being checked
+  const [verifyProgress, setVerifyProgress] = useState({ done: 0, total: 0 });
 
   //  Step 3 
   const [playgroundSchemaText, setPlaygroundSchemaText] = useState("");
@@ -179,6 +207,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [expandedRules, setExpandedRules] = useState({});
   const [expandedAdvanced, setExpandedAdvanced] = useState({});
   const [validationSteps, setValidationSteps] = useState([]);
+  // Validation progress for the button, 0..100, advanced by the backend's stage events
+  const [validationProgress, setValidationProgress] = useState(0);
 
   // Group violations by source shape for the expandable rule cards
   const violationsByShape = useMemo(() => {
@@ -520,6 +550,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     const isTarget = (idx) => !onlyIndices || onlyIndices.includes(idx);
 
     setVerifying(true);
+    setVerifyProgress({ done: 0, total: onlyIndices ? onlyIndices.length : rules.length });
+    const finishedIndices = new Set();
     setError(null);
     setSuccess(null);
     setShaclGenerationSteps(prev => prev.map((step, idx) =>
@@ -571,6 +603,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   : step
               ));
             } else if (event.status === "progress") {
+              finishedIndices.add(event.index);
+              setVerifyProgress(prev => ({ ...prev, done: finishedIndices.size }));
               setShaclGenerationSteps(prev => prev.map((step, idx) =>
                 idx === event.index
                   ? {
@@ -680,6 +714,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     setError(null);
     setPlaygroundReport(null);
     setValidationSteps([]);
+    setValidationProgress(0);
     setExpandedRules({});
     setExpandedAdvanced({});
 
@@ -755,9 +790,11 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 // The AI model chosen in step 1 (generation + verification) goes into the report and its PDF
                 setPlaygroundReport({ ...event.report, model: selectedModel });
                 setValidationSteps(prev => [...prev, { step: "done", message: "Validation complete!", status: "done" }]);
+                setValidationProgress(100);
                 setSuccess("Validation complete!");
               } else {
                 setValidationSteps(prev => [...prev, { ...event, status: "done" }]);
+                setValidationProgress(prev => validationStagePercent(event.step, prev));
               }
             } catch { /* skip non-JSON lines */ }
           }
@@ -1255,15 +1292,18 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1 }}>
                   <Typography variant="h6">Generated SHACL Shapes</Typography>
                   <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
-                    <Button
+                    <ProgressButton
                       variant="outlined"
                       size="small"
                       onClick={() => handleVerifyShacl()}
-                      disabled={loading || verifying || !shaclCode.trim()}
-                      startIcon={verifying ? <CircularProgress size={16} /> : <VerifiedIcon />}
+                      disabled={loading || !shaclCode.trim()}
+                      startIcon={<VerifiedIcon />}
+                      active={verifying}
+                      progress={verifyProgress.total ? (verifyProgress.done / verifyProgress.total) * 100 : null}
+                      label={`Verifying ${verifyProgress.done}/${verifyProgress.total}`}
                     >
-                      {verifying ? "Verifying..." : "Verify Shapes"}
-                    </Button>
+                      Verify Shapes
+                    </ProgressButton>
                     {unverifiedStepIndices.length > 0 && !verifying && (
                       <Button
                         variant="outlined"
@@ -1909,9 +1949,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                     {downloadingPdf ? "Generating PDF..." : "Download PDF Report"}
                   </Button>
                 )}
-                <Button variant="contained" onClick={handlePlaygroundValidate} disabled={loading} startIcon={loading ? <CircularProgress size={20} /> : <PlayArrowIcon />}>
+                <ProgressButton
+                  variant="contained"
+                  onClick={handlePlaygroundValidate}
+                  startIcon={<PlayArrowIcon />}
+                  active={loading}
+                  progress={validationProgress}
+                  label={`Validating ${Math.round(validationProgress)}%`}
+                >
                   Run Validation
-                </Button>
+                </ProgressButton>
               </Box>
             )}
           </Box>
