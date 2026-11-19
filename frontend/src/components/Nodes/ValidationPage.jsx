@@ -35,6 +35,7 @@ import {
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ProgressButton from "../Common/ProgressButton";
+import { useTimedProgress, formatRemaining } from "../Common/useTimedProgress";
 import CancelIcon from "@mui/icons-material/Cancel";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -193,6 +194,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   const [generationIds, setGenerationIds] = useState([]);
   const [roundId, setRoundId] = useState(null);  // the generate call the current shapes came from (backend logs)
   const [verifying, setVerifying] = useState(false);
+  // SHACL generation progress for the buttons: rules finished / rules requested
+  const [shaclProgress, setShaclProgress] = useState({ done: 0, total: 0 });
   // Verification progress for the button: rules finished / rules being checked
   const [verifyProgress, setVerifyProgress] = useState({ done: 0, total: 0 });
 
@@ -309,9 +312,35 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   };
 
   //  Step 0 → 1: AI generation
+  // Question generation is one request that reports nothing while it runs, so its button fills against
+  // the average duration of the user's earlier runs with the same model (backend timing log).
+  const DEFAULT_QUESTION_ESTIMATE_MS = 120000;
+  const [questionEstimateMs, setQuestionEstimateMs] = useState(DEFAULT_QUESTION_ESTIMATE_MS);
+  const generatingQuestions = loading && activeStep === 0 && inputMode === "ai";
+  const questionTimer = useTimedProgress(generatingQuestions, questionEstimateMs);
+
+  const estimateQuestionDuration = async () => {
+    try {
+      const params = { step: "question_generation", status: "completed", limit: 5 };
+      let res = await axios.get(`${API}/validation/runs`, { ...getAuthConfig(), params: { ...params, model: selectedModel } });
+      if (!res.data?.entries?.length) {
+        res = await axios.get(`${API}/validation/runs`, { ...getAuthConfig(), params });
+      }
+      const durations = (res.data?.entries || []).map(r => r.duration_ms).filter(ms => ms > 0);
+      if (durations.length) {
+        setQuestionEstimateMs(durations.reduce((a, b) => a + b, 0) / durations.length);
+        return;
+      }
+    } catch {
+      // no history available: keep the default estimate
+    }
+    setQuestionEstimateMs(DEFAULT_QUESTION_ESTIMATE_MS);
+  };
+
   const handleGenerateQuestions = async () => {
     setLoading(true);
     setError(null);
+    await estimateQuestionDuration();
 
     const formData = new FormData();
     if (aiContextPrompt) formData.append("user_explanation", aiContextPrompt);
@@ -375,6 +404,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
     setGenerationIds([]);
     setRoundId(null);
     const newGenerationIds = [];
+    const finishedRules = new Set();
+    setShaclProgress({ done: 0, total: activeRules.length });
     setShaclGenerationSteps(activeRules.map(rule => ({ rule, status: "pending" })));
 
     // Transition to Step 2 immediately so the user can watch it stream
@@ -455,6 +486,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 );
               } else if (event.status === "progress") {
                 if (event.generation_id) newGenerationIds[event.index] = event.generation_id;
+                finishedRules.add(event.index);
+                setShaclProgress(prev => ({ ...prev, done: finishedRules.size }));
                 // Update rule status with verification metadata
                 setShaclGenerationSteps(prev => 
                   prev.map((step, idx) => 
@@ -1890,13 +1923,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 >
                   Skip to Playground
                 </Button>
-                <Button
+                <ProgressButton
                   variant="contained"
                   onClick={handleGenerateQuestions}
                   disabled={loading || (!useWorkspace && !hasUploadedFiles)}
+                  active={generatingQuestions}
+                  progress={questionTimer.percent}
+                  label={`Generating questions, ${formatRemaining(questionTimer.remainingSec, questionTimer.overdue)}`}
                 >
-                  {loading ? <CircularProgress size={24} /> : "Generate Questions"}
-                </Button>
+                  Generate Questions
+                </ProgressButton>
               </Box>
             )}
 
@@ -1924,16 +1960,30 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                 >
                   Skip to Playground
                 </Button>
-                <Button variant="contained" onClick={handleGenerateSHACL} disabled={loading || selectedCount === 0}>
-                  {loading ? <CircularProgress size={24} /> : `Generate SHACL (${selectedCount} questions)`}
-                </Button>
+                <ProgressButton
+                  variant="contained"
+                  onClick={handleGenerateSHACL}
+                  disabled={selectedCount === 0}
+                  active={loading}
+                  progress={shaclProgress.total ? (shaclProgress.done / shaclProgress.total) * 100 : null}
+                  label={`Generating ${shaclProgress.done}/${shaclProgress.total}`}
+                >
+                  {`Generate SHACL (${selectedCount} questions)`}
+                </ProgressButton>
               </Box>
             )}
 
             {activeStep === 2 && (
-              <Button variant="contained" onClick={handleProceedToPlayground} disabled={loading} endIcon={<NavigateNextIcon />}>
+              <ProgressButton
+                variant="contained"
+                onClick={handleProceedToPlayground}
+                endIcon={<NavigateNextIcon />}
+                active={loading}
+                progress={shaclProgress.total ? (shaclProgress.done / shaclProgress.total) * 100 : null}
+                label={`Generating ${shaclProgress.done}/${shaclProgress.total}`}
+              >
                 Proceed to Playground
-              </Button>
+              </ProgressButton>
             )}
 
             {activeStep === 3 && (
