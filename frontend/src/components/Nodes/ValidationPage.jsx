@@ -35,7 +35,7 @@ import {
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ProgressButton from "../Common/ProgressButton";
-import { useTimedProgress, formatRemaining } from "../Common/useTimedProgress";
+import { useTimedProgress } from "../Common/useTimedProgress";
 import CancelIcon from "@mui/icons-material/Cancel";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -1929,7 +1929,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   disabled={loading || (!useWorkspace && !hasUploadedFiles)}
                   active={generatingQuestions}
                   progress={questionTimer.percent}
-                  label={`Generating questions, ${formatRemaining(questionTimer.remainingSec, questionTimer.overdue)}`}
+                  label="Generating questions"
                 >
                   Generate Questions
                 </ProgressButton>

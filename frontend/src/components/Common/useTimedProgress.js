@@ -23,10 +23,3 @@ export function useTimedProgress(active, expectedMs) {
     overdue: elapsed > expected
   };
 }
-
-/** "about 2 min left", "about 40 s left" or "almost done" once the estimate has run out. */
-export function formatRemaining(remainingSec, overdue) {
-  if (overdue || remainingSec <= 0) return "almost done";
-  if (remainingSec >= 90) return `about ${Math.round(remainingSec / 60)} min left`;
-  return `about ${remainingSec} s left`;
-}
