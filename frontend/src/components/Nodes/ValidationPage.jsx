@@ -1524,7 +1524,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                   const suspiciousCnt = playgroundReport.suspicious_count ?? 0;
                   const notCheckedCnt = playgroundReport.not_checked_count ?? (playgroundReport.rules?.filter(r => !r.verification || r.verification === "not_checked").length || 0);
                   const aiVerifiedCnt = verifiedCnt + repairedCnt;
-                  const needsReview = (r) => r.verification === "unverified" || r.suspicious;
+                  const needsReview = (r) => r.verification === "unverified" || r.suspicious || r.status === "Not evaluated";
 
                   const reliableRules = playgroundReport.reliable_rules || playgroundReport.rules?.filter(r => !needsReview(r)) || [];
                   const unreliableRules = playgroundReport.unreliable_rules || playgroundReport.rules?.filter(needsReview) || [];
@@ -1546,7 +1546,8 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
                   const renderRuleCard = (rule, i, isReliableSection) => {
                     const ruleViolations = violationsByShape[rule.shape_iri] || [];
-                    const isFail = rule.status !== "Pass";
+                    const isNotEvaluated = rule.status === "Not evaluated";
+                    const isFail = rule.status !== "Pass" && !isNotEvaluated;
                     const isExpanded = expandedRules[rule.shape_iri];
                     const isAdvExpanded = expandedAdvanced[rule.shape_iri];
                     const failedItemCount = rule.failed_items_count !== undefined ? rule.failed_items_count : ruleViolations.length;
@@ -1554,14 +1555,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                     const aiStatus = AI_STATUS[rule.verification] || AI_STATUS.not_checked;
 
                     return (
-                      <Box key={`${isReliableSection}-${i}`} className={`validation-rule-card ${isFail ? "fail" : "pass"} ${!isReliable && isFail ? "unreliable" : ""}`}>
+                      <Box key={`${isReliableSection}-${i}`} className={`validation-rule-card ${isFail ? "fail" : "pass"} ${(!isReliable && isFail) || isNotEvaluated ? "unreliable" : ""}`}>
                         <Box 
                           className="validation-rule-header"
                           onClick={() => isFail && ruleViolations.length > 0 && toggleRuleExpand(rule.shape_iri)}
                           sx={{ cursor: isFail && ruleViolations.length > 0 ? "pointer" : "default" }}
                         >
                           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1, minWidth: 0 }}>
-                            {isFail 
+                            {isNotEvaluated
+                              ? <HelpOutlineIcon sx={{ fontSize: 20, color: "#f59e0b", flexShrink: 0 }} />
+                              : isFail
                               ? <CancelIcon sx={{ fontSize: 20, color: isReliable ? "var(--accent-error)" : "#f59e0b", flexShrink: 0 }} />
                               : <CheckCircleIcon sx={{ fontSize: 20, color: "var(--accent-success)", flexShrink: 0 }} />
                             }
@@ -1582,8 +1585,10 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                               size="small"
                               sx={{ bgcolor: aiStatus.bg, color: aiStatus.color, fontWeight: 600, fontSize: 11, height: 24, "& .MuiChip-icon": { color: "inherit" } }}
                             />
-                            {isFail ? (
-                              <Chip 
+                            {isNotEvaluated ? (
+                              <Chip label="Not evaluated" size="small" sx={{ bgcolor: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", fontWeight: 600, fontSize: 12, height: 24 }} />
+                            ) : isFail ? (
+                              <Chip
                                 label={`${failedItemCount} flagged`}
                                 size="small"
                                 sx={{ bgcolor: isReliable ? "rgba(239, 68, 68, 0.1)" : "rgba(245, 158, 11, 0.1)", color: isReliable ? "var(--accent-error)" : "#f59e0b", fontWeight: 600, fontSize: 12, height: 24 }}
@@ -1610,8 +1615,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                             </Typography>
                           </Box>
                         )}
+                        {/* Why a rule could not be evaluated (unsupported SPARQL clause or query timeout) */}
+                        {isNotEvaluated && rule.advice && (
+                          <Box sx={{ px: 2, py: 1, bgcolor: "rgba(245, 158, 11, 0.06)", borderTop: "1px solid rgba(245, 158, 11, 0.15)" }}>
+                            <Typography variant="caption" sx={{ color: "#d97706" }}>
+                              <b>Not evaluated:</b> {rule.advice}
+                            </Typography>
+                          </Box>
+                        )}
                         {/* What to do when the AI could not verify the shape */}
-                        {rule.verification === "unverified" && rule.advice && (
+                        {!isNotEvaluated && rule.verification === "unverified" && rule.advice && (
                           <Box sx={{ px: 2, py: 1, bgcolor: "rgba(245, 158, 11, 0.06)", borderTop: "1px solid rgba(245, 158, 11, 0.15)" }}>
                             <Typography variant="caption" sx={{ color: "#d97706" }}>
                               <b>What to do:</b> {rule.advice}
