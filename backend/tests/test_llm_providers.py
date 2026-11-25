@@ -4,6 +4,7 @@ the cloud SDKs with the right parameters, and failures become errors the UI can 
 The SDK packages are replaced by fakes, so no network and no API keys are needed.
 """
 
+import json
 import sys
 import types
 import unittest
@@ -11,7 +12,8 @@ from unittest.mock import patch
 
 from services import llm_providers
 from services.llm_providers import (
-    split_model, json_text, cloud_providers, call_anthropic, call_openai, LLMProviderError, KisteConnectionError,
+    split_model, json_text, cloud_providers, call_anthropic, call_openai, call_anthropic_meta, call_openai_meta,
+    LLMProviderError, KisteConnectionError,
 )
 from services.local_llm_service import LocalLLMService
 
@@ -43,14 +45,14 @@ def fake_sdk(name: str, create):
     return module
 
 
-def claude_reply(text, stop_reason="end_turn"):
+def claude_reply(text, stop_reason="end_turn", model="claude-opus-5-5-20260301"):
     block = types.SimpleNamespace(type="text", text=text)
-    return lambda **kw: types.SimpleNamespace(content=[block], stop_reason=stop_reason, stop_details=None)
+    return lambda **kw: types.SimpleNamespace(content=[block], stop_reason=stop_reason, stop_details=None, model=model)
 
 
-def openai_reply(text):
+def openai_reply(text, model="gpt-5.5-2026-04-01"):
     msg = types.SimpleNamespace(content=text)
-    return lambda **kw: types.SimpleNamespace(choices=[types.SimpleNamespace(message=msg)])
+    return lambda **kw: types.SimpleNamespace(choices=[types.SimpleNamespace(message=msg)], model=model)
 
 
 class TestModelRouting(unittest.TestCase):
@@ -140,6 +142,50 @@ class TestAnthropic(unittest.TestCase):
             with self.assertRaises(LLMProviderError) as ctx:
                 call_anthropic("claude-opus-5-5", MESSAGES)
             self.assertIn("pip install anthropic", str(ctx.exception))
+
+
+class TestReturnedModelId(unittest.TestCase):
+    """The *_meta variants also return the model id the API reports, which the generation log stores."""
+
+    def test_anthropic_meta(self):
+        sdk = fake_sdk("anthropic", claude_reply("ttl"))
+        with patch.dict(sys.modules, {"anthropic": sdk}), patch.dict("os.environ", {"ANTHROPIC_API_KEY": "k"}):
+            self.assertEqual(call_anthropic_meta("claude-opus-5-5", MESSAGES), ("ttl", {"model": "claude-opus-5-5-20260301"}))
+
+    def test_openai_meta(self):
+        sdk = fake_sdk("openai", openai_reply("ttl"))
+        with patch.dict(sys.modules, {"openai": sdk}), patch.dict("os.environ", {"OPENAI_API_KEY": "k"}):
+            self.assertEqual(call_openai_meta("gpt-5.5", MESSAGES), ("ttl", {"model": "gpt-5.5-2026-04-01"}))
+
+    def test_dispatcher_meta_adds_provider_host_and_temperature(self):
+        service = LocalLLMService()
+        with patch("services.local_llm_service.call_anthropic_meta", return_value=("a", {"model": "claude-x"})),              patch("services.local_llm_service.call_openai_meta", return_value=("o", {"model": "gpt-x"})),              patch.object(LocalLLMService, "_call_kiste_server_meta", return_value=("k", {"model": "qwen-x"})):
+            self.assertEqual(service._call_kiste_meta(MESSAGES, model_override="anthropic/claude-opus-5-5"),
+                             ("a", {"model": "claude-x", "provider": "anthropic", "host": "api", "temperature": None}))
+            self.assertEqual(service._call_kiste_meta(MESSAGES, model_override="openai/gpt-5.5"),
+                             ("o", {"model": "gpt-x", "provider": "openai", "host": "api", "temperature": None}))
+            self.assertEqual(service._call_kiste_meta(MESSAGES, temperature=0, model_override="Qwen3.6-35B-A3B-MLX-8bit"),
+                             ("k", {"model": "qwen-x", "provider": "kiste", "host": "kiste", "temperature": 0}))
+
+    def test_kiste_server_reads_model_from_response(self):
+        service = LocalLLMService()
+        body = json.dumps({"model": "Qwen3.6-35B-A3B-MLX-8bit", "choices": [{"message": {"content": "ttl"}}]}).encode()
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def read(self):
+                return body
+
+        with patch("services.local_llm_service.KISTE_API_KEY", "k"), patch("services.local_llm_service.KISTE_API_URL", "https://x/v1"),              patch("services.local_llm_service.urllib.request.urlopen", return_value=FakeResponse()) as urlopen:
+            text, meta = service._call_kiste_server_meta(MESSAGES, False, 0, "Qwen3.6-35B-A3B-MLX-8bit", None)
+        self.assertEqual((text, meta), ("ttl", {"model": "Qwen3.6-35B-A3B-MLX-8bit"}))
+        sent = json.loads(urlopen.call_args.args[0].data.decode())
+        self.assertEqual(sent["temperature"], 0)  # Step 9: the request body carries temperature 0
 
 
 class TestOpenAI(unittest.TestCase):

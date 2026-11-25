@@ -1,0 +1,124 @@
+# AI model catalog of the portal (read by services/model_catalog.py, served by GET /validation/models).
+
+exclude:
+  - id: Kokoro-82M-bf16
+    reason: speech synthesis
+  - id: Qwen3-TTS-12Hz-1.7B-CustomVoice-8bit
+    reason: speech synthesis
+  - id: parakeet-tdt-0.6b-v3
+    reason: speech recognition
+  - id: Qwen3-Embedding-0.6B-8bit
+    reason: embeddings only, no text output
+  - id: MarkItDown
+    reason: document converter, not a language model
+
+models:
+  # --- Kiste (TU Chemnitz server) ---
+  - id: Qwen3.6-35B-A3B-MLX-8bit
+    label: Qwen 3.6 35B
+    provider: kiste
+    host: kiste
+    include_in_study: true
+    description: Best for general-purpose matching tasks
+    context_window: 262K
+
+  - id: DeepSeek-V4-Flash-0731-MXFP4-MLX
+    label: DeepSeek V4 Flash
+    provider: kiste
+    host: kiste
+    include_in_study: true
+    description: Fast responses with large context window
+    context_window: 1M
+
+  - id: gpt-oss-120b-MLX-8bit
+    label: GPT-OSS 120B (8-bit)
+    provider: kiste
+    host: kiste
+    include_in_study: true
+    description: High-quality reasoning, larger model
+    context_window: 131K
+
+  - id: gpt-oss-120b-MXFP4-Q8
+    label: GPT-OSS 120B (MXFP4)
+    provider: kiste
+    host: kiste
+    include_in_study: false   # same model as the 8-bit build
+    description: Quantized variant, slightly faster
+    context_window: 131K
+
+  - id: gemma-4-26B-A4B-it-QAT-MLX-4bit
+    label: Gemma 4 26B
+    provider: kiste
+    host: kiste
+    include_in_study: true
+    description: Google's efficient instruction-tuned model
+    context_window: 262K
+
+  - id: Hunyuan-MT-7B-8bit
+    label: Hunyuan MT 7B
+    provider: kiste
+    host: kiste
+    include_in_study: false   # translation model
+    description: Lightweight and fast, smaller context
+    context_window: 32K
+    tag: Fast
+
+  - id: GLM-5.3-Flash-oQ4e-mtp
+    label: GLM 5.3 Flash
+    provider: kiste
+    host: kiste
+    include_in_study: false   # not confirmed as a study model yet
+    description: Zhipu's open model with fast multi-token decoding
+    context_window: 131K
+
+  - id: Phi-3-mini-4k-instruct-mlx
+    label: Phi-3 Mini 4K
+    provider: kiste
+    host: kiste
+    include_in_study: false   # context too small
+    description: Microsoft's compact model, limited context
+    context_window: 4K
+    tag: Compact
+
+  # --- Claude (Anthropic API) ---
+  - id: claude-opus-5-5
+    label: Claude Opus 5.5
+    provider: anthropic
+    host: api
+    include_in_study: true
+    description: Anthropic's strongest model for reasoning; best for SHACL shapes and verification
+    context_window: 1M
+
+  - id: claude-sonnet-5-5
+    label: Claude Sonnet 5.5
+    provider: anthropic
+    host: api
+    include_in_study: true
+    description: Fast and capable at a lower price
+    context_window: 1M
+
+  - id: claude-haiku-5-5
+    label: Claude Haiku 5.5
+    provider: anthropic
+    host: api
+    include_in_study: false
+    description: Fastest and cheapest Claude; fine for simple rules
+    context_window: 1M
+    tag: Fast
+
+  # --- OpenAI API ---
+  - id: gpt-5.5
+    label: GPT-5.5
+    provider: openai
+    host: api
+    include_in_study: true
+    description: OpenAI's current flagship
+    context_window: 400K
+
+  - id: gpt-5.4
+    label: GPT-5.4
+    provider: openai
+    host: api
+    include_in_study: true
+    description: Previous flagship, slightly cheaper
+    context_window: 400K

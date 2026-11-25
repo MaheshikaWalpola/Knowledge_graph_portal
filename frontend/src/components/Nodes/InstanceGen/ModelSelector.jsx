@@ -11,81 +11,45 @@ import {
 } from "@mui/material";
 import { API } from "../../../config";
 
-// Kiste models (TU Chemnitz server) with metadata for display
-const KISTE_MODELS = [
-  {
-    id: "Qwen3.6-35B-A3B-MLX-8bit",
-    label: "Qwen 3.6 35B",
-    description: "Best for general-purpose matching tasks",
-    contextWindow: "262K",
-    tag: null,
-  },
-  {
-    id: "DeepSeek-V4-Flash-0731-MXFP4-MLX",
-    label: "DeepSeek V4 Flash",
-    description: "Fast responses with large context window",
-    contextWindow: "1M",
-    tag: null,
-  },
-  {
-    id: "gpt-oss-120b-MLX-8bit",
-    label: "GPT-OSS 120B (8-bit)",
-    description: "High-quality reasoning, larger model",
-    contextWindow: "131K",
-    tag: null,
-  },
-  {
-    id: "gpt-oss-120b-MXFP4-Q8",
-    label: "GPT-OSS 120B (MXFP4)",
-    description: "Quantized variant, slightly faster",
-    contextWindow: "131K",
-    tag: null,
-  },
-  {
-    id: "gemma-4-26B-A4B-it-QAT-MLX-4bit",
-    label: "Gemma 4 26B",
-    description: "Google's efficient instruction-tuned model",
-    contextWindow: "262K",
-    tag: null,
-  },
-  {
-    id: "Hunyuan-MT-7B-8bit",
-    label: "Hunyuan MT 7B",
-    description: "Lightweight and fast, smaller context",
-    contextWindow: "32K",
-    tag: "Fast",
-  },
-];
-
+// The model list comes from the backend (GET /validation/models): backend/models.yaml merged with the
+// models the Kiste server offers right now and the cloud providers whose API keys are set.
+// Nothing is hard-coded here, so the dropdown always matches what the backend can actually call.
 
 export default function ModelSelector({
   selectedModel,
   onModelChange,
   description = "Choose the AI model for intelligent header-to-schema matching",
-  // Also offer the cloud providers (Claude, OpenAI) whose API keys are configured on the server
+  // Also offer the cloud providers (Claude, OpenAI); false keeps the list to the Kiste models
   includeCloud = false,
 }) {
-  const [cloudModels, setCloudModels] = useState([]);
+  const [models, setModels] = useState([]);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    if (!includeCloud) return;
     let cancelled = false;
     fetch(`${API}/validation/models`)
-      .then((res) => (res.ok ? res.json() : { providers: [] }))
-      .then((data) => { if (!cancelled) setCloudModels((data.providers || []).flatMap((p) => p.models)); })
-      .catch(() => { if (!cancelled) setCloudModels([]); });
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
+      .then((data) => {
+        if (cancelled) return;
+        // Every model the Kiste server offers right now (catalog entry or not), plus the cloud models with keys
+        const offered = (data.models || []).filter(
+          (m) => m.available !== false && (includeCloud || m.provider === "kiste")
+        );
+        setModels(offered);
+        setLoadError(false);
+      })
+      .catch(() => { if (!cancelled) setLoadError(true); });
     return () => { cancelled = true; };
   }, [includeCloud]);
 
-  // One flat list: the Kiste models first, then the cloud models the server offers
-  const allModels = [...KISTE_MODELS, ...cloudModels];
+  const labelOf = (model) => model.label;
 
   const renderModel = (model) => (
-    <MenuItem key={model.id} value={model.id}>
+    <MenuItem key={model.model} value={model.model}>
       <Box sx={{ display: "flex", flexDirection: "column", width: "100%" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {model.label}
+            {labelOf(model)}
           </Typography>
           {model.tag && (
             <Chip
@@ -100,7 +64,7 @@ export default function ModelSelector({
           <Typography variant="caption" color="textSecondary">
             {model.description}
           </Typography>
-          {model.contextWindow && (
+          {model.context_window && (
             <Typography
               variant="caption"
               sx={{
@@ -110,7 +74,7 @@ export default function ModelSelector({
                 fontSize: "0.65rem",
               }}
             >
-              ctx: {model.contextWindow}
+              ctx: {model.context_window}
             </Typography>
           )}
         </Box>
@@ -134,11 +98,12 @@ export default function ModelSelector({
             onChange={(e) => onModelChange(e.target.value)}
             displayEmpty
             renderValue={(value) => {
-              const model = allModels.find((m) => m.id === value);
-              if (!model) return "Select a model";
+              const model = models.find((m) => m.model === value);
+              // The list is still loading or could not be read: show the stored value as it is
+              if (!model) return value || "Select a model";
               return (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <span>{model.label}</span>
+                  <span>{labelOf(model)}</span>
                   {model.tag && (
                     <Chip
                       label={model.tag}
@@ -157,9 +122,17 @@ export default function ModelSelector({
               },
             }}
           >
-            {allModels.map(renderModel)}
+            {models.map(renderModel)}
+            {models.length === 0 && selectedModel && (
+              <MenuItem value={selectedModel}>{selectedModel}</MenuItem>
+            )}
           </Select>
         </FormControl>
+        {loadError && (
+          <Typography variant="caption" color="error" sx={{ display: "block", mt: 0.5 }}>
+            The model list could not be loaded from the server. The current selection is kept.
+          </Typography>
+        )}
       </CardContent>
     </Card>
   );

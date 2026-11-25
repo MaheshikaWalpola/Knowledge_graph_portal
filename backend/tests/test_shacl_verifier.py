@@ -12,7 +12,7 @@ import json
 
 from rdflib import Graph
 
-from services.shacl_verifier import SHACLVerifier
+from services.shacl_verifier import SHACLVerifier, unsupported_sparql_clauses
 from services.local_llm_service import KisteConnectionError
 from core.config import settings
 
@@ -172,6 +172,23 @@ class TestSHACLVerifier(unittest.TestCase):
         graph, problems, _ = self.verifier.check_static("this is not turtle", self.known_terms)
         self.assertIsNone(graph)
         self.assertTrue(problems)
+
+    def test_unsupported_sparql_clauses(self):
+        # The same keywords pySHACL refuses in sh:sparql; predicate names such as ex:allowedValues are not matched
+        self.assertEqual(unsupported_sparql_clauses("SELECT $this WHERE { VALUES ?c { <a> } $this a ?c }"), ["VALUES"])
+        self.assertEqual(unsupported_sparql_clauses("SELECT $this WHERE { $this ?p ?o MINUS { $this a <x> } }"), ["MINUS"])
+        self.assertEqual(unsupported_sparql_clauses("SELECT $this WHERE { SERVICE <http://x> { $this a ?c } }"), ["SERVICE"])
+        self.assertEqual(unsupported_sparql_clauses("SELECT $this WHERE { $this <http://x#allowedValues> ?v FILTER (?v IN (1, 2)) }"), [])
+
+    def test_static_check_rejects_values_in_sparql(self):
+        # A shape with VALUES inside sh:select is valid SHACL syntax but pySHACL refuses to run it
+        shape = VALID_SHAPE.replace(
+            "    sh:property [\n        sh:path cmpo:hasUnit ;",
+            '    sh:sparql [ a sh:SPARQLConstraint ; sh:message "m" ; sh:select """SELECT $this WHERE { VALUES ?c { cmpo:Pressure } $this a ?c }""" ] ;\n'
+            "    sh:property [\n        sh:path cmpo:hasUnit ;")
+        graph, problems, _ = self.verifier.check_static(shape, self.known_terms)
+        self.assertIsNotNone(graph)
+        self.assertTrue(any("VALUES" in p and "FILTER" in p for p in problems), problems)
 
     #  Check 2: blind test data
 

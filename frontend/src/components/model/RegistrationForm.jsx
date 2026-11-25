@@ -335,7 +335,7 @@ axios.post(`${API}/auth/register`, requestBody)
                 onMouseDown={handleMouseDownPassword}
                 edge="end"
               >
-                {showPassword ? <VisibilityOff /> : <Visibility />}
+                {showPassword ? <Visibility /> : <VisibilityOff />}
               </IconButton>
             </InputAdornment>
           }
@@ -375,9 +375,9 @@ axios.post(`${API}/auth/register`, requestBody)
                 edge="end"
               >
                 {showConfirmPassword ? (
-                  <VisibilityOff />
-                ) : (
                   <Visibility />
+                ) : (
+                  <VisibilityOff />
                 )}
               </IconButton>
             </InputAdornment>

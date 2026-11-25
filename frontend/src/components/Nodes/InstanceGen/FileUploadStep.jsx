@@ -7,6 +7,8 @@ import {
   CardContent,
   Stack,
   Chip,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -102,10 +104,11 @@ export default function FileUploadStep({
             display: "grid",
             gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
             gap: 3,
-            alignItems: "start",
+            alignItems: "stretch",
           }}
         >
-          <Card variant="outlined">
+          {/* Same height as the PDF to CSV card next to it */}
+          <Card variant="outlined" sx={{ height: "100%" }}>
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>
                 CSV Data Files
@@ -120,15 +123,30 @@ export default function FileUploadStep({
                   alignItems: "center",
                   gap: 2,
                   mt: 2,
+                  flexWrap: "wrap",
                 }}
               >
-                <Button
-                  variant="outlined"
-                  startIcon={<CloudUploadIcon />}
-                  onClick={() => dataInputRef.current?.click()}
-                >
-                  Choose CSV Files
-                </Button>
+                {/* Full button until the first file is chosen, then a small icon so the row stays compact */}
+                {dataFiles.length === 0 ? (
+                  <Button
+                    variant="outlined"
+                    startIcon={<CloudUploadIcon />}
+                    onClick={() => dataInputRef.current?.click()}
+                  >
+                    Choose CSV Files
+                  </Button>
+                ) : (
+                  <Tooltip title="Add more CSV files">
+                    <IconButton
+                      color="primary"
+                      size="small"
+                      onClick={() => dataInputRef.current?.click()}
+                      sx={{ border: 1, borderColor: "divider" }}
+                    >
+                      <CloudUploadIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
 
                 {dataFiles.length > 0 && (
                   <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
