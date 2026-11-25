@@ -281,6 +281,20 @@ const CanvasInner = forwardRef(({
       }
       return false;
     },
+    // Select a node by id and centre the view on it (used by the ontology check panel).
+    focusNodeById: (id) => {
+      const node = nodes.find((n) => n.id === id);
+      if (!node) return false;
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === id })));
+      onSelectionChangeHandler({ nodes: [node], edges: [] });
+      if (reactFlowInstance) {
+        const width = node.width || 220;
+        const height = node.height || 100;
+        reactFlowInstance.setCenter(node.position.x + width / 2, node.position.y + height / 2,
+          { zoom: 1.2, duration: 600 });
+      }
+      return true;
+    },
     selectAll: () => {
       setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
       setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));

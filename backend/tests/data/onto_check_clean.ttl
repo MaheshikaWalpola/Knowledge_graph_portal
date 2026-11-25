@@ -1,0 +1,24 @@
+# Clean test ontology for the canvas ontology check: expected 0 errors and 0 warnings,
+# for both manual and automatic checks.
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:   <http://example.org/onto-clean#> .
+
+<http://example.org/onto-clean> a owl:Ontology ;
+    rdfs:label "Ontology check test (clean)" .
+
+ex:Equipment a owl:Class ; rdfs:label "Equipment" .
+ex:Wafer a owl:Class ; rdfs:label "Wafer" ; owl:disjointWith ex:Equipment .
+ex:Polisher a owl:Class ; rdfs:label "Polisher" ; rdfs:subClassOf ex:Equipment .
+ex:Lot a owl:Class ; rdfs:label "Lot" ; owl:hasKey ( ex:lotId ) .
+
+ex:processedBy a owl:ObjectProperty ; rdfs:label "processed by" ;
+    rdfs:domain ex:Wafer ; rdfs:range ex:Polisher .
+ex:inLot a owl:ObjectProperty ; rdfs:label "in lot" ;
+    rdfs:domain ex:Wafer ; rdfs:range ex:Lot .
+ex:lotId a owl:DatatypeProperty ; rdfs:label "lot id" ;
+    rdfs:domain ex:Lot ; rdfs:range xsd:string .
+
+ex:lot1 a ex:Lot ; ex:lotId "L-1" .
+ex:lot2 a ex:Lot ; ex:lotId "L-2" .

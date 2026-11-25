@@ -1,0 +1,17 @@
+# code: PF05
+# message: Class is not connected: no superclass, no subclass, and not used as a domain, range or type
+# manual_only: true
+# Similar to OOPS! P04 "Creating unconnected ontology elements" (not an exact equivalent).
+# Run only on manual checks: while an ontology is being built most new classes are unconnected.
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT DISTINCT ?iri WHERE {
+  { ?iri a owl:Class } UNION { ?iri a rdfs:Class }
+  FILTER(isIRI(?iri) && ?iri NOT IN (owl:Thing, owl:Nothing))
+  FILTER NOT EXISTS { ?iri rdfs:subClassOf ?sup . FILTER(?sup NOT IN (?iri, owl:Thing)) }
+  FILTER NOT EXISTS { ?sub rdfs:subClassOf ?iri . FILTER(?sub != ?iri) }
+  FILTER NOT EXISTS { ?p rdfs:domain|rdfs:range ?iri }
+  FILTER NOT EXISTS { ?x rdf:type ?iri }
+  FILTER NOT EXISTS { ?iri owl:equivalentClass|owl:disjointWith|^owl:equivalentClass|^owl:disjointWith ?other }
+}

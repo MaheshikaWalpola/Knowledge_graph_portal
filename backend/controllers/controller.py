@@ -553,16 +553,8 @@ def ctrl_upload_schema(
                 detail=f"An ontology named '{name.strip()}' already exists. Please choose a different name.",
             )
             
-    # Overwrite: delete old graphs if updating
-    if update_schema_id:
-        ctrl_delete_user_schema(user_email, update_schema_id)
-        schema_id = update_schema_id
-    else:
-        schema_id = name.replace(" ", "_")[:20] + "_" + str(hash(user_email))[:6]
-
-    graph_iri = user_schema_graph(user_email, schema_id)
-    instance_graph_iri = user_schema_instance_graph(user_email, schema_id)
-
+    # Validate everything that can reject the upload BEFORE deleting the old version, so a failed
+    # save (e.g. canvas content that is not valid Turtle) leaves the stored schema untouched.
     schema_content = schema_file.file.read()
 
     try:
@@ -573,6 +565,30 @@ def ctrl_upload_schema(
             "summary": _friendly_parse_error(raw, schema_file.filename),
             "technical": raw,
         })
+
+    parsed_inst = None
+    if mode == "separate":
+        if not instances_file:
+            raise HTTPException(422, detail="instances_file is required for separate mode")
+        inst_content = instances_file.file.read()
+        try:
+            parsed_inst = parse_rdf_bytes(inst_content, instances_file.filename)
+        except Exception as e:
+            raw = str(e)
+            raise HTTPException(400, detail={
+                "summary": _friendly_parse_error(raw, instances_file.filename),
+                "technical": raw,
+            })
+
+    # Overwrite: delete old graphs if updating (only now that the new content is known to parse)
+    if update_schema_id:
+        ctrl_delete_user_schema(user_email, update_schema_id)
+        schema_id = update_schema_id
+    else:
+        schema_id = name.replace(" ", "_")[:20] + "_" + str(hash(user_email))[:6]
+
+    graph_iri = user_schema_graph(user_email, schema_id)
+    instance_graph_iri = user_schema_instance_graph(user_email, schema_id)
 
     namespace = parsed_schema.namespace
 
@@ -601,27 +617,12 @@ def ctrl_upload_schema(
         }
 
     else:
-        # separate mode
-        if not instances_file:
-            raise HTTPException(422, detail="instances_file is required for separate mode")
-
+        # separate mode (instances file already checked and parsed above)
         # Import schema file to schema graph
         try:
             import_turtle_to_named_graph(parsed_schema.turtle, graph_iri)
         except Exception as e:
             raise HTTPException(500, detail=f"Failed to import schema graph: {e}")
-
-        inst_content = instances_file.file.read()
-        try:
-            parsed_inst = parse_rdf_bytes(inst_content, instances_file.filename)
-        except Exception as e:
-            # Rollback
-            delete_named_graph(graph_iri)
-            raw = str(e)
-            raise HTTPException(400, detail={
-                "summary": _friendly_parse_error(raw, instances_file.filename),
-                "technical": raw,
-            })
 
         try:
             import_turtle_to_named_graph(parsed_inst.turtle, instance_graph_iri)

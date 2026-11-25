@@ -19,4 +19,8 @@ chat_conversations_collection.create_index([("user_email", ASCENDING), ("updated
 # Canvas schema change history
 schema_history_collection = db["schema_history"]
 schema_history_collection.create_index([("user_email", ASCENDING), ("schema_id", ASCENDING), ("saved_at", DESCENDING)])
-schema_history_collection.create_index([("saved_at", DESCENDING)])
+schema_history_collection.create_index([("saved_at", DESCENDING)])
+
+# Ontology check runs on the canvas (one record per run, never overwritten)
+ontology_checks_collection = db["ontology_checks"]
+ontology_checks_collection.create_index([("user_email", ASCENDING), ("schema_id", ASCENDING), ("checked_at", DESCENDING)])

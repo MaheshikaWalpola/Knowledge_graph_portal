@@ -1,0 +1,24 @@
+# code: PF09
+# message: {detail}
+# No direct OOPS! equivalent (related to P11/P35-style property misuse).
+# ?related: the range that doesn't fit the kind of property.
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT DISTINCT ?iri ?related ?detail WHERE {
+  {
+    ?iri a owl:DatatypeProperty ; rdfs:range ?related .
+    ?related a owl:Class .
+    # Built-in datatypes imported through the canvas show up typed as owl:Class: not this mistake.
+    FILTER(!STRSTARTS(STR(?related), "http://www.w3.org/2001/XMLSchema#") && ?related != rdfs:Literal)
+    BIND("Datatype property has a class as its range; use an object property, or a datatype as range" AS ?detail)
+  } UNION {
+    ?iri a owl:ObjectProperty ; rdfs:range ?related .
+    FILTER(STRSTARTS(STR(?related), "http://www.w3.org/2001/XMLSchema#")
+           || ?related = rdfs:Literal
+           || EXISTS { ?related a rdfs:Datatype }
+           || EXISTS { ?related a rdfs:Literal })
+    BIND("Object property has a datatype or literal as its range; use a datatype property, or a class as range" AS ?detail)
+  }
+  FILTER(isIRI(?iri))
+}

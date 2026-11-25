@@ -1,0 +1,14 @@
+# code: PF04
+# message: Class is part of a cycle in the class hierarchy (rdfs:subClassOf leads back to itself)
+# Similar to OOPS! P06 "Including cycles in a class hierarchy" (not an exact equivalent).
+# ?related: the other classes in the same cycle.
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT DISTINCT ?iri ?related WHERE {
+  ?iri rdfs:subClassOf+ ?iri .
+  FILTER(isIRI(?iri))
+  OPTIONAL {
+    ?iri rdfs:subClassOf+ ?related .
+    ?related rdfs:subClassOf+ ?iri .
+    FILTER(?related != ?iri)
+  }
+}

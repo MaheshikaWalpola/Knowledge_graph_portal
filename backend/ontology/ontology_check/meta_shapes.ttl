@@ -1,0 +1,30 @@
+# SHACL meta-shapes for the ontology check (services/ontology_check_service.py).
+# They validate the ontology itself, not instance data: the targets are OWL property declarations.
+# kgpc:code is the stable pitfall code shown in the UI; sh:message is the text shown with it.
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix kgpc: <urn:kgp:ontology-check#> .
+
+kgpc:PropertyDeclarationShape
+    a sh:NodeShape ;
+    sh:targetClass owl:ObjectProperty , owl:DatatypeProperty ;
+    sh:property kgpc:PF01 , kgpc:PF02 .
+
+# Similar to OOPS! P11 "Missing domain or range in properties" (not an exact equivalent).
+kgpc:PF01
+    a sh:PropertyShape ;
+    sh:path rdfs:domain ;
+    sh:minCount 1 ;
+    sh:severity sh:Warning ;
+    kgpc:code "PF01" ;
+    sh:message "Property has no domain (rdfs:domain)" .
+
+# Similar to OOPS! P11 "Missing domain or range in properties" (not an exact equivalent).
+kgpc:PF02
+    a sh:PropertyShape ;
+    sh:path rdfs:range ;
+    sh:minCount 1 ;
+    sh:severity sh:Warning ;
+    kgpc:code "PF02" ;
+    sh:message "Property has no range (rdfs:range)" .

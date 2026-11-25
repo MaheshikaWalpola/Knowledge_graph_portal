@@ -1,0 +1,72 @@
+# What the canvas sends for onto_check_faulty.ttl: /canvas/import followed by buildTTL (CanvasEditor.jsx).
+# The owl:hasKey list comes back as a bare blank-node name, which is not valid Turtle.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix ex: <http://example.org/ontology#> .
+
+<http://example.org/onto-check> a owl:Class .
+<http://example.org/onto-check> rdfs:label "Ontology check test (faulty)" .
+
+<http://example.org/onto-check#A> a owl:Class .
+<http://example.org/onto-check#A> rdfs:label "A" .
+
+<http://example.org/onto-check#B> a owl:Class .
+<http://example.org/onto-check#B> rdfs:label "B" .
+
+<http://example.org/onto-check#Batch> a owl:Class .
+<http://example.org/onto-check#Batch> rdfs:label "Batch" .
+
+<http://example.org/onto-check#Device> a owl:Class .
+<http://example.org/onto-check#Device> rdfs:label "Device" .
+
+<http://example.org/onto-check#Lot> a owl:Class .
+<http://example.org/onto-check#Lot> rdfs:label "Lot" .
+
+<http://example.org/onto-check#Pallet> a owl:Class .
+<http://example.org/onto-check#Pallet> rdfs:label "Pallet" .
+
+<http://example.org/onto-check#SmartWafer> a owl:Class .
+<http://example.org/onto-check#SmartWafer> rdfs:label "Smart wafer" .
+
+<http://example.org/onto-check#Unlabelled> a owl:Class .
+<http://example.org/onto-check#Unlabelled> rdfs:label "Unlabelled" .
+
+<http://example.org/onto-check#Wafer> a owl:Class .
+<http://example.org/onto-check#Wafer> rdfs:label "Wafer" .
+
+<http://example.org/onto-check#batch1> a owl:Class .
+<http://example.org/onto-check#batch1> rdfs:label "batch1" .
+
+<http://example.org/onto-check#lotId> a owl:DatatypeProperty .
+<http://example.org/onto-check#lotId> rdfs:label "lot id" .
+
+<http://example.org/onto-check#measuredWafer> a owl:ObjectProperty .
+<http://example.org/onto-check#measuredWafer> rdfs:label "measured wafer" .
+
+<http://example.org/onto-check#pallet1> a owl:Class .
+<http://example.org/onto-check#pallet1> rdfs:label "pallet1" .
+
+<http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> a owl:Class .
+<http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> rdfs:label "nil" .
+
+<http://www.w3.org/2001/XMLSchema#string> a owl:Class .
+<http://www.w3.org/2001/XMLSchema#string> rdfs:label "string" .
+
+n138755ec432f48158fa25d81f4da6647b1 a owl:Class .
+n138755ec432f48158fa25d81f4da6647b1 rdfs:label "n138755ec432f48158fa25d81f4da6647b1" .
+
+<http://example.org/onto-check#Batch> rdfs:subClassOf <http://example.org/onto-check#Lot> .
+<http://example.org/onto-check#lotId> rdfs:domain <http://example.org/onto-check#Lot> .
+<http://example.org/onto-check#B> rdfs:subClassOf <http://example.org/onto-check#A> .
+<http://example.org/onto-check#Lot> rdfs:subClassOf n138755ec432f48158fa25d81f4da6647b1 .
+n138755ec432f48158fa25d81f4da6647b1 rdfs:subClassOf <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .
+<http://example.org/onto-check#Unlabelled> rdfs:subClassOf <http://example.org/onto-check#Device> .
+<http://example.org/onto-check#A> rdfs:subClassOf <http://example.org/onto-check#B> .
+<http://example.org/onto-check#Batch> rdfs:subClassOf <http://example.org/onto-check#Pallet> .
+<http://example.org/onto-check#Pallet> rdfs:subClassOf <http://example.org/onto-check#Lot> .
+<http://example.org/onto-check#SmartWafer> rdfs:subClassOf <http://example.org/onto-check#Device> .
+n138755ec432f48158fa25d81f4da6647b1 rdfs:subClassOf <http://example.org/onto-check#lotId> .
+<http://example.org/onto-check#lotId> rdfs:range <http://www.w3.org/2001/XMLSchema#string> .
+<http://example.org/onto-check#Wafer> rdfs:subClassOf <http://example.org/onto-check#Device> .
+<http://example.org/onto-check#SmartWafer> rdfs:subClassOf <http://example.org/onto-check#Wafer> .

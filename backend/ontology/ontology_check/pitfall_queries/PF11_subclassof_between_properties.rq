@@ -1,0 +1,16 @@
+# code: PF11
+# message: rdfs:subClassOf links two properties; this was probably meant as rdfs:subPropertyOf (the canvas saves edge types it doesn't know as subClassOf)
+# No OOPS! equivalent: detects the effect of the canvas round trip, which turns unknown edges
+# (e.g. rdfs:subPropertyOf) into rdfs:subClassOf.
+# ?related: the property on the other end.
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT DISTINCT ?iri ?related WHERE {
+  ?iri rdfs:subClassOf ?related .
+  ?iri a ?t1 .
+  ?related a ?t2 .
+  VALUES ?t1 { owl:ObjectProperty owl:DatatypeProperty owl:AnnotationProperty rdf:Property }
+  VALUES ?t2 { owl:ObjectProperty owl:DatatypeProperty owl:AnnotationProperty rdf:Property }
+  FILTER(isIRI(?iri))
+}

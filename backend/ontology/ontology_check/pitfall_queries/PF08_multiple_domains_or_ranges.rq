@@ -1,0 +1,15 @@
+# code: PF08
+# message: Property has several {detail}; OWL reads them as an intersection, so a value must belong to all of them
+# Similar to OOPS! P19 "Defining multiple domains or ranges in properties" (not an exact equivalent).
+# ?related: the domain or range classes.
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT DISTINCT ?iri ?related ?detail WHERE {
+  {
+    ?iri rdfs:domain ?related , ?other .
+    BIND("domains" AS ?detail)
+  } UNION {
+    ?iri rdfs:range ?related , ?other .
+    BIND("ranges" AS ?detail)
+  }
+  FILTER(isIRI(?iri) && ?related != ?other)
+}

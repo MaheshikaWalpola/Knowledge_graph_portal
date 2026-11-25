@@ -2,8 +2,11 @@ import React, { memo } from "react";
 import { Handle, Position } from "reactflow";
 import { NodeResizer } from "@reactflow/node-resizer";
 import "@reactflow/node-resizer/dist/style.css";
+import { checkClassName, useNodeCheck } from "../ontologyCheck";
+import CheckMarker from "./CheckMarker";
 
-const LiteralNode = memo(({ data, selected }) => {
+const LiteralNode = memo(({ id, data, selected }) => {
+  const mark = useNodeCheck(id);
   return (
     <>
       <NodeResizer 
@@ -14,7 +17,7 @@ const LiteralNode = memo(({ data, selected }) => {
         keepAspectRatio={true}
       />
       <div
-        className={`onto-node onto-literal ${selected ? "selected" : ""}`}
+        className={`onto-node onto-literal ${selected ? "selected" : ""} ${checkClassName(mark)}`}
         style={{ 
           "--node-color": data.color || "#8b5cf6",
           borderColor: "var(--node-color)" 
@@ -26,6 +29,7 @@ const LiteralNode = memo(({ data, selected }) => {
         <Handle type="source" position={Position.Right} id="right" className="onto-handle" />
         <div className="onto-node-label">{data.label || "Unnamed"}</div>
       </div>
+      <CheckMarker mark={mark} />
     </>
   );
 });

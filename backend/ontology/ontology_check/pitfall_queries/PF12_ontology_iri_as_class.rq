@@ -1,0 +1,28 @@
+# code: PF12
+# message: This looks like the ontology's own IRI but is typed as owl:Class (the canvas imports the ontology header as a class node)
+# No OOPS! equivalent: detects the effect of the canvas round trip, which turns the owl:Ontology
+# header into a class. Matches a class that is also an owl:Ontology, or whose IRI is the
+# namespace of other declared terms (e.g. <http://ex.org/onto> with <http://ex.org/onto#Wafer>).
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT DISTINCT ?iri WHERE {
+  {
+    ?iri a owl:Class , owl:Ontology .
+  } UNION {
+    # Namespace with its trailing '#' or '/' (http://ex.org/onto#)
+    ?term a ?termType .
+    VALUES ?termType { owl:Class owl:ObjectProperty owl:DatatypeProperty owl:NamedIndividual }
+    BIND(REPLACE(STR(?term), "[^#/]*$", "") AS ?ns)
+    BIND(IRI(?ns) AS ?iri)
+    ?iri a owl:Class .
+    FILTER(isIRI(?term) && STR(?iri) = ?ns && ?iri != ?term)
+  } UNION {
+    # Namespace without it (http://ex.org/onto)
+    ?term a ?termType .
+    VALUES ?termType { owl:Class owl:ObjectProperty owl:DatatypeProperty owl:NamedIndividual }
+    BIND(REPLACE(STR(?term), "[#/][^#/]*$", "") AS ?ns)
+    BIND(IRI(?ns) AS ?iri)
+    ?iri a owl:Class .
+    FILTER(isIRI(?term) && STR(?iri) = ?ns && ?iri != ?term)
+  }
+}

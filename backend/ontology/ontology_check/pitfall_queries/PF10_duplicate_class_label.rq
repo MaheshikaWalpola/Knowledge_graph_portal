@@ -1,0 +1,13 @@
+# code: PF10
+# message: Another class has the same label "{detail}"
+# Similar to OOPS! P02 "Creating synonyms as classes" (not an exact equivalent).
+# Compares labels exactly (same text and language tag), so the query stays a cheap join.
+# ?related: the other classes with that label.
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+SELECT DISTINCT ?iri ?related ?detail WHERE {
+  ?iri a owl:Class ; rdfs:label ?label .
+  ?related rdfs:label ?label ; a owl:Class .
+  FILTER(isIRI(?iri) && isIRI(?related) && ?iri != ?related)
+  BIND(STR(?label) AS ?detail)
+}

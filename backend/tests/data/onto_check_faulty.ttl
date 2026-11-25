@@ -1,0 +1,38 @@
+# Test ontology for the canvas ontology check, with deliberate mistakes.
+# Expected: exactly 1 error (SmartWafer) and these warnings:
+#   PF01 + PF02 on measuredWafer (no domain, no range)
+#   PF04 on A and B (A subClassOf B subClassOf A)
+# The keyed Lot classes must NOT produce an error (owlrl 7.6.2 owl:hasKey regression).
+# Unlabelled has no rdfs:label on purpose; there is no label check (PF03 was dropped).
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:   <http://example.org/onto-check#> .
+
+<http://example.org/onto-check> a owl:Ontology ;
+    rdfs:label "Ontology check test (faulty)" .
+
+# SmartWafer sits under two disjoint classes, so it can never have members.
+ex:Wafer a owl:Class ; rdfs:label "Wafer" ; owl:disjointWith ex:Device .
+ex:Device a owl:Class ; rdfs:label "Device" .
+ex:SmartWafer a owl:Class ; rdfs:label "Smart wafer" ;
+    rdfs:subClassOf ex:Wafer , ex:Device .
+
+# A property with no domain and no range.
+ex:measuredWafer a owl:ObjectProperty ; rdfs:label "measured wafer" .
+
+# A class without a label.
+ex:Unlabelled a owl:Class ; rdfs:subClassOf ex:Device .
+
+# A cycle in the class hierarchy.
+ex:A a owl:Class ; rdfs:label "A" ; rdfs:subClassOf ex:B .
+ex:B a owl:Class ; rdfs:label "B" ; rdfs:subClassOf ex:A .
+
+# One-property key on a class with disjoint subclasses and members that carry key values.
+# owlrl 7.6.2 would merge every member of Lot (probes included) and report Batch/Pallet clashes.
+ex:Lot a owl:Class ; rdfs:label "Lot" ; owl:hasKey ( ex:lotId ) .
+ex:Batch a owl:Class ; rdfs:label "Batch" ; rdfs:subClassOf ex:Lot ; owl:disjointWith ex:Pallet .
+ex:Pallet a owl:Class ; rdfs:label "Pallet" ; rdfs:subClassOf ex:Lot .
+ex:lotId a owl:DatatypeProperty ; rdfs:label "lot id" ; rdfs:domain ex:Lot ; rdfs:range xsd:string .
+ex:batch1 a ex:Batch ; ex:lotId "B-1" .
+ex:pallet1 a ex:Pallet ; ex:lotId "P-1" .

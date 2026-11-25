@@ -1,8 +1,10 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import OntologyPalette from "./OntologyPalette";
 import OntologyCanvas from "./OntologyCanvas";
 import PropertyPanel from "./PropertyPanel";
+import OntologyCheckPanel from "./OntologyCheckPanel";
+import { CheckHighlightContext, CHECK_TOOLTIP, buildHighlights, nodeIri, summaryText } from "./ontologyCheck";
 import "./CanvasEditor.css";
 
 // MUI Icons
@@ -20,6 +22,7 @@ import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import LayersClearIcon from "@mui/icons-material/LayersClear";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
 import { API } from "../../config";
 
 // ─── Diff Engine ───────────────────────────────────────────
@@ -217,6 +220,9 @@ function buildTTL(model) {
 
 // ─── Component ─────────────────────────────────────────────
 
+const AUTO_CHECK_KEY = "kgp.canvas.autoCheck";
+const AUTO_CHECK_DELAY_MS = 3000;
+
 export default function CanvasEditor({ onOpenAuth }) {
   const [activeEdgeType, setActiveEdgeType] = useState("subClassOf");
   const [selected, setSelected] = useState(null);
@@ -250,6 +256,132 @@ export default function CanvasEditor({ onOpenAuth }) {
   // Derive schema context from URL
   const originalSchemaId = new URLSearchParams(location.search).get("schema_id");
   const originalName = location.state?.originalName || "";
+
+  // ─── Ontology check (POST /ontology/check) ─────────────────
+  const [autoCheck, setAutoCheck] = useState(() => localStorage.getItem(AUTO_CHECK_KEY) !== "off");
+  const [checkResult, setCheckResult] = useState(null);
+  const [checkedCanvasTtl, setCheckedCanvasTtl] = useState(null); // canvas TTL the result belongs to
+  const [checkRunning, setCheckRunning] = useState(false);
+  const [checkError, setCheckError] = useState(null);
+  const [showCheckPanel, setShowCheckPanel] = useState(false);
+  const checkSeq = useRef(0);          // only the latest request may update the state
+  const checkAbort = useRef(null);
+  const lastAutoCheckTtl = useRef(null); // don't auto-check the same content twice
+  // Canvas TTL right after loading the schema from the workspace (null if not loaded from there).
+  const [loadedCanvasTtl, setLoadedCanvasTtl] = useState(null);
+
+  // buildTTL ignores positions, so dragging nodes doesn't change this (or trigger checks).
+  const canvasTtl = useMemo(() => buildTTL(model), [model]);
+  const hasContent = (model.nodes || []).length > 0;
+  const checkStale = !!checkResult && checkedCanvasTtl !== canvasTtl;
+  // While the canvas is unchanged since it was loaded, check the saved schema instead: it holds
+  // everything the canvas shows plus the OWL axioms the canvas drops (and the canvas content of
+  // some imported ontologies, e.g. with owl:hasKey lists, is not even valid Turtle).
+  const canvasUnchangedSinceLoad =
+    !!originalSchemaId && loadedCanvasTtl !== null && canvasTtl === loadedCanvasTtl;
+  const defaultCheckSource = canvasUnchangedSinceLoad ? "stored" : "canvas";
+
+  // Recompute highlights only when the check result or the node IRIs change, not on every drag.
+  const nodeIriKey = (model.nodes || []).map((n) => `${n.id}\u0000${nodeIri(n)}`).join("\u0001");
+  const checkHighlights = useMemo(
+    () => buildHighlights(checkResult, model.nodes),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [checkResult, nodeIriKey]
+  );
+  const checkContextValue = useMemo(
+    () => ({ byNode: checkHighlights.byNode, stale: checkStale }),
+    [checkHighlights, checkStale]
+  );
+
+  const resetCheck = useCallback(() => {
+    checkSeq.current += 1;
+    checkAbort.current?.abort();
+    lastAutoCheckTtl.current = null;
+    setLoadedCanvasTtl(null);
+    setCheckResult(null);
+    setCheckedCanvasTtl(null);
+    setCheckRunning(false);
+    setCheckError(null);
+  }, []);
+
+  const runCheck = useCallback(async ({ source = "canvas", trigger = "manual" } = {}) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      if (trigger === "manual") onOpenAuth?.();
+      return;
+    }
+    if (source === "canvas" && !hasContent) {
+      if (trigger === "manual") setCheckError("The canvas is empty: there is nothing to check.");
+      return;
+    }
+    if (source === "stored" && !originalSchemaId) return;
+
+    // A newer request replaces an older one: abort it and ignore its answer.
+    checkAbort.current?.abort();
+    const controller = new AbortController();
+    checkAbort.current = controller;
+    const seq = ++checkSeq.current;
+    const ttlAtRequest = canvasTtl;
+    if (trigger === "auto") lastAutoCheckTtl.current = ttlAtRequest;
+
+    setCheckRunning(true);
+    try {
+      const body = source === "canvas"
+        ? { source, trigger, ttl: ttlAtRequest, schema_id: originalSchemaId || null }
+        : { source, trigger, schema_id: originalSchemaId };
+      const resp = await fetch(`${API}/ontology/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (seq !== checkSeq.current) return;
+      if (!resp.ok) {
+        const d = data.detail;
+        const msg = resp.status === 401
+          ? "Please log in again to check the ontology."
+          : (typeof d === "string" ? d : d?.summary) || `The check failed (HTTP ${resp.status}).`;
+        setCheckError(msg);
+        return;
+      }
+      setCheckResult(data);
+      setCheckedCanvasTtl(ttlAtRequest);
+      setCheckError(null);
+    } catch (err) {
+      if (err.name === "AbortError" || seq !== checkSeq.current) return;
+      setCheckError(`The check could not be run: ${err.message || err}`);
+    } finally {
+      if (seq === checkSeq.current) setCheckRunning(false);
+    }
+  }, [canvasTtl, hasContent, originalSchemaId, onOpenAuth]);
+
+  // Automatic check, a few seconds after the last edit.
+  useEffect(() => {
+    if (!autoCheck || !hasContent || !localStorage.getItem("token")) return;
+    if (lastAutoCheckTtl.current === canvasTtl) return;
+    if (checkResult && checkedCanvasTtl === canvasTtl) return; // already checked (either source)
+    const timer = setTimeout(() => runCheck({ source: defaultCheckSource, trigger: "auto" }), AUTO_CHECK_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [autoCheck, hasContent, canvasTtl, checkResult, checkedCanvasTtl, runCheck, defaultCheckSource]);
+
+  // Abort a running check when leaving the canvas.
+  useEffect(() => () => checkAbort.current?.abort(), []);
+
+  const handleToggleAutoCheck = useCallback((on) => {
+    setAutoCheck(on);
+    localStorage.setItem(AUTO_CHECK_KEY, on ? "on" : "off");
+  }, []);
+
+  const handleCheckNow = useCallback(() => {
+    setShowCheckPanel(true);
+    runCheck({ source: defaultCheckSource, trigger: "manual" });
+  }, [runCheck, defaultCheckSource]);
+
+  const labelForNode = useCallback(
+    (id) => (model.nodes || []).find((n) => n.id === id)?.data?.label || id,
+    [model.nodes]
+  );
 
   // Toggle a CSS class on the root element to hide/show the app header & footer
   useEffect(() => {
@@ -310,6 +442,7 @@ export default function CanvasEditor({ onOpenAuth }) {
         
         const data = await importRes.json();
         handleImport(data);
+        setLoadedCanvasTtl(data?.nodes && data?.edges ? buildTTL(data) : null);
       } catch (err) {
         console.error("Auto-load schema error:", err);
       } finally {
@@ -321,12 +454,13 @@ export default function CanvasEditor({ onOpenAuth }) {
   }, [location.search, handleImport]);
 
   const handleClearCanvas = useCallback(() => {
+    resetCheck();
     setModel({ nodes: [], edges: [] });
     canvasRef.current?.clearCanvas?.();
     setSelected(null);
     setShowClearConfirm(false);
     navigate("/canvas", { replace: true, state: null });
-  }, [navigate]);
+  }, [navigate, resetCheck]);
 
   const handleSearch = useCallback(() => {
     if (!searchQuery.trim()) return;
@@ -742,6 +876,31 @@ export default function CanvasEditor({ onOpenAuth }) {
           <GridViewIcon sx={{ fontSize: 18 }} />
         </button>
 
+        <div className="ce-dock-divider" />
+
+        {/* Action: Check ontology */}
+        <button
+          className={`ce-dock-btn action-btn ${showCheckPanel ? "active" : ""}`}
+          title={`Check ontology (${defaultCheckSource === "stored"
+            ? "the saved schema, since the canvas is unchanged"
+            : "the canvas"}). ${CHECK_TOOLTIP}`}
+          onClick={handleCheckNow}
+          disabled={checkRunning}
+        >
+          <FactCheckIcon sx={{ fontSize: 18 }} />
+        </button>
+        {(checkResult || checkRunning) && (
+          <button
+            className={`ce-check-dock-summary ${
+              checkResult?.summary?.errors ? "has-errors" : checkResult?.summary?.warnings ? "has-warnings" : "ok"
+            } ${checkStale ? "stale" : ""}`}
+            onClick={() => setShowCheckPanel((v) => !v)}
+            title={checkStale ? "Outdated: the ontology changed since this check" : "Show the problem list"}
+          >
+            {checkRunning && !checkResult ? "Checking…" : summaryText(checkResult.summary)}
+          </button>
+        )}
+
       </div>
 
       {/* Left palette */}
@@ -756,12 +915,32 @@ export default function CanvasEditor({ onOpenAuth }) {
 
       {/* Center canvas */}
       <main className="ce-center">
-        <OntologyCanvas
-          ref={canvasRef}
-          activeEdgeType={activeEdgeType}
-          onSelectionChange={setSelected}
-          onModelChange={setModel}
-        />
+        <CheckHighlightContext.Provider value={checkContextValue}>
+          <OntologyCanvas
+            ref={canvasRef}
+            activeEdgeType={activeEdgeType}
+            onSelectionChange={setSelected}
+            onModelChange={setModel}
+          />
+        </CheckHighlightContext.Provider>
+        {showCheckPanel && (
+          <OntologyCheckPanel
+            result={checkResult}
+            running={checkRunning}
+            error={checkError}
+            stale={checkStale}
+            autoCheck={autoCheck}
+            onToggleAutoCheck={handleToggleAutoCheck}
+            onCheckCanvas={() => runCheck({ source: "canvas", trigger: "manual" })}
+            onCheckStored={() => runCheck({ source: "stored", trigger: "manual" })}
+            canCheckStored={!!originalSchemaId}
+            highlights={checkHighlights}
+            labelFor={labelForNode}
+            selectedNodeId={selected?.kind === "node" ? selected.id : null}
+            onFocus={(id) => canvasRef.current?.focusNodeById(id)}
+            onClose={() => setShowCheckPanel(false)}
+          />
+        )}
       </main>
 
       {/* Right property panel */}
