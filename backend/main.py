@@ -36,3 +36,9 @@ app.include_router(chat_router)
 app.include_router(validation_router)
 app.include_router(history_router)
 app.include_router(ontology_check_router)
+
+@app.on_event("startup")
+def _read_kiste_model_list():
+    # Reads GET <KISTE_BASE_URL>/v1/models once and prints the ids; the dropdown offers only models that are there
+    from services.model_catalog import refresh_kiste_models
+    refresh_kiste_models()

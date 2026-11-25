@@ -108,9 +108,12 @@ def _split_system(messages: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, s
     return "\n\n".join(system_parts), turns
 
 
-def call_anthropic(model: str, messages: List[Dict[str, str]], json_mode: bool = False,
-                   reasoning_effort: Optional[str] = None, timeout: float = 300) -> str:
-    """One Claude request through the official SDK. Thinking stays at the model's adaptive default."""
+def call_anthropic_meta(model: str, messages: List[Dict[str, str]], json_mode: bool = False,
+                        reasoning_effort: Optional[str] = None, timeout: float = 300) -> Tuple[str, Dict]:
+    """
+    One Claude request through the official SDK. Thinking stays at the model's adaptive default.
+    Returns (answer text, meta); meta["model"] is the model id the API reports in its response.
+    """
     try:
         import anthropic
     except ImportError:
@@ -145,12 +148,22 @@ def call_anthropic(model: str, messages: List[Dict[str, str]], json_mode: bool =
         raise LLMProviderError("Claude declined this request" + (f" ({category})." if category else "."))
     if response.stop_reason == "max_tokens":
         logger.warning("Claude answer was cut off at %s output tokens (model=%s)", MAX_OUTPUT_TOKENS, model)
-    return "".join(block.text for block in response.content if block.type == "text")
+    text = "".join(block.text for block in response.content if block.type == "text")
+    return text, {"model": getattr(response, "model", None)}
 
 
-def call_openai(model: str, messages: List[Dict[str, str]], json_mode: bool = False,
-                reasoning_effort: Optional[str] = None, timeout: float = 300) -> str:
-    """One OpenAI chat completion. No temperature is sent: GPT-5 models accept only their default."""
+def call_anthropic(model: str, messages: List[Dict[str, str]], json_mode: bool = False,
+                   reasoning_effort: Optional[str] = None, timeout: float = 300) -> str:
+    """One Claude request; the answer text only."""
+    return call_anthropic_meta(model, messages, json_mode, reasoning_effort, timeout)[0]
+
+
+def call_openai_meta(model: str, messages: List[Dict[str, str]], json_mode: bool = False,
+                     reasoning_effort: Optional[str] = None, timeout: float = 300) -> Tuple[str, Dict]:
+    """
+    One OpenAI chat completion. No temperature is sent: GPT-5 models accept only their default.
+    Returns (answer text, meta); meta["model"] is the model id the API reports in its response.
+    """
     try:
         import openai
     except ImportError:
@@ -176,4 +189,11 @@ def call_openai(model: str, messages: List[Dict[str, str]], json_mode: bool = Fa
         raise LLMProviderError(f"The OpenAI API returned an error ({e.status_code}): {e.message}")
     except openai.APIConnectionError:
         raise LLMProviderError("The OpenAI API could not be reached. Check the server's internet connection.")
-    return response.choices[0].message.content or ""
+    text = response.choices[0].message.content or ""
+    return text, {"model": getattr(response, "model", None)}
+
+
+def call_openai(model: str, messages: List[Dict[str, str]], json_mode: bool = False,
+                reasoning_effort: Optional[str] = None, timeout: float = 300) -> str:
+    """One OpenAI chat completion; the answer text only."""
+    return call_openai_meta(model, messages, json_mode, reasoning_effort, timeout)[0]

@@ -157,11 +157,14 @@ export default function SchemaOntology({ onOpenAuth }) {
         },
       },
       {
+        // the searched node: Cytoscape draws nodes in z-index order, so a high value brings it
+        // in front of any node that overlaps it (the ring alone stayed hidden under neighbours)
         selector: ".hit",
         style: {
           "border-width": 4,
           "border-color": "#AAFF00",
           "font-weight": 700,
+          "z-index": 9999,
         },
       },
     ],
