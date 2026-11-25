@@ -1,0 +1,16 @@
+# Canvas-safe test ontology. Expected: 0 errors, 2 warnings:
+#   PF08 on measures (two domains) and on locatedAt (two ranges).
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:   <http://example.org/ontology#> .
+
+ex:Thermometer a owl:Class ; rdfs:label "Thermometer" .
+ex:Barometer   a owl:Class ; rdfs:label "Barometer" .
+ex:Quantity    a owl:Class ; rdfs:label "Quantity" .
+ex:Room        a owl:Class ; rdfs:label "Room" .
+ex:Building    a owl:Class ; rdfs:label "Building" .
+
+ex:measures a owl:ObjectProperty ; rdfs:label "measures" ;
+    rdfs:domain ex:Thermometer , ex:Barometer ; rdfs:range ex:Quantity .
+ex:locatedAt a owl:ObjectProperty ; rdfs:label "located at" ;
+    rdfs:domain ex:Thermometer ; rdfs:range ex:Room , ex:Building .

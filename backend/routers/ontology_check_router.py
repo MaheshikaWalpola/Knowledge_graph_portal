@@ -56,8 +56,8 @@ def _parse_error_summary(raw: str, source: str) -> str:
     where = f" (line {line.group(1)})" if line else ""
     if source == "canvas":
         return (f"The canvas content is not valid Turtle{where}, so it can't be checked. Imported OWL "
-                f"constructs the canvas can't show, such as owl:hasKey lists, can cause this: "
-                f"try \"Check saved schema\".")
+                f"constructs the canvas can't show, such as owl:hasKey lists, can cause this. To check the "
+                f"saved version, reopen the schema from your workspace and run the check before editing.")
     return f"The saved schema is not valid Turtle{where}, so it can't be checked."
 
 

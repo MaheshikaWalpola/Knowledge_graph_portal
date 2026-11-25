@@ -1,0 +1,14 @@
+# Canvas-safe test ontology. Expected: 0 errors, 1 warning:
+#   PF09 on hasSupplier, a datatype property whose range is a class.
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:   <http://example.org/ontology#> .
+
+ex:Part     a owl:Class ; rdfs:label "Part" .
+ex:Supplier a owl:Class ; rdfs:label "Supplier" .
+ex:Assembly a owl:Class ; rdfs:label "Assembly" .
+
+ex:hasSupplier a owl:DatatypeProperty ; rdfs:label "has supplier" ;
+    rdfs:domain ex:Part ; rdfs:range ex:Supplier .
+ex:partOf a owl:ObjectProperty ; rdfs:label "part of" ;
+    rdfs:domain ex:Part ; rdfs:range ex:Assembly .

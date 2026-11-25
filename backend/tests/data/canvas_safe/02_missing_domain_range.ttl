@@ -1,0 +1,14 @@
+# Canvas-safe test ontology. Expected: 0 errors, 3 warnings:
+#   PF01 (no domain) on hasOperator, PF02 (no range) on hasOperator and usesRecipe.
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:   <http://example.org/ontology#> .
+
+ex:Machine  a owl:Class ; rdfs:label "Machine" .
+ex:Operator a owl:Class ; rdfs:label "Operator" ; rdfs:subClassOf ex:Person .
+ex:Person   a owl:Class ; rdfs:label "Person" .
+ex:Recipe   a owl:Class ; rdfs:label "Recipe" ; rdfs:subClassOf ex:Document .
+ex:Document a owl:Class ; rdfs:label "Document" .
+
+ex:hasOperator a owl:ObjectProperty ; rdfs:label "has operator" .
+ex:usesRecipe  a owl:ObjectProperty ; rdfs:label "uses recipe" ; rdfs:domain ex:Machine .

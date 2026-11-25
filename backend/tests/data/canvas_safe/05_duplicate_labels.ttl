@@ -1,0 +1,14 @@
+# Canvas-safe test ontology. Expected: 0 errors, 2 warnings:
+#   PF10 (same label "Batch") on ProductionBatch and ChemicalBatch.
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:   <http://example.org/ontology#> .
+
+ex:ProductionBatch a owl:Class ; rdfs:label "Batch" .
+ex:ChemicalBatch   a owl:Class ; rdfs:label "Batch" .
+ex:Order           a owl:Class ; rdfs:label "Order" .
+
+ex:fulfils a owl:ObjectProperty ; rdfs:label "fulfils" ;
+    rdfs:domain ex:ProductionBatch ; rdfs:range ex:Order .
+ex:usedIn a owl:ObjectProperty ; rdfs:label "used in" ;
+    rdfs:domain ex:ChemicalBatch ; rdfs:range ex:ProductionBatch .

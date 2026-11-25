@@ -1,0 +1,13 @@
+# Canvas-safe test ontology. Expected: 0 errors, 3 warnings:
+#   PF04 (subClassOf cycle) on Sensor, Device and Component.
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:   <http://example.org/ontology#> .
+
+ex:Sensor    a owl:Class ; rdfs:label "Sensor"    ; rdfs:subClassOf ex:Device .
+ex:Device    a owl:Class ; rdfs:label "Device"    ; rdfs:subClassOf ex:Component .
+ex:Component a owl:Class ; rdfs:label "Component" ; rdfs:subClassOf ex:Sensor .
+ex:Plant     a owl:Class ; rdfs:label "Plant" .
+
+ex:installedIn a owl:ObjectProperty ; rdfs:label "installed in" ;
+    rdfs:domain ex:Sensor ; rdfs:range ex:Plant .

@@ -33,9 +33,7 @@ export default function OntologyCheckPanel({
   stale,
   autoCheck,
   onToggleAutoCheck,
-  onCheckCanvas,
-  onCheckStored,
-  canCheckStored,
+  onCheck,
   highlights,
   labelFor,
   selectedNodeId,
@@ -75,19 +73,10 @@ export default function OntologyCheckPanel({
       </div>
 
       <div className="ce-check-actions">
-        <button onClick={onCheckCanvas} disabled={running} title={CHECK_TOOLTIP}>
-          Check canvas
+        <button onClick={onCheck} disabled={running} title="Check Ontology">
+          Check Ontology
         </button>
-        <button
-          onClick={onCheckStored}
-          disabled={running || !canCheckStored}
-          title={canCheckStored
-            ? "Check the saved version of this schema, including OWL axioms the canvas can't show (e.g. disjointness)"
-            : "Save the schema first, or open it from your workspace, to check the stored version"}
-        >
-          Check saved schema
-        </button>
-        <label className="ce-check-auto" title="Check the canvas automatically a few seconds after each edit">
+        <label className="ce-check-auto" title="Check automatically a few seconds after each edit">
           <input type="checkbox" checked={autoCheck} onChange={(e) => onToggleAutoCheck(e.target.checked)} />
           Auto
         </label>
@@ -98,9 +87,11 @@ export default function OntologyCheckPanel({
       {stale && result && !running && (
         <div className="ce-check-stale">The ontology changed since this check; highlights are outdated.</div>
       )}
-      {result?.source === "stored" && (
+      {result && !running && (
         <div className="ce-check-status">
-          Showing the check of the saved schema, which includes OWL axioms the canvas can't show.
+          {result.source === "stored"
+            ? "Checked: saved schema, including OWL axioms the canvas can't show."
+            : "Checked: canvas content."}
         </div>
       )}
 

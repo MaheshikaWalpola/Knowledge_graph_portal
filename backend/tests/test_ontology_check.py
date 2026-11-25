@@ -2,7 +2,8 @@
 Tests for the live ontology check on the canvas (services/ontology_check_service.py):
 1. Consistency (OWL RL with probe individuals): the SmartWafer contradiction, the owl:hasKey
    regression, probes never leak, triple limit and timeout
-2. Pitfalls (meta-SHACL and SPARQL): PF01/PF02, PF04, PF05 (manual only), PF08-PF12
+2. Pitfalls (meta-SHACL and SPARQL): PF01/PF02, PF04, PF05 (manual only), PF08-PF12,
+   and the canvas-safe example files
 3. The check never changes its input; runs are stored in MongoDB without duplicates
 4. POST /ontology/check: canvas and stored sources, and clean rejection of bad input
 """
@@ -31,6 +32,8 @@ FAULTY_TTL = (DATA / "onto_check_faulty.ttl").read_text(encoding="utf-8")
 CLEAN_TTL = (DATA / "onto_check_clean.ttl").read_text(encoding="utf-8")
 # onto_check_faulty.ttl after the canvas round trip (/canvas/import, then buildTTL)
 CANVAS_TTL = (DATA / "onto_check_faulty_canvas.ttl").read_text(encoding="utf-8")
+# Test ontologies that stay valid through the canvas round trip; each header lists the expected result.
+CANVAS_SAFE = DATA / "canvas_safe"
 EX = "http://example.org/onto-check#"
 
 PREFIXES = """
@@ -209,6 +212,54 @@ class TestPitfalls(unittest.TestCase):
         self.assertFalse([p for p in result["problems"] if p["code"] == "PF12"])
 
 
+class TestCanvasSafeExamples(unittest.TestCase):
+    """The files in data/canvas_safe give the result their header comment promises.
+
+    Expected (code, local name) pairs per file; PF05 appears on manual checks only.
+    """
+
+    EXPECTED = {
+        "01_clean.ttl": [],
+        "02_missing_domain_range.ttl": [("PF01", "hasOperator"), ("PF02", "hasOperator"),
+                                        ("PF02", "usesRecipe")],
+        "03_hierarchy_cycle.ttl": [("PF04", "Component"), ("PF04", "Device"), ("PF04", "Sensor")],
+        "04_multiple_domains_ranges.ttl": [("PF08", "locatedAt"), ("PF08", "measures")],
+        "05_duplicate_labels.ttl": [("PF10", "ChemicalBatch"), ("PF10", "ProductionBatch")],
+        "06_kind_mismatch.ttl": [("PF09", "hasSupplier")],
+        "07_unconnected_class.ttl": [("PF05", "Invoice"), ("PF05", "Warehouse")],
+        "08_mixed.ttl": [("PF01", "ownedBy"), ("PF02", "ownedBy"), ("PF04", "Instrument"),
+                         ("PF04", "Tool"), ("PF08", "calibrates"), ("PF09", "serialOf"),
+                         ("PF10", "Probe"), ("PF10", "ProbeCard")],
+    }
+
+    @staticmethod
+    def found(result):
+        return sorted((p["code"], p["iri"].rsplit("#", 1)[-1]) for p in result["problems"])
+
+    def test_every_file_is_covered(self):
+        self.assertEqual(sorted(p.name for p in CANVAS_SAFE.glob("*.ttl")), sorted(self.EXPECTED))
+
+    def test_expected_results(self):
+        for name, expected in self.EXPECTED.items():
+            ttl = (CANVAS_SAFE / name).read_text(encoding="utf-8")
+            for trigger in ("manual", "auto"):
+                with self.subTest(file=name, trigger=trigger):
+                    result, _ = check(ttl, trigger=trigger)
+                    want = [e for e in expected if trigger == "manual" or e[0] != "PF05"]
+                    self.assertEqual(result["summary"]["errors"], 0)
+                    self.assertEqual(self.found(result), sorted(want))
+
+    def test_files_avoid_what_the_canvas_breaks(self):
+        # Blank nodes (owl:hasKey lists, restrictions) make the canvas output invalid Turtle,
+        # and an owl:Ontology header comes back as a class node.
+        from rdflib import BNode, OWL, RDF
+        for path in CANVAS_SAFE.glob("*.ttl"):
+            with self.subTest(file=path.name):
+                g = ocs.parse_ontology(path.read_text(encoding="utf-8"))
+                self.assertFalse(any(isinstance(t, BNode) for triple in g for t in triple))
+                self.assertFalse(list(g.subjects(RDF.type, OWL.Ontology)))
+
+
 class TestReadOnly(unittest.TestCase):
 
     def test_input_graph_is_not_modified(self):
@@ -329,7 +380,7 @@ class TestEndpoint(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
         detail = resp.json()["detail"]
         self.assertIn("canvas content is not valid Turtle", detail["summary"])
-        self.assertIn("Check saved schema", detail["summary"])
+        self.assertIn("reopen the schema from your workspace", detail["summary"])
         self.assertTrue(detail["technical"])
 
     def test_too_large_is_rejected(self):

@@ -4,7 +4,7 @@ import OntologyPalette from "./OntologyPalette";
 import OntologyCanvas from "./OntologyCanvas";
 import PropertyPanel from "./PropertyPanel";
 import OntologyCheckPanel from "./OntologyCheckPanel";
-import { CheckHighlightContext, CHECK_TOOLTIP, buildHighlights, nodeIri, summaryText } from "./ontologyCheck";
+import { CheckHighlightContext, buildHighlights, nodeIri, summaryText } from "./ontologyCheck";
 import "./CanvasEditor.css";
 
 // MUI Icons
@@ -881,9 +881,7 @@ export default function CanvasEditor({ onOpenAuth }) {
         {/* Action: Check ontology */}
         <button
           className={`ce-dock-btn action-btn ${showCheckPanel ? "active" : ""}`}
-          title={`Check ontology (${defaultCheckSource === "stored"
-            ? "the saved schema, since the canvas is unchanged"
-            : "the canvas"}). ${CHECK_TOOLTIP}`}
+          title="Check Ontology"
           onClick={handleCheckNow}
           disabled={checkRunning}
         >
@@ -931,9 +929,7 @@ export default function CanvasEditor({ onOpenAuth }) {
             stale={checkStale}
             autoCheck={autoCheck}
             onToggleAutoCheck={handleToggleAutoCheck}
-            onCheckCanvas={() => runCheck({ source: "canvas", trigger: "manual" })}
-            onCheckStored={() => runCheck({ source: "stored", trigger: "manual" })}
-            canCheckStored={!!originalSchemaId}
+            onCheck={handleCheckNow}
             highlights={checkHighlights}
             labelFor={labelForNode}
             selectedNodeId={selected?.kind === "node" ? selected.id : null}

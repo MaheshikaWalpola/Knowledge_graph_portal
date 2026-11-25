@@ -1,0 +1,14 @@
+# Canvas-safe test ontology. Expected: 0 errors.
+#   Manual check: 2 warnings, PF05 (not connected) on Warehouse and Invoice.
+#   Auto-check: 0 warnings (PF05 runs on manual checks only).
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:   <http://example.org/ontology#> .
+
+ex:Order     a owl:Class ; rdfs:label "Order" .
+ex:Customer  a owl:Class ; rdfs:label "Customer" .
+ex:Warehouse a owl:Class ; rdfs:label "Warehouse" .
+ex:Invoice   a owl:Class ; rdfs:label "Invoice" .
+
+ex:placedBy a owl:ObjectProperty ; rdfs:label "placed by" ;
+    rdfs:domain ex:Order ; rdfs:range ex:Customer .

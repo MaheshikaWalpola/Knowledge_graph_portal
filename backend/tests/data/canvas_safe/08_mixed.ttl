@@ -1,0 +1,20 @@
+# Canvas-safe test ontology with several pitfalls. Expected: 0 errors, 8 warnings:
+#   PF04 on Tool and Instrument (cycle), PF08 on calibrates (two ranges),
+#   PF10 on Probe and ProbeCard (same label "Probe"),
+#   PF01 and PF02 on ownedBy, PF09 on serialOf.
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:   <http://example.org/ontology#> .
+
+ex:Tool       a owl:Class ; rdfs:label "Tool"       ; rdfs:subClassOf ex:Instrument .
+ex:Instrument a owl:Class ; rdfs:label "Instrument" ; rdfs:subClassOf ex:Tool .
+ex:Probe      a owl:Class ; rdfs:label "Probe"      ; rdfs:subClassOf ex:Tool .
+ex:ProbeCard  a owl:Class ; rdfs:label "Probe"      ; rdfs:subClassOf ex:Tool .
+ex:Standard   a owl:Class ; rdfs:label "Standard" .
+ex:Reference  a owl:Class ; rdfs:label "Reference" .
+
+ex:calibrates a owl:ObjectProperty ; rdfs:label "calibrates" ;
+    rdfs:domain ex:Tool ; rdfs:range ex:Standard , ex:Reference .
+ex:ownedBy a owl:ObjectProperty ; rdfs:label "owned by" .
+ex:serialOf a owl:DatatypeProperty ; rdfs:label "serial of" ;
+    rdfs:domain ex:Probe ; rdfs:range ex:Tool .

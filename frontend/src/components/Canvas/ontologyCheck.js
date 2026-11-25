@@ -26,7 +26,8 @@ export function summaryText(summary) {
 export const CHECK_TOOLTIP =
   "Quick OWL RL consistency check, not complete OWL 2 DL reasoning: some contradictions are not found. " +
   "The canvas only holds classes, properties, labels, subClassOf, domain and range, so red errors are " +
-  "unlikely from canvas content. Use “Check saved schema” to include disjointness and other OWL axioms.";
+  "unlikely from canvas content. A schema opened from your workspace is checked in its saved form, " +
+  "including disjointness and other OWL axioms, until you edit it.";
 
 // The prefixes buildTTL (CanvasEditor.jsx) declares; keep them in step with it.
 const PREFIXES = {

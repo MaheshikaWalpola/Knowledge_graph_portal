@@ -1,0 +1,15 @@
+# Canvas-safe test ontology. Expected: 0 errors, 0 warnings (manual and auto).
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix ex:   <http://example.org/ontology#> .
+
+ex:Equipment a owl:Class ; rdfs:label "Equipment" .
+ex:Polisher  a owl:Class ; rdfs:label "Polisher" ; rdfs:subClassOf ex:Equipment .
+ex:Furnace   a owl:Class ; rdfs:label "Furnace"  ; rdfs:subClassOf ex:Equipment .
+ex:Wafer     a owl:Class ; rdfs:label "Wafer" .
+ex:Lot       a owl:Class ; rdfs:label "Lot" .
+
+ex:processedBy a owl:ObjectProperty ; rdfs:label "processed by" ;
+    rdfs:domain ex:Wafer ; rdfs:range ex:Equipment .
+ex:inLot a owl:ObjectProperty ; rdfs:label "in lot" ;
+    rdfs:domain ex:Wafer ; rdfs:range ex:Lot .
