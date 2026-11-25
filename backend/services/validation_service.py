@@ -10,6 +10,7 @@ from rdflib import Graph, Namespace, RDF, URIRef
 from pyshacl import validate
 
 from services.local_llm_service import LocalLLMService
+from services.reasoning_service import INFERENCE_LABELS, apply_reasoning, normalize_inference
 from services.shacl_verifier import SHACLVerifier, SHAPE_STRUCTURE_GUIDE, compact_schema
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether, HRFlowable
@@ -723,12 +724,20 @@ class ValidationService:
         yield {"status": "completed", "shacl_ttl": _serialize_shapes_in_order(g, ordered).strip(),
                "verification_map": verification_map}
 
-    def validate_rdf_stream(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None, verification_metadata: Optional[Dict[str, Any]] = None):
+    def validate_rdf_stream(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None, verification_metadata: Optional[Dict[str, Any]] = None,
+                            inference: str = "none"):
         """
         Generator that yields JSON progress events for SSE streaming.
         Each yield is a dict that will be JSON-serialized.
+        `inference` ('none', 'rdfs' or 'owlrl') adds the facts the ontology implies before checking.
         """
         import time
+
+        try:
+            inference = normalize_inference(inference)
+        except ValueError as e:
+            yield {"step": "error", "message": str(e), "error": True}
+            return
 
         v_map = verification_metadata if verification_metadata is not None else (getattr(self, "last_verification_map", None) or {})
 
@@ -783,6 +792,31 @@ class ValidationService:
                 yield {"step": "error", "message": f"Failed to parse schema: {str(e)[:200]}", "error": True}
                 return
             yield {"step": "schema_merged", "message": f"Schema merged ({len(g_combined)} total triples)"}
+
+        # Step 3b: Reasoning - add the facts the ontology implies, on a copy, so the SPARQL pre-check
+        # and pySHACL below both validate the same expanded graph.
+        inference_used = "none"
+        inferred_triples = 0
+        reasoning_notes = []
+        if inference != "none":
+            if not schema_ttl:
+                reasoning_notes.append("Reasoning was on but no ontology was provided, so it may have had nothing to work from.")
+            yield {"step": "reasoning", "message": f"Reasoning ({INFERENCE_LABELS[inference]}): working out facts implied by the ontology..."}
+            try:
+                t0 = time.time()
+                reasoning = apply_reasoning(g_combined, inference)
+            except Exception as e:
+                yield {"step": "error", "message": f"Reasoning failed: {str(e)[:200]}", "error": True}
+                return
+            g_combined = reasoning["graph"]
+            inference_used = reasoning["used"]
+            inferred_triples = reasoning["inferred"]
+            if reasoning["note"]:
+                reasoning_notes.append(reasoning["note"])
+            for note in reasoning_notes:
+                yield {"step": "reasoning_note", "message": note}
+            yield {"step": "reasoning_done",
+                   "message": f"Reasoning ({INFERENCE_LABELS[inference_used]}) added {inferred_triples:,} implied facts in {time.time() - t0:.1f}s"}
 
         # Step 4a: Pre-materialize rdfs:subClassOf transitive closure
         yield {"step": "materializing", "message": "Pre-materializing class hierarchy for query performance..."}
@@ -1142,6 +1176,10 @@ class ValidationService:
             "report": {
                 "conforms": conforms,
                 "total_triples": len(g_data),
+                "inference": inference_used,
+                "inference_requested": inference,
+                "inferred_triples": inferred_triples,
+                "reasoning_notes": reasoning_notes,
                 "total_violations": len(violations),
                 "total_questions": total_questions,
                 "passed_questions": passed_questions,
@@ -1169,18 +1207,20 @@ class ValidationService:
             }
         }
 
-    def validate_rdf(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None, verification_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def validate_rdf(self, data_ttl: str, shapes_ttl: str, schema_ttl: Optional[str] = None, verification_metadata: Optional[Dict[str, Any]] = None,
+                     inference: str = "none") -> Dict[str, Any]:
         """
         Non-streaming wrapper: runs the full validation and returns the report dict.
         """
         result = None
-        for event in self.validate_rdf_stream(data_ttl, shapes_ttl, schema_ttl, verification_metadata):
+        for event in self.validate_rdf_stream(data_ttl, shapes_ttl, schema_ttl, verification_metadata, inference=inference):
             if event.get("error"):
                 return {
                     "conforms": False,
                     "error": event["message"],
                     "total_violations": 0,
                     "total_triples": 0,
+                    "inference": inference,
                     "total_questions": 0,
                     "passed_questions": 0,
                     "failed_questions": 0,
@@ -1211,6 +1251,7 @@ class ValidationService:
             "error": "Validation produced no results",
             "total_violations": 0,
             "total_triples": 0,
+            "inference": inference,
             "total_questions": 0,
             "passed_questions": 0,
             "failed_questions": 0,
@@ -1380,6 +1421,15 @@ class ValidationService:
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         story.append(meta_table)
+
+        inference_used = report_data.get("inference") or "none"
+        reasoning_text = INFERENCE_LABELS.get(inference_used, inference_used)
+        if inference_used != "none":
+            reasoning_text += f" ({report_data.get('inferred_triples', 0):,} implied facts added from the ontology)"
+        reasoning_lines = [f"<b>Reasoning:</b> {self._safe_xml(reasoning_text)}"]
+        reasoning_lines += [self._safe_xml(n) for n in report_data.get("reasoning_notes") or []]
+        story.append(Spacer(1, 4))
+        story.append(Paragraph("<br/>".join(reasoning_lines), style_body))
         story.append(Spacer(1, 10))
 
         # 2. Executive Audit Metrics

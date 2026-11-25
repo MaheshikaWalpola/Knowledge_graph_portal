@@ -12,6 +12,7 @@ from starlette.concurrency import run_in_threadpool
 from core.auth import get_current_user
 from services.llm_providers import cloud_providers
 from services.validation_service import ValidationService
+from services.reasoning_service import normalize_inference
 from services.user_schema_service import get_user_schema
 from services.graphdb_service import (
     export_graph_turtle,
@@ -230,6 +231,14 @@ async def api_verify_shacl_stream(
     return EventSourceResponse(event_generator())
 
 
+def _parse_inference(raw: Optional[str]) -> str:
+    """Validate the reasoning mode sent by the client ('none', 'rdfs' or 'owlrl')."""
+    try:
+        return normalize_inference(raw)
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+
+
 def _parse_verification_meta(raw: Optional[str]) -> Optional[dict]:
     if not raw:
         return None
@@ -245,17 +254,20 @@ async def api_run_playground(
     instances_ttl: str = Form(...),
     shacl_ttl: str = Form(...),
     verification_metadata: Optional[str] = Form(None),
+    inference: str = Form("none"),
     current_user: Any = Depends(get_current_user)
 ):
     """
     Execute SHACL validation against user-provided Turtle data and shapes in the playground.
     """
     v_meta = _parse_verification_meta(verification_metadata)
+    inference = _parse_inference(inference)
     report = validation_service.validate_rdf(
         data_ttl=instances_ttl,
         shapes_ttl=shacl_ttl,
         schema_ttl=schema_ttl,
-        verification_metadata=v_meta
+        verification_metadata=v_meta,
+        inference=inference
     )
     return {"status": "ok", "report": report}
 
@@ -266,12 +278,14 @@ async def api_run_playground_stream(
     instances_ttl: str = Form(...),
     shacl_ttl: str = Form(...),
     verification_metadata: Optional[str] = Form(None),
+    inference: str = Form("none"),
     current_user: Any = Depends(get_current_user)
 ):
     """SSE endpoint that streams step-by-step SHACL validation progress for the playground."""
     import asyncio
     start = time.perf_counter()
     v_meta = _parse_verification_meta(verification_metadata)
+    inference = _parse_inference(inference)
 
     async def event_generator():
         with _timed("Playground validation", start):
@@ -279,7 +293,8 @@ async def api_run_playground_stream(
                 data_ttl=instances_ttl,
                 shapes_ttl=shacl_ttl,
                 schema_ttl=schema_ttl,
-                verification_metadata=v_meta
+                verification_metadata=v_meta,
+                inference=inference
             ):
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)  # Yield control to flush the event
@@ -292,6 +307,7 @@ async def api_run_workspace(
     schema_id: str = Form(...),
     shacl_ttl: str = Form(...),
     verification_metadata: Optional[str] = Form(None),
+    inference: str = Form("none"),
     current_user: Any = Depends(get_current_user)
 ):
     """
@@ -299,6 +315,7 @@ async def api_run_workspace(
     """
     user_email = current_user["email"]
     v_meta = _parse_verification_meta(verification_metadata)
+    inference = _parse_inference(inference)
     
     # 1. Fetch schema and instances turtle from GraphDB
     try:
@@ -312,7 +329,8 @@ async def api_run_workspace(
         data_ttl=instances_ttl,
         shapes_ttl=shacl_ttl,
         schema_ttl=schema_ttl,
-        verification_metadata=v_meta
+        verification_metadata=v_meta,
+        inference=inference
     )
     
     return {"status": "ok", "report": report}
@@ -323,6 +341,7 @@ async def api_run_workspace_stream(
     schema_id: str = Form(...),
     shacl_ttl: str = Form(...),
     verification_metadata: Optional[str] = Form(None),
+    inference: str = Form("none"),
     current_user: Any = Depends(get_current_user)
 ):
     """SSE endpoint that streams workspace graph retrieval and SHACL validation progress."""
@@ -330,6 +349,7 @@ async def api_run_workspace_stream(
     start = time.perf_counter()
     user_email = current_user["email"]
     v_meta = _parse_verification_meta(verification_metadata)
+    inference = _parse_inference(inference)
 
     # Fetch graphs first (fast operation)
     try:
@@ -346,7 +366,8 @@ async def api_run_workspace_stream(
                 data_ttl=instances_ttl_content,
                 shapes_ttl=shacl_ttl,
                 schema_ttl=schema_ttl_content,
-                verification_metadata=v_meta
+                verification_metadata=v_meta,
+                inference=inference
             ):
                 yield {"data": json.dumps(event)}
                 await asyncio.sleep(0)

@@ -117,6 +117,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
   //  Workspace validation target schemas 
   const [schemas, setSchemas] = useState([]);
   const [validationTarget, setValidationTarget] = useState("uploaded");
+  const [inferenceMode, setInferenceMode] = useState("none");
 
   useEffect(() => {
     if (user) {
@@ -674,6 +675,7 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
 
     const formData = new URLSearchParams();
     formData.append("shacl_ttl", playgroundShaclText);
+    formData.append("inference", inferenceMode);
 
     // Pass verification metadata so the backend can split reliable vs unreliable
     if (verificationMap && Object.keys(verificationMap).length > 0) {
@@ -1380,6 +1382,23 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                       }
                     </Typography>
                   </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", mt: 1.5 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                      Reasoning:
+                    </Typography>
+                    <FormControl variant="outlined" size="small" sx={{ minWidth: 220 }}>
+                      <Select value={inferenceMode} onChange={(e) => setInferenceMode(e.target.value)} disabled={loading}>
+                        <MenuItem value="none">Off</MenuItem>
+                        <MenuItem value="rdfs">RDFS (subclasses, domain and range)</MenuItem>
+                        <MenuItem value="owlrl">OWL RL (full, slower)</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Typography variant="caption" color="textSecondary" sx={{ flex: 1 }}>
+                      {inferenceMode === "none"
+                        ? "Checks only the facts written in the data."
+                        : "Also uses facts the ontology implies, e.g. a MaximumRating is also a Parameter. Your stored data is not changed."}
+                    </Typography>
+                  </Box>
                 </Box>
 
                 {/* Live Validation Progress Steps */}
@@ -1648,6 +1667,16 @@ export default function ValidationPage({ user: propUser, onOpenAuth }) {
                           <Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 2 }}>
                             <Box sx={{ textAlign: "right" }}>
                               <Typography variant="body2" sx={{ opacity: 0.85 }}>{playgroundReport.total_triples} triples evaluated</Typography>
+                              <Typography variant="body2" sx={{ opacity: 0.85 }}>
+                                {playgroundReport.inference && playgroundReport.inference !== "none"
+                                  ? `Reasoning: ${playgroundReport.inference === "owlrl" ? "OWL RL" : "RDFS"} (+${playgroundReport.inferred_triples ?? 0} implied facts)`
+                                  : "Reasoning: off"}
+                              </Typography>
+                              {(playgroundReport.reasoning_notes || []).map((note, i) => (
+                                <Typography key={i} variant="caption" sx={{ display: "block", opacity: 0.85, maxWidth: 320 }}>
+                                  {note}
+                                </Typography>
+                              ))}
                             </Box>
                             <Button 
                               variant="outlined" 
